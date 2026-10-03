@@ -785,74 +785,74 @@ class VietmapHudOverlay @JvmOverloads constructor(
     }
 
     private fun createAlertBadge(isVertical: Boolean = false): LinearLayout {
+        // Waze-like compact alert cell used by every HUD style:
+        // big icon on top, distance below. The long title/upcoming list stays
+        // hidden so the floating bubble remains readable on Android Auto.
         return LinearLayout(context).apply {
-            orientation = if (isVertical) VERTICAL else HORIZONTAL
-            gravity = if (isVertical) Gravity.CENTER_HORIZONTAL else Gravity.CENTER_VERTICAL
-            setPadding(dp(8), dp(5), dp(10), dp(5))
-            background = rounded(Color.parseColor("#EE0F172A"), 10f, Color.parseColor("#EF4444"), 2)
+            orientation = VERTICAL
+            gravity = Gravity.CENTER
+            minimumWidth = if (isVertical) 0 else dp(62)
+            setPadding(
+                if (isVertical) dp(4) else dp(8),
+                dp(5),
+                if (isVertical) dp(4) else dp(8),
+                dp(5)
+            )
+            background = rounded(
+                Color.parseColor("#D9161B22"),
+                12f,
+                Color.parseColor("#38536A7A"),
+                1
+            )
             layoutParams = LayoutParams(
                 if (isVertical) LayoutParams.MATCH_PARENT else LayoutParams.WRAP_CONTENT,
                 LayoutParams.WRAP_CONTENT
             ).apply {
                 if (isVertical) {
-                    topMargin = dp(4)
+                    topMargin = dp(5)
                     bottomMargin = dp(4)
                 } else {
-                    marginStart = dp(6)
+                    marginStart = dp(7)
                     marginEnd = dp(4)
                 }
             }
 
-            val iconTv = TextView(context).apply {
+            alertIconText = TextView(context).apply {
                 text = "📷"
-                textSize = if (isVertical) 20f else 22f
+                textSize = if (isVertical) 24f else 27f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
-                if (!isVertical) setPadding(0, 0, dp(6), 0)
+                includeFontPadding = false
+                setTextColor(Color.WHITE)
+                maxLines = 1
             }
-            alertIconText = iconTv
-            addView(iconTv)
+            addView(alertIconText)
 
-            val col = LinearLayout(context).apply {
-                orientation = VERTICAL
-                gravity = if (isVertical) Gravity.CENTER_HORIZONTAL else Gravity.CENTER_VERTICAL
-
-                val titleTv = TextView(context).apply {
-                    text = "Cảnh báo"
-                    textSize = if (isVertical) 10f else 12f
-                    typeface = Typeface.DEFAULT_BOLD
-                    setTextColor(Color.WHITE)
-                    gravity = if (isVertical) Gravity.CENTER else Gravity.START
-                    maxLines = 1
-                    ellipsize = TextUtils.TruncateAt.END
-                }
-                alertTitleText = titleTv
-                addView(titleTv)
-
-                val distTv = TextView(context).apply {
-                    text = "0m"
-                    textSize = if (isVertical) 9.5f else 11f
-                    typeface = Typeface.DEFAULT_BOLD
-                    setTextColor(Color.parseColor("#FEF08A"))
-                    gravity = if (isVertical) Gravity.CENTER else Gravity.START
-                }
-                alertDistanceText = distTv
-                addView(distTv)
-
-                val upcomingTv = TextView(context).apply {
-                    text = ""
-                    textSize = if (isVertical) 8.2f else 9.2f
-                    typeface = Typeface.DEFAULT_BOLD
-                    setTextColor(Color.parseColor("#CBD5E1"))
-                    gravity = if (isVertical) Gravity.CENTER else Gravity.START
-                    maxLines = if (isVertical) 3 else 2
-                    ellipsize = TextUtils.TruncateAt.END
-                    visibility = GONE
-                }
-                alertUpcomingText = upcomingTv
-                addView(upcomingTv)
+            alertDistanceText = TextView(context).apply {
+                text = "430 m"
+                textSize = if (isVertical) 10.5f else 11.5f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+                includeFontPadding = false
+                setPadding(0, dp(2), 0, 0)
+                maxLines = 1
             }
-            addView(col)
+            addView(alertDistanceText)
+
+            // Kept as hidden views so the same update code/state model can still
+            // expose a semantic title without adding visual clutter.
+            alertTitleText = TextView(context).apply {
+                visibility = GONE
+                maxLines = 1
+            }
+            addView(alertTitleText)
+
+            alertUpcomingText = TextView(context).apply {
+                visibility = GONE
+                maxLines = 1
+            }
+            addView(alertUpcomingText)
 
             alertContainer = this
             visibility = GONE
@@ -1345,13 +1345,18 @@ class VietmapHudOverlay @JvmOverloads constructor(
         val isConn = data.isConnected || isPreviewMode
         wazeDot?.background = circle(if (isConn) Color.parseColor("#10B981") else Color.parseColor("#64748B"), 0, 0f)
 
-        // 7. Active Road Alert Badge (Camera phạt nguội, Đèn đỏ, Khu dân cư, CSGT, etc.)
+        // 7. Compact Waze-style road alert cell.
+        // The closest HLP alert is the only one rendered in the floating HUD:
+        // icon + distance, matching the small bubble shown over other apps.
         val rawAlertTitle = data.alertTitle?.replace("VML-TPMS", "")?.replace("TPMS", "")?.trim()
         val cleanAlertTitle = if (rawAlertTitle != null && !WazeHlpWebSocketManager.isIgnoredText(rawAlertTitle)) rawAlertTitle else null
 
+        val primaryAlert = data.upcomingAlerts.firstOrNull()
         val effWarning = when {
+            primaryAlert != null && primaryAlert.warningType != VietmapWarningType.NONE -> primaryAlert.warningType
             data.warningType != VietmapWarningType.NONE -> data.warningType
-            !cleanAlertTitle.isNullOrBlank() -> VietmapIconClassifier.classifyFromText(cleanAlertTitle).takeIf { it != VietmapWarningType.NONE }
+            !cleanAlertTitle.isNullOrBlank() -> VietmapIconClassifier.classifyFromText(cleanAlertTitle)
+                .takeIf { it != VietmapWarningType.NONE }
                 ?: WazeHlpWebSocketManager.mapWarningType(cleanAlertTitle)
             else -> VietmapWarningType.NONE
         }
@@ -1360,85 +1365,64 @@ class VietmapHudOverlay @JvmOverloads constructor(
         val categoryEnabled = isPreviewMode ||
             !WazeAlertPolicy.isCameraCategory(effWarning) ||
             WazeHudManager.isSpeedCameraEnabled(context)
-        val hasActiveAlertBadge = (effWarning != VietmapWarningType.NONE || !cleanAlertTitle.isNullOrBlank()) && masterEnabled && categoryEnabled && isAlertFresh
+        val hasAlertData = primaryAlert != null ||
+            effWarning != VietmapWarningType.NONE ||
+            !cleanAlertTitle.isNullOrBlank()
+        val hasActiveAlertBadge = hasAlertData && masterEnabled && categoryEnabled && isAlertFresh
 
         if (hasActiveAlertBadge) {
-            val displayWarning = if (effWarning != VietmapWarningType.NONE) effWarning else VietmapWarningType.SPEED_CAMERA
-            val primaryAlert = data.upcomingAlerts.firstOrNull()
-            val emoji = primaryAlert?.code?.takeIf { it > 0 }
-                ?.let(WazeHlpWebSocketManager::alertCodeEmoji)
-                ?: displayWarning.iconEmoji.ifBlank { "⚠️" }
+            val displayWarning = if (effWarning != VietmapWarningType.NONE) {
+                effWarning
+            } else {
+                VietmapWarningType.HAZARD
+            }
 
-            var shortTitle = primaryAlert?.title?.takeIf { it.isNotBlank() }
+            val code = primaryAlert?.code ?: 0
+            val value = primaryAlert?.value
+            val icon = when {
+                code in setOf(8, 22) && (value ?: 0) > 0 -> "⭕" + value
+                code > 0 -> WazeHlpWebSocketManager.alertCodeEmoji(code)
+                else -> displayWarning.iconEmoji.ifBlank { "⚠️" }
+            }
+
+            val alertDistanceMeters = primaryAlert?.distanceMeters
+                ?: WazeAlertPolicy.effectiveAlertDistanceMeters(data)
+            val distance = WazeAlertPolicy.formatDistance(alertDistanceMeters)
+
+            val semanticTitle = primaryAlert?.title?.takeIf { it.isNotBlank() }
                 ?: WazeAlertPolicy.shortTitle(displayWarning, cleanAlertTitle)
-            primaryAlert?.let { pa ->
-                if (pa.code in setOf(8, 22) && (pa.value ?: 0) > 0 && !shortTitle.contains("km/h")) {
-                    shortTitle += " • ${pa.value} km/h"
-                }
-                if (pa.code == 6) {
-                    val severityText = when (pa.jamSeverity) {
-                        1 -> "nhẹ"
-                        2 -> "vừa"
-                        3 -> "nặng"
-                        4 -> "đứng im"
-                        5 -> "đường đóng"
-                        else -> null
-                    }
-                    if (!severityText.isNullOrBlank() && !shortTitle.contains(severityText, ignoreCase = true)) {
-                        shortTitle += " • $severityText"
-                    }
-                    pa.jamDelayMinutes?.takeIf { it > 0 }?.let { delay ->
-                        if (!shortTitle.contains("+$delay")) shortTitle += " • +$delay phút"
-                    }
-                }
+
+            val accent = WazeAlertPolicy.accentColor(displayWarning, alertDistanceMeters)
+            val urgent = alertDistanceMeters != null &&
+                alertDistanceMeters <= 150 &&
+                WazeAlertPolicy.isRoadHazard(displayWarning)
+
+            alertContainer?.background = rounded(
+                Color.parseColor("#E6161B22"),
+                12f,
+                accent,
+                if (urgent) 2 else 1
+            )
+            alertIconText?.text = icon
+            alertIconText?.textSize = if (code in setOf(8, 22) && (value ?: 0) > 0) 20f else 27f
+            alertDistanceText?.text = if (distance.isNotBlank()) distance else "•"
+            alertDistanceText?.setTextColor(Color.WHITE)
+            alertDistanceText?.visibility = VISIBLE
+
+            // Hidden visually, but useful for accessibility/debugging.
+            alertTitleText?.text = semanticTitle
+            alertTitleText?.contentDescription = buildString {
+                append(semanticTitle)
+                if (distance.isNotBlank()) append(", ").append(distance)
             }
+            alertTitleText?.visibility = GONE
+            alertUpcomingText?.visibility = GONE
 
-            val alertDistanceMeters = primaryAlert?.distanceMeters ?: WazeAlertPolicy.effectiveAlertDistanceMeters(data)
-            val alertDistStr = WazeAlertPolicy.formatDistance(alertDistanceMeters)
-
-            val parseColorSafe = WazeAlertPolicy.accentColor(displayWarning, alertDistanceMeters)
-            // Use sharp, high-contrast dark solid background with 2dp thick vibrant border
-            val containerBgColor = Color.parseColor("#FA0B132B")
-
-            val borderWidth = if (alertDistanceMeters != null && alertDistanceMeters <= 150 && WazeAlertPolicy.isRoadHazard(displayWarning)) 3 else 2
-            alertContainer?.background = rounded(containerBgColor, 10f, parseColorSafe, borderWidth)
-            alertIconText?.text = emoji
-            alertIconText?.textSize = 22f
-            alertTitleText?.text = shortTitle
-            alertTitleText?.setTextColor(Color.WHITE)
-
-            if (!alertDistStr.isNullOrBlank()) {
-                alertDistanceText?.text = "📍 $alertDistStr"
-                alertDistanceText?.setTextColor(Color.parseColor("#FEF08A"))
-                alertDistanceText?.visibility = VISIBLE
-            } else {
-                alertDistanceText?.visibility = GONE
-            }
-
-            val nextAlerts = data.upcomingAlerts.drop(1).take(3)
-            if (nextAlerts.isNotEmpty()) {
-                val nextText = nextAlerts.joinToString("   ") { item ->
-                    val icon = if (item.code > 0) WazeHlpWebSocketManager.alertCodeEmoji(item.code) else item.warningType.iconEmoji
-                    val d = WazeAlertPolicy.formatDistance(item.distanceMeters)
-                    val value = if (item.code in setOf(8, 22) && item.value != null && item.value > 0) "${item.value}" else ""
-                    buildString {
-                        append(icon)
-                        if (value.isNotBlank()) append(value)
-                        if (d.isNotBlank()) {
-                            if (value.isNotBlank()) append("/") else append(" ")
-                            append(d)
-                        }
-                    }
-                }
-                alertUpcomingText?.text = nextText
-                alertUpcomingText?.visibility = VISIBLE
-            } else {
-                alertUpcomingText?.visibility = GONE
-            }
-
+            alertContainer?.contentDescription = alertTitleText?.contentDescription
             alertContainer?.visibility = VISIBLE
         } else {
             alertUpcomingText?.visibility = GONE
+            alertTitleText?.visibility = GONE
             alertContainer?.visibility = GONE
         }
     }
@@ -1458,8 +1442,16 @@ class VietmapHudOverlay @JvmOverloads constructor(
             distanceToTurnMeters = live.distanceToTurnMeters,
             distanceText = "250m",
             distanceMeters = 250,
-            warningType = VietmapWarningType.RESIDENTIAL_START,
-            alertTitle = "Bắt đầu khu dân cư",
+            warningType = VietmapWarningType.RED_LIGHT_CAMERA,
+            alertTitle = "Camera đèn đỏ",
+            upcomingAlerts = listOf(
+                WazeAlertItem(
+                    code = 3,
+                    warningType = VietmapWarningType.RED_LIGHT_CAMERA,
+                    title = "Camera đèn đỏ",
+                    distanceMeters = 430
+                )
+            ),
             roadName = live.roadName,
             nextRoadName = live.nextRoadName,
             etaTime = live.etaTime,
