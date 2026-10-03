@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="36dp"
+    android:viewportWidth="48"
+    android:viewportHeight="36">
+    <!-- Dark green / black card -->
+    <path
+        android:fillColor="#064E3B"
+        android:pathData="M6,0 L42,0 C45.3,0 48,2.7 48,6 L48,30 C48,33.3 45.3,36 42,36 L6,36 C2.7,36 0,33.3 0,30 L0,6 C0,2.7 2.7,0 6,0 Z" />
+    <!-- Red K+ box -->
+    <path
+        android:fillColor="#E11D48"
+        android:pathData="M4,7 L20,7 C21.1,7 22,7.9 22,9 L22,27 C22,28.1 21.1,29 20,29 L4,29 C2.9,29 2,28.1 2,27 L2,9 C2,7.9 2.9,7 4,7 Z" />
+    <!-- White K -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M6,11 L8.5,11 L8.5,16.5 L12.5,11 L15.5,11 L11,17.5 L16,25 L12.8,25 L8.5,18.5 L8.5,25 L6,25 Z" />
+    <!-- Plus symbol in yellow -->
+    <path
+        android:fillColor="#FDE047"
+        android:pathData="M17.5,12 L19,12 L19,14.5 L21.5,14.5 L21.5,16 L19,16 L19,18.5 L17.5,18.5 L17.5,16 L15,16 L15,14.5 L17.5,14.5 Z" />
+    <!-- Green Sport bar -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M24,10 L44,10 C45.1,10 46,10.9 46,12 L46,24 C46,25.1 45.1,26 44,26 L24,26 Z" />
+    <!-- White text shape -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M27,15 L32,15 L32,17 L29,17 L29,19 L32,19 L32,21 L27,21 Z" />
+</vector>

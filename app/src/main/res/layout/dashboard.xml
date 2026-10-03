@@ -1,0 +1,747 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootContainer"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_cockpit_charcoal">
+
+    <!-- Supercar Bugatti Wallpaper (Default) -->
+    <ImageView
+        android:id="@+id/dashboardBackground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/bg_wallpaper_bugatti"
+        android:visibility="visible" />
+
+    <!-- Frosted scrim for maximum contrast and elegance -->
+    <View
+        android:id="@+id/dashboardScrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#30000000"
+        android:visibility="visible" />
+
+    <!-- Main Cockpit Launcher Content Frame -->
+    <RelativeLayout
+        android:id="@+id/dashboardMainContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingStart="22dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="22dp"
+        android:paddingBottom="14dp">
+
+        <!-- ================= TOP HEADER BAR ================= -->
+
+        <!-- Top-Left: Greeting & Compact Clock + Date lockup -->
+        <LinearLayout
+            android:id="@+id/topLeftContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true"
+            android:orientation="vertical">
+
+            <!-- Greeting: Chào buổi chiều, Phạm Nam -->
+            <TextView
+                android:id="@+id/greetingText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:includeFontPadding="false"
+                android:shadowColor="#CC000000"
+                android:shadowDx="0"
+                android:shadowDy="1"
+                android:shadowRadius="4"
+                android:text="Chào buổi chiều, Phạm Nam"
+                android:textColor="#E2E8F0"
+                android:textSize="15sp" />
+
+            <!-- Compact Clock & Date Row -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <!-- Clock: 16:48 -->
+                <TextView
+                    android:id="@+id/clockText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif"
+                    android:includeFontPadding="false"
+                    android:shadowColor="#CC000000"
+                    android:shadowDx="0"
+                    android:shadowDy="2"
+                    android:shadowRadius="6"
+                    android:text="17:05"
+                    android:textColor="#FFFFFF"
+                    android:textSize="48sp"
+                    android:textStyle="bold" />
+
+                <!-- Vertical subtle divider -->
+                <View
+                    android:layout_width="2dp"
+                    android:layout_height="38dp"
+                    android:layout_marginStart="14dp"
+                    android:layout_marginEnd="14dp"
+                    android:background="#35FFFFFF" />
+
+                <!-- Solar & Lunar Dates stacked neatly -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Solar Date: Thứ Hai, 28/09/2026 -->
+                    <TextView
+                        android:id="@+id/dateText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:includeFontPadding="false"
+                        android:shadowColor="#CC000000"
+                        android:shadowDx="0"
+                        android:shadowDy="1"
+                        android:shadowRadius="3"
+                        android:text="Thứ Hai, 28/09/2026"
+                        android:textColor="#F1F5F9"
+                        android:textSize="14.5sp" />
+
+                    <!-- Lunar Date: ÂL: 18/08 - Năm Bính Ngọ -->
+                    <TextView
+                        android:id="@+id/lunarDateText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:fontFamily="sans-serif"
+                        android:includeFontPadding="false"
+                        android:shadowColor="#CC000000"
+                        android:shadowDx="0"
+                        android:shadowDy="1"
+                        android:shadowRadius="3"
+                        android:text="ÂL: 18/08 - Năm Bính Ngọ"
+                        android:textColor="#38BDF8"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Live weather from the phone GPS location -->
+        <LinearLayout
+            android:id="@+id/weatherCard"
+            android:layout_width="150dp"
+            android:layout_height="76dp"
+            android:layout_below="@id/topLeftContainer"
+            android:layout_alignParentStart="true"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_weather_card"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="8dp">
+
+            <TextView
+                android:id="@+id/weatherIcon"
+                android:layout_width="38dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:text="🌤️"
+                android:textSize="27sp" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="7dp"
+                android:layout_weight="1"
+                android:gravity="center_vertical"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/weatherTemp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:includeFontPadding="false"
+                    android:shadowColor="#B0000000"
+                    android:shadowDx="0"
+                    android:shadowDy="1"
+                    android:shadowRadius="3"
+                    android:text="—°C"
+                    android:textColor="#FFFFFF"
+                    android:textSize="23sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/weatherCondition"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-medium"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:text="Đang cập nhật"
+                    android:textColor="#E2E8F0"
+                    android:textSize="10sp" />
+
+                <TextView
+                    android:id="@+id/weatherLocation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:text="📍 Vị trí điện thoại"
+                    android:textColor="#67E8F9"
+                    android:textSize="9.5sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Top-Right: Search Capsule, Voice Mic, Notification & Settings (Shifted 1.5cm / 95dp to left) -->
+        <LinearLayout
+            android:id="@+id/topRightContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentEnd="true"
+            android:layout_marginEnd="95dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- Capsule Search Pill -->
+            <LinearLayout
+                android:id="@+id/searchBarPill"
+                android:layout_width="220dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_search_pill"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp">
+
+                <ImageView
+                    android:id="@+id/searchIcon"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_bar_search"
+                    android:tint="#CBD5E1" />
+
+                <TextView
+                    android:id="@+id/searchHintText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif"
+                    android:maxLines="1"
+                    android:text="Tìm kiếm nội dung..."
+                    android:textColor="#CBD5E1"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <!-- Voice Search Button (Mic) -->
+            <FrameLayout
+                android:id="@+id/btnVoiceSearchCockpit"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/bg_circle_frosted"
+                android:clickable="true"
+                android:focusable="true">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_bar_mic"
+                    android:tint="#38BDF8" />
+            </FrameLayout>
+
+            <!-- Day/Night & Ambient Light Theme Button (Replaced notification bell) -->
+            <FrameLayout
+                android:id="@+id/btnNotification"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/bg_circle_frosted"
+                android:clickable="true"
+                android:focusable="true">
+
+                <ImageView
+                    android:id="@+id/ivDayNightToggle"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_mode_night"
+                    android:tint="#38BDF8" />
+            </FrameLayout>
+
+            <!-- Settings Gear Button -->
+            <FrameLayout
+                android:id="@+id/btnSettings"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_circle_frosted"
+                android:clickable="true"
+                android:focusable="true">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_bar_setting"
+                    android:tint="#FFFFFF" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <!-- Favorite Channels Quick Strip -->
+        <HorizontalScrollView
+            android:id="@+id/favChannelsScroll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_above="@id/bottomDock"
+            android:layout_marginBottom="10dp"
+            android:scrollbars="none"
+            android:overScrollMode="never"
+            android:visibility="visible">
+
+            <LinearLayout
+                android:id="@+id/favChannelsRow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <!-- ================= BOTTOM DOCK SECTION ================= -->
+        <LinearLayout
+            android:id="@+id/bottomDock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- App 1: IPTV (Modern IPTV live icon, no longer VTVgo) -->
+            <LinearLayout
+                android:id="@+id/cardVtv"
+                android:layout_width="92dp"
+                android:layout_height="82dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/bg_app_card_frosted"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="6dp">
+
+                <ImageView
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:src="@drawable/ic_app_iptv" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif-bold"
+                    android:includeFontPadding="false"
+                    android:text="IPTV"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif"
+                    android:includeFontPadding="false"
+                    android:text="Truyền hình"
+                    android:textColor="#38BDF8"
+                    android:textSize="9.5sp" />
+            </LinearLayout>
+
+            <!-- App: Danh sách M3U -->
+            <LinearLayout
+                android:id="@+id/cardM3u"
+                android:layout_width="92dp"
+                android:layout_height="82dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/bg_app_card_frosted"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="6dp">
+
+                <ImageView
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:src="@drawable/ic_app_iptv" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif-bold"
+                    android:includeFontPadding="false"
+                    android:text="M3U"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif"
+                    android:includeFontPadding="false"
+                    android:text="Danh sách"
+                    android:textColor="#34D399"
+                    android:textSize="9.5sp" />
+            </LinearLayout>
+
+            <!-- App 2: YouTube -->
+            <LinearLayout
+                android:id="@+id/cardYoutube"
+                android:layout_width="92dp"
+                android:layout_height="82dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/bg_app_card_frosted"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="6dp">
+
+                <ImageView
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:src="@drawable/ic_app_youtube" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif-bold"
+                    android:includeFontPadding="false"
+                    android:text="YouTube"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif"
+                    android:includeFontPadding="false"
+                    android:text="Video &amp; Nhạc"
+                    android:textColor="#94A3B8"
+                    android:textSize="9.5sp" />
+            </LinearLayout>
+
+            <!-- App 3: Trình duyệt -->
+            <LinearLayout
+                android:id="@+id/cardBrowser"
+                android:layout_width="92dp"
+                android:layout_height="82dp"
+                android:layout_marginEnd="10dp"
+                android:background="@drawable/bg_app_card_frosted"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="6dp">
+
+                <ImageView
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:src="@drawable/ic_tab_globe" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif-bold"
+                    android:includeFontPadding="false"
+                    android:text="Trình duyệt"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif"
+                    android:includeFontPadding="false"
+                    android:text="Internet"
+                    android:textColor="#94A3B8"
+                    android:textSize="9.5sp" />
+            </LinearLayout>
+
+            <!-- App 4: List App / Tất cả ứng dụng -->
+            <LinearLayout
+                android:id="@+id/cardBookmark"
+                android:layout_width="92dp"
+                android:layout_height="82dp"
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/bg_app_card_frosted"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="6dp">
+
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_app_grid" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif-bold"
+                    android:includeFontPadding="false"
+                    android:text="Ứng dụng"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif"
+                    android:includeFontPadding="false"
+                    android:text="Tất cả"
+                    android:textColor="#38BDF8"
+                    android:textSize="9.5sp" />
+            </LinearLayout>
+
+            <!-- Mini Media Player Widget on Right -->
+            <LinearLayout
+                android:id="@+id/miniPlayerCard"
+                android:layout_width="0dp"
+                android:layout_height="82dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_player_card_frosted"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="10dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="6dp">
+
+                <!-- Album Art / Video Thumbnail -->
+                <FrameLayout
+                    android:id="@+id/playerArtHolder"
+                    android:layout_width="66dp"
+                    android:layout_height="66dp"
+                    android:background="@drawable/bg_thumb_rounded"
+                    android:clipToOutline="true">
+
+                    <ImageView
+                        android:id="@+id/playerThumbnail"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="fitCenter"
+                        android:padding="5dp"
+                        android:visibility="gone" />
+
+                    <ImageView
+                        android:id="@+id/playerFallbackIcon"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_app_youtube"
+                        android:tint="#CBD5E1" />
+                </FrameLayout>
+
+                <!-- Media Details & Progress -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical">
+
+                    <!-- Title & Heart Icon -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <com.carhud.aaproxy.SmoothMarqueeTextView
+                            android:id="@+id/playerTitleText"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="sans-serif-bold"
+                            android:includeFontPadding="false"
+                            android:singleLine="true"
+                            android:text="Mùa Thu Đi Qua (Acoustic Ver.)"
+                            android:textColor="#FFFFFF"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- Subtitle / Source (YouTube / Live TV) -->
+                    <TextView
+                        android:id="@+id/playerSubtitleText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="1dp"
+                        android:fontFamily="sans-serif"
+                        android:includeFontPadding="false"
+                        android:singleLine="true"
+                        android:text="YouTube"
+                        android:textColor="#38BDF8"
+                        android:textSize="9.5sp" />
+
+                    <!-- Live TV Badge (Replaces Scrubber on IPTV) -->
+                    <LinearLayout
+                        android:id="@+id/playerLiveContainer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:visibility="gone">
+
+                        <View
+                            android:layout_width="7dp"
+                            android:layout_height="7dp"
+                            android:background="@drawable/bg_circle_red" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="5dp"
+                            android:fontFamily="sans-serif-bold"
+                            android:includeFontPadding="false"
+                            android:text="ĐANG PHÁT TRỰC TIẾP"
+                            android:textColor="#EF4444"
+                            android:textSize="9sp" />
+                    </LinearLayout>
+
+                    <!-- Scrubber / Timeline Bar (YouTube / Vod) -->
+                    <LinearLayout
+                        android:id="@+id/playerScrubberContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/playerCurTime"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="28dp"
+                            android:fontFamily="sans-serif"
+                            android:includeFontPadding="false"
+                            android:text="1:51"
+                            android:textColor="#CBD5E1"
+                            android:textSize="8.5sp" />
+
+                        <ProgressBar
+                            android:id="@+id/playerProgressBar"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="0dp"
+                            android:layout_height="3dp"
+                            android:layout_marginStart="5dp"
+                            android:layout_marginEnd="5dp"
+                            android:layout_weight="1"
+                            android:max="100"
+                            android:progress="55"
+                            android:progressDrawable="@drawable/bg_progress_blue" />
+
+                        <TextView
+                            android:id="@+id/playerDurTime"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="28dp"
+                            android:gravity="end"
+                            android:fontFamily="sans-serif"
+                            android:includeFontPadding="false"
+                            android:text="3:22"
+                            android:textColor="#CBD5E1"
+                            android:textSize="8.5sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Automotive Playback Controls (Large hit targets for driving) -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <!-- Prev Button -->
+                    <FrameLayout
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="4dp">
+
+                        <ImageView
+                            android:id="@+id/btnPlayerPrev"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_gravity="center"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:src="@drawable/ic_player_prev"
+                            android:tint="#FFFFFF" />
+                    </FrameLayout>
+
+                    <!-- Play/Pause Button (Accent circle for high visibility and quick tap) -->
+                    <FrameLayout
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:background="@drawable/bg_circle_play_accent"
+                        android:elevation="2dp">
+
+                        <ImageView
+                            android:id="@+id/btnPlayerPlayPause"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:src="@drawable/ic_player_pause"
+                            android:tint="#FFFFFF" />
+                    </FrameLayout>
+
+                    <!-- Next Button -->
+                    <FrameLayout
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_marginStart="4dp">
+
+                        <ImageView
+                            android:id="@+id/btnPlayerNext"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_gravity="center"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:src="@drawable/ic_player_next"
+                            android:tint="#FFFFFF" />
+                    </FrameLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </RelativeLayout>
+</FrameLayout>

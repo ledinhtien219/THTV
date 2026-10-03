@@ -1,0 +1,1872 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <script src="hls.min.js"></script>
+  <script>
+    try {
+      Object.defineProperty(document, 'hidden', { get: function() { return false; }, configurable: true });
+      Object.defineProperty(document, 'visibilityState', { get: function() { return 'visible'; }, configurable: true });
+      Object.defineProperty(document, 'webkitVisibilityState', { get: function() { return 'visible'; }, configurable: true });
+      document.hasFocus = function() { return true; };
+
+      var killEvent = function(e) { e.stopImmediatePropagation(); };
+      window.addEventListener('blur', killEvent, true);
+      window.addEventListener('visibilitychange', killEvent, true);
+      document.addEventListener('visibilitychange', killEvent, true);
+    } catch(e) {}
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #0B111E;
+      color: #E2E8F0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .main-body {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+    .main-body.fullscreen-video .channels-section,
+    .main-body.channels-hidden .channels-section {
+      display: none !important;
+    }
+    .player-section {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100% !important;
+      height: 100% !important;
+      background: #000000;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+    }
+    .video-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000000;
+      overflow: hidden;
+    }
+    video#videoPlayer {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      object-fit: fill !important;
+      background: #000000;
+      display: block;
+      margin: 0 auto;
+    }
+
+    /* Transparent touch catcher above the hardware video layer.
+       Android Auto/WebView can route touches directly to <video>, skipping
+       parent DOM listeners. This layer guarantees taps reach our UI logic. */
+    .iptv-touch-wake-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      z-index: 8;
+      pointer-events: auto;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    video#videoPlayer.fit-contain {
+      object-fit: contain !important;
+    }
+    video#videoPlayer.fit-cover {
+      object-fit: cover !important;
+    }
+    video#videoPlayer.fit-fill {
+      object-fit: fill !important;
+    }
+    video#videoPlayer.fit-4-3 {
+      object-fit: fill !important;
+      width: auto !important;
+      height: 100% !important;
+      aspect-ratio: 4 / 3 !important;
+    }
+    video#videoPlayer.fit-21-9 {
+      object-fit: fill !important;
+      width: 100% !important;
+      height: auto !important;
+      aspect-ratio: 21 / 9 !important;
+    }
+    .player-info {
+      position: absolute;
+      top: 8px;
+      left: 52px;
+      right: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 10;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    .main-body.controls-hidden .player-info {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: translateY(-8px);
+    }
+    .iptv-home-btn {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 229, 255, 0.5);
+      background: rgba(10, 18, 30, 0.92);
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      cursor: pointer;
+      z-index: 80;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.55);
+      pointer-events: auto;
+    }
+    .iptv-home-btn:active {
+      background: rgba(0, 229, 255, 0.25);
+      transform: scale(0.94);
+    }
+    .current-title {
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #FFFFFF;
+      max-width: 70%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .player-controls-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      pointer-events: auto;
+    }
+    .badge-live {
+      background: #E50914;
+      color: #FFFFFF;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .btn-fs {
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #00E5FF;
+      font-size: 12px;
+      padding: 3px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .btn-fs:hover { background: rgba(0, 229, 255, 0.2); }
+    .btn-show-channels {
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      background: rgba(16, 25, 42, 0.85);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(0, 229, 255, 0.45);
+      color: #00E5FF;
+      padding: 3px 8px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 600;
+      z-index: 15;
+      display: none;
+      align-items: center;
+      gap: 3px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      transition: opacity 0.3s ease, transform 0.2s ease;
+      pointer-events: auto;
+    }
+    .btn-show-channels:hover {
+      background: #1E314F;
+      border-color: #00E5FF;
+    }
+    .main-body.channels-hidden .btn-show-channels {
+      display: flex;
+    }
+    .main-body.controls-hidden .btn-show-channels {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+    .channels-section {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 350px;
+      max-width: 85%;
+      padding-top: 10px;
+      background: rgba(10, 18, 32, 0.96);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-left: 1px solid rgba(0, 229, 255, 0.35);
+      box-shadow: -6px 0 25px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      height: 100%;
+      z-index: 50;
+    }
+    .channels-header {
+      display: none !important;
+    }
+    .channel-search-input {
+      display: none !important;
+    }
+    .btn-mini {
+      display: none !important;
+    }
+    .tabs-bar {
+      display: flex;
+      background: rgba(19, 30, 51, 0.95);
+      border-bottom: 1px solid #1E2D44;
+      padding: 6px 8px;
+      gap: 6px;
+      overflow-x: auto;
+      flex-shrink: 0;
+    }
+    .tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: #94A3B8;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+    }
+    .tab-btn.active {
+      background: #00E5FF20;
+      color: #00E5FF;
+      border-color: #00E5FF60;
+    }
+    .channel-list {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 6px 8px;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+      overscroll-behavior-y: contain;
+      cursor: grab;
+      user-select: none;
+      will-change: scroll-position;
+      transform: translateZ(0);
+    }
+    .channel-list:active {
+      cursor: grabbing;
+    }
+    .channel-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: #142036;
+      margin-bottom: 6px;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.05);
+      transition: all 0.15s ease;
+      min-height: 54px;
+      contain: content;
+      transform: translateZ(0);
+    }
+    .channel-item:hover, .channel-item.active {
+      background: #1E3354;
+      border-color: #00E5FF;
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
+    }
+    .channel-logo {
+      width: 42px;
+      height: 42px;
+      min-width: 42px;
+      min-height: 42px;
+      border-radius: 8px;
+      background: #0B1220;
+      border: 1px solid rgba(0, 229, 255, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+      padding: 2px;
+      box-sizing: border-box;
+    }
+    .channel-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain !important;
+      display: block;
+    }
+    .channel-logo span {
+      font-size: 18px;
+    }
+    .channel-meta {
+      flex: 1;
+      min-width: 0;
+    }
+    .channel-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #FFFFFF;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+    .channel-group {
+      font-size: 11px;
+      color: #38BDF8;
+      margin-top: 2px;
+      line-height: 1.1;
+    }
+    /* Unified vertical IPTV media toolbar. Designed to stay legible on
+       both bright daytime video and dark nighttime scenes. */
+    :root {
+      --iptv-toolbar-scale: 1;
+      --iptv-dock-bg: rgba(7, 16, 27, 0.91);
+      --iptv-dock-border: rgba(226, 232, 240, 0.34);
+      --iptv-dock-highlight: rgba(34, 211, 238, 0.22);
+      --iptv-btn-bg: rgba(255, 255, 255, 0.055);
+      --iptv-btn-border: rgba(226, 232, 240, 0.13);
+      --iptv-icon-color: #F8FAFC;
+      --iptv-label-color: #E2E8F0;
+      --iptv-active: #2DD4BF;
+      --iptv-active-bg: rgba(20, 184, 166, 0.24);
+      --iptv-active-border: rgba(45, 212, 191, 0.88);
+      --iptv-shadow: rgba(0, 0, 0, 0.72);
+    }
+    body.iptv-day {
+      --iptv-dock-bg: rgba(8, 18, 30, 0.95);
+      --iptv-dock-border: rgba(255, 255, 255, 0.44);
+      --iptv-btn-bg: rgba(255, 255, 255, 0.075);
+      --iptv-btn-border: rgba(255, 255, 255, 0.18);
+      --iptv-icon-color: #FFFFFF;
+      --iptv-label-color: #F8FAFC;
+      --iptv-shadow: rgba(0, 0, 0, 0.82);
+    }
+    body.iptv-night {
+      --iptv-dock-bg: rgba(5, 13, 23, 0.88);
+      --iptv-dock-border: rgba(148, 163, 184, 0.38);
+      --iptv-btn-bg: rgba(15, 23, 42, 0.56);
+      --iptv-btn-border: rgba(148, 163, 184, 0.20);
+    }
+    .iptv-dock-bar {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%) scale(var(--iptv-toolbar-scale, 1));
+      transform-origin: left center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      width: 72px;
+      background: var(--iptv-dock-bg);
+      backdrop-filter: blur(18px) saturate(1.15);
+      -webkit-backdrop-filter: blur(18px) saturate(1.15);
+      border: 1px solid var(--iptv-dock-border);
+      padding: 7px 5px;
+      border-radius: 20px;
+      z-index: 40;
+      box-shadow:
+        0 9px 28px var(--iptv-shadow),
+        inset 0 1px 0 rgba(255,255,255,0.10),
+        0 0 0 1px rgba(0,0,0,0.26);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      pointer-events: auto;
+    }
+    .main-body.controls-hidden .iptv-dock-bar {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: translateY(-50%) translateX(-16px) scale(var(--iptv-toolbar-scale, 1));
+    }
+    .iptv-btn {
+      position: relative;
+      background: var(--iptv-btn-bg);
+      border: 1px solid var(--iptv-btn-border);
+      color: var(--iptv-icon-color);
+      padding: 6px 4px 5px;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 60px;
+      min-height: 59px;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+      box-sizing: border-box;
+      outline: none;
+      overflow: hidden;
+    }
+    .iptv-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
+    }
+    .iptv-btn:active, .iptv-btn:hover, .iptv-btn.is-active {
+      background: var(--iptv-active-bg);
+      border-color: var(--iptv-active-border);
+      color: var(--iptv-active);
+      box-shadow: 0 0 12px rgba(45, 212, 191, 0.22), inset 0 0 0 1px rgba(45,212,191,0.10);
+    }
+    .iptv-btn:active { transform: scale(0.95); }
+    .iptv-icon {
+      width: 25px;
+      height: 25px;
+      line-height: 1;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: currentColor;
+      filter: drop-shadow(0 1px 1px rgba(0,0,0,0.92));
+    }
+    .iptv-icon svg {
+      width: 25px;
+      height: 25px;
+      display: block;
+      overflow: visible;
+    }
+    .iptv-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.05px;
+      color: var(--iptv-label-color);
+      white-space: nowrap;
+      line-height: 1.05;
+      text-align: center;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.95);
+    }
+    .iptv-btn:hover .iptv-label,
+    .iptv-btn:active .iptv-label,
+    .iptv-btn.is-active .iptv-label { color: #EFFFFD; }
+    #btnIptvPlayPause.is-playing {
+      background: var(--iptv-active-bg);
+      border-color: var(--iptv-active-border);
+      color: var(--iptv-active);
+    }
+    #btnIptvPlayPause .icon-play { display: flex; }
+    #btnIptvPlayPause .icon-pause { display: none; }
+    #btnIptvPlayPause.is-playing .icon-play { display: none; }
+    #btnIptvPlayPause.is-playing .icon-pause { display: flex; }
+
+    /* IPTV quick actions stay out of the main toolbar, preserving the clean
+       5-button layout while keeping channel list/favorite/aspect/reload. */
+    .iptv-quick-menu {
+      position: absolute;
+      left: 88px;
+      top: 50%;
+      transform: translateY(-50%) scale(var(--iptv-toolbar-scale, 1));
+      transform-origin: left center;
+      display: none;
+      width: 142px;
+      padding: 7px;
+      gap: 5px;
+      flex-direction: column;
+      background: var(--iptv-dock-bg);
+      border: 1px solid var(--iptv-dock-border);
+      border-radius: 15px;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: 0 9px 28px var(--iptv-shadow), inset 0 1px 0 rgba(255,255,255,0.08);
+      z-index: 41;
+    }
+    .iptv-quick-menu.open { display: flex; }
+    .iptv-quick-action {
+      min-height: 39px;
+      border-radius: 10px;
+      border: 1px solid var(--iptv-btn-border);
+      background: var(--iptv-btn-bg);
+      color: #F8FAFC;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: left;
+      padding: 0 10px;
+      cursor: pointer;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+    }
+    .iptv-quick-action:active,
+    .iptv-quick-action:hover {
+      color: #DFFFFA;
+      border-color: var(--iptv-active-border);
+      background: var(--iptv-active-bg);
+    }
+    .main-body.controls-hidden .iptv-quick-menu { display: none !important; }
+    .loading-spin {
+      text-align: center;
+      padding: 20px;
+      color: #94A3B8;
+      font-size: 11px;
+    }
+    /* Settings Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+    .modal-box {
+      background: #131E33;
+      border: 1px solid #2B3D58;
+      border-radius: 16px;
+      padding: 16px;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    }
+    .modal-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #00E5FF;
+      margin-bottom: 6px;
+    }
+    .modal-desc {
+      font-size: 11px;
+      color: #94A3B8;
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+    .modal-input {
+      width: 100%;
+      background: #0B111E;
+      border: 1px solid #2B3D58;
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #FFFFFF;
+      font-size: 12px;
+      outline: none;
+      margin-bottom: 14px;
+    }
+    .modal-input:focus { border-color: #00E5FF; }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .btn-modal {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-modal-cancel { background: #1E2D44; color: #FFFFFF; }
+    .btn-modal-default { background: #24354E; color: #FFD54F; }
+    .btn-modal-save { background: #00E5FF; color: #0B111E; }
+
+    /* Small subwindows / cards */
+    @media (max-width: 520px) {
+      .channels-section {
+        width: 170px;
+        min-width: 140px;
+      }
+      .channel-item {
+        padding: 3px 5px;
+        gap: 5px;
+        margin-bottom: 2px;
+      }
+      .channel-logo {
+        width: 20px;
+        height: 20px;
+        min-width: 20px;
+        min-height: 20px;
+      }
+      .channel-name {
+        font-size: 10.5px;
+      }
+      .channel-group {
+        font-size: 8.5px;
+      }
+      .current-title {
+        font-size: 10px;
+        padding: 2px 6px;
+      }
+    }
+
+    /* Portrait phone orientation ONLY */
+    @media (orientation: portrait), (max-width: 600px) and (max-aspect-ratio: 1/1) {
+      .main-body {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        height: 100% !important;
+        position: relative !important;
+        overflow: hidden !important;
+      }
+      .player-section {
+        position: relative !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: auto !important;
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 16 / 9 !important;
+        min-height: 200px !important;
+        max-height: 40vh !important;
+        flex: 0 0 auto !important;
+        z-index: 10 !important;
+        background: #000000 !important;
+      }
+      .video-container {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+      }
+      .channels-section {
+        position: relative !important;
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        flex: 1 1 0% !important;
+        border-left: none !important;
+        border-top: 1px solid #1E2D44 !important;
+        z-index: 5 !important;
+        display: flex !important;
+        box-shadow: none !important;
+      }
+      /* On portrait phone, channels list stays visible unless in fullscreen */
+      .main-body:not(.fullscreen-video):not(.channels-hidden) .channels-section {
+        display: flex !important;
+      }
+      .main-body.channels-hidden .channels-section {
+        display: none !important;
+      }
+      .main-body.fullscreen-video .player-section {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-height: none !important;
+        aspect-ratio: auto !important;
+        z-index: 99 !important;
+      }
+      .main-body.fullscreen-video .channels-section {
+        display: none !important;
+      }
+      .btn-show-channels {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="main-body channels-hidden">
+    <!-- Video Player -->
+    <div class="player-section" id="playerSection">
+      <div class="player-info" id="playerInfo">
+        <div class="current-title" id="currentTitle">Chọn kênh để xem trực tiếp</div>
+        <div class="player-controls-right">
+          <div class="badge-live" id="liveBadge" style="display:none;">● LIVE</div>
+          <button class="btn-fs" id="btnToggleFit" onclick="toggleVideoFit(event)" title="Đổi tỉ lệ (Vừa khung / Tràn viền)">⤢</button>
+          <button class="btn-fs" id="btnToggleFs" onclick="toggleChannels(event)" title="Ẩn/Hiện danh sách kênh">&#x26F6;</button>
+        </div>
+      </div>
+      <div class="btn-show-channels" id="btnShowChannels" onclick="toggleChannels(event)" title="Mở danh sách kênh">
+        <span>📺 Kênh</span>
+      </div>
+      <div class="video-container">
+        <video id="videoPlayer" autoplay playsinline webkit-playsinline></video>
+        <div id="iptvTouchWakeLayer" class="iptv-touch-wake-layer" aria-hidden="true"></div>
+      </div>
+      <!-- Unified Vertical IPTV Floating Media Toolbar -->
+      <div class="iptv-dock-bar" id="iptvDockBar">
+        <button class="iptv-btn" id="btnIptvHome" onclick="goAppHome(event)" title="Trang chủ" aria-label="Trang chủ">
+          <span class="iptv-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 10.8 12 3l9 7.8v9.1a1.1 1.1 0 0 1-1.1 1.1h-5.2v-6.1H9.3V21H4.1A1.1 1.1 0 0 1 3 19.9z"/></svg>
+          </span>
+          <span class="iptv-label">Trang chủ</span>
+        </button>
+        <button class="iptv-btn" id="btnIptvPrev" onclick="prevChannel(event)" title="Kênh trước" aria-label="Lùi kênh">
+          <span class="iptv-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 5h2.2v14H5zM19 5.4v13.2L8.8 12z"/></svg>
+          </span>
+          <span class="iptv-label">Lùi kênh</span>
+        </button>
+        <button class="iptv-btn" id="btnIptvPlayPause" onclick="toggleIptvPlayPause(event)" title="Phát / Dừng" aria-label="Phát hoặc dừng">
+          <span class="iptv-icon icon-play">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4.5v15L19 12z"/></svg>
+          </span>
+          <span class="iptv-icon icon-pause">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.5 5h4v14h-4zM13.5 5h4v14h-4z"/></svg>
+          </span>
+          <span class="iptv-label">Phát / Dừng</span>
+        </button>
+        <button class="iptv-btn" id="btnIptvNext" onclick="nextChannel(event)" title="Kênh sau" aria-label="Tới kênh">
+          <span class="iptv-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.8 5H19v14h-2.2zM5 5.4 15.2 12 5 18.6z"/></svg>
+          </span>
+          <span class="iptv-label">Tới kênh</span>
+        </button>
+        <button class="iptv-btn" id="btnIptvSettings" onclick="toggleIptvQuickSettings(event)" title="Cài đặt" aria-label="Cài đặt IPTV">
+          <span class="iptv-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m19.4 13 .1-1-.1-1 2-1.5-2-3.4-2.4 1a7 7 0 0 0-1.7-1L15 3.5h-4L10.6 6a7 7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.5-.1 1 .1 1-2 1.5 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.4zM13 15.4A3.4 3.4 0 1 1 13 8.6a3.4 3.4 0 0 1 0 6.8"/></svg>
+          </span>
+          <span class="iptv-label">Cài đặt</span>
+        </button>
+      </div>
+      <div class="iptv-quick-menu" id="iptvQuickMenu" aria-hidden="true">
+        <button class="iptv-quick-action" onclick="quickOpenChannels(event)">📺 Danh sách kênh</button>
+        <button class="iptv-quick-action" id="btnFavCurrent" onclick="quickToggleFavorite(event)">★ Yêu thích kênh</button>
+        <button class="iptv-quick-action" onclick="quickToggleFit(event)">⤢ Tỉ lệ hình</button>
+        <button class="iptv-quick-action" onclick="quickReloadChannels(event)">↻ Tải lại nguồn</button>
+        <button class="iptv-quick-action" id="btnConfirmFit" style="display:none" onclick="confirmQuickFit(event)">✓ OK</button>
+      </div>
+    </div>
+
+    <!-- Channels / Matches List -->
+    <div class="channels-section">
+      <div class="channels-header">
+        <input type="text" class="channel-search-input" id="searchInput" placeholder="&#128269; T&#236;m tr&#7853;n, k&#234;nh TV..." oninput="filterChannels()">
+        <button class="btn-mini" onclick="scrollChannelPage(-1)" title="Cu&#7897;n L&#234;n">&#9650;</button>
+        <button class="btn-mini" onclick="scrollChannelPage(1)" title="Cu&#7897;n Xu&#7889;ng">&#9660;</button>
+        <button class="btn-mini" onclick="reloadChannels()" title="L&#224;m m&#7899;i">&#8635;</button>
+        <button class="btn-mini btn-mini-settings" onclick="openIptvModal()" title="C&#224;i &#273;&#7863;t Link">&#9881;</button>
+      </div>
+      <div class="tabs-bar" id="tabsBar">
+        <button class="tab-btn active" onclick="switchTab('all', this)">T&#7845;t c&#7843;</button>
+        <button class="tab-btn" onclick="switchTab('tv', this)">&#128250; Truy&#7873;n H&#236;nh</button>
+      </div>
+      <div class="channel-list" id="channelList">
+        <div class="loading-spin">&#8987; &#272;ang t&#7843;i l&#7883;ch b&#243;ng &#273;&#225; &amp; k&#234;nh truy&#7873;n h&#236;nh...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal for IPTV link -->
+  <div class="modal-overlay" id="iptvModal">
+    <div class="modal-box">
+      <div class="modal-title">&#9881; C&#224;i &#273;&#7863;t ngu&#7891;n k&#234;nh IPTV (M3U)</div>
+      <div class="modal-desc">Nhập link danh sách kênh M3U hoặc chọn file .m3u từ bộ nhớ máy:</div>
+      <input type="text" class="modal-input" id="iptvUrlInput" placeholder="Nhập đường dẫn m3u...">
+      <div style="margin: 8px 0; text-align: center;">
+        <input type="file" id="localM3uFile" accept=".m3u,.m3u8,text/*" style="display:none" onchange="handleM3uFileSelected(event)">
+        <button type="button" class="btn-modal" style="background:#0284C7;color:#fff;width:100%;padding:10px;border-radius:10px;border:none;font-weight:bold;cursor:pointer;font-size:13px;" onclick="document.getElementById('localM3uFile').click()">📁 Chọn file .M3U từ thiết bị</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal btn-modal-cancel" onclick="closeIptvModal()">Đóng</button>
+        <button class="btn-modal btn-modal-default" onclick="resetDefaultIptv()">Mặc định</button>
+        <button class="btn-modal btn-modal-save" onclick="saveIptvUrl()">Lưu &amp; Tải lại</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 1. Spoof Page Visibility & Focus so IPTV background playback NEVER pauses
+    try {
+      Object.defineProperty(document, 'hidden', { get: function() { return false; }, configurable: true });
+      Object.defineProperty(document, 'visibilityState', { get: function() { return 'visible'; }, configurable: true });
+      Object.defineProperty(document, 'webkitVisibilityState', { get: function() { return 'visible'; }, configurable: true });
+      document.hasFocus = function() { return true; };
+      var killEvt = function(e) { e.stopImmediatePropagation(); };
+      window.addEventListener('blur', killEvt, true);
+      window.addEventListener('visibilitychange', killEvt, true);
+      document.addEventListener('visibilitychange', killEvt, true);
+      window.addEventListener('webkitvisibilitychange', killEvt, true);
+      document.addEventListener('webkitvisibilitychange', killEvt, true);
+      window.addEventListener('pagehide', killEvt, true);
+
+    } catch(e) {}
+
+    let allChannels = [];
+    let activeTab = 'all';
+    let hlsInstance = null;
+    const DEFAULT_URL = 'https://raw.githubusercontent.com/khanh71/All-In-One-IPTV/main/http-iptv.m3u';
+    const video = document.getElementById('videoPlayer');
+    const titleEl = document.getElementById('currentTitle');
+    const liveBadge = document.getElementById('liveBadge');
+    const modalEl = document.getElementById('iptvModal');
+    const urlInput = document.getElementById('iptvUrlInput');
+
+    let autoHideTimer = null;
+    const AUTO_HIDE_DELAY = 10000; // 10s auto-hide
+
+    window.setIptvToolbarScale = function(percent) {
+      const n = Math.max(50, Math.min(150, Number(percent) || 100));
+      document.documentElement.style.setProperty('--iptv-toolbar-scale', String(n / 100));
+      try { localStorage.setItem('iptv_toolbar_scale', String(n)); } catch(e) {}
+    };
+    try {
+      const savedToolbarScale = Number(localStorage.getItem('iptv_toolbar_scale') || 100);
+      window.setIptvToolbarScale(savedToolbarScale);
+    } catch(e) {}
+
+    window.setIptvTheme = function(isDay) {
+      try {
+        document.body.classList.toggle('iptv-day', !!isDay);
+        document.body.classList.toggle('iptv-night', !isDay);
+      } catch(e) {}
+    };
+    try {
+      window.setIptvTheme(!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches));
+    } catch(e) { window.setIptvTheme(false); }
+
+    function closeIptvQuickSettings() {
+      const menu = document.getElementById('iptvQuickMenu');
+      const btn = document.getElementById('btnIptvSettings');
+      if (menu) { menu.classList.remove('open'); menu.setAttribute('aria-hidden', 'true'); }
+      if (btn) btn.classList.remove('is-active');
+      const confirm = document.getElementById('btnConfirmFit');
+      if (confirm) confirm.style.display = 'none';
+    }
+
+    function toggleIptvQuickSettings(e) {
+      if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+      const menu = document.getElementById('iptvQuickMenu');
+      const btn = document.getElementById('btnIptvSettings');
+      if (!menu) return;
+      const opening = !menu.classList.contains('open');
+      closeIptvQuickSettings();
+      if (opening) {
+        menu.classList.add('open');
+        menu.setAttribute('aria-hidden', 'false');
+        if (btn) btn.classList.add('is-active');
+        showControlsOnly();
+      }
+      resetAutoHideTimer();
+    }
+
+    function quickOpenChannels(e) { closeIptvQuickSettings(); toggleChannels(e); }
+    function quickToggleFavorite(e) { closeIptvQuickSettings(); toggleFavCurrent(e); }
+    function quickToggleFit(e) {
+      // Cycle and preview the ratio without closing the settings panel.
+      if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+      const menu = document.getElementById('iptvQuickMenu');
+      if (menu) { menu.classList.add('open'); menu.setAttribute('aria-hidden', 'false'); }
+      showControlsOnly();
+      toggleVideoFit(e);
+      const confirm = document.getElementById('btnConfirmFit');
+      if (confirm) {
+        confirm.style.display = 'block';
+        const labels = { fill: 'Tràn viền', contain: 'Vừa khung', cover: 'Phóng to', '4:3': '4:3', '21:9': '21:9' };
+        confirm.textContent = '✓ OK · ' + (labels[currentFitMode] || currentFitMode);
+      }
+    }
+    function confirmQuickFit(e) {
+      if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+      closeIptvQuickSettings();
+      resetAutoHideTimer();
+    }
+    function dismissQuickSettingsOutside(e) {
+      const menu = document.getElementById('iptvQuickMenu');
+      if (!menu || !menu.classList.contains('open')) return;
+      if (e.target.closest('#iptvQuickMenu, #btnIptvSettings')) return;
+      closeIptvQuickSettings();
+      resetAutoHideTimer();
+    }
+    document.addEventListener('pointerdown', dismissQuickSettingsOutside, true);
+    document.addEventListener('touchstart', dismissQuickSettingsOutside, { capture: true, passive: true });
+    function quickReloadChannels(e) {
+      if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+      closeIptvQuickSettings();
+      reloadChannels();
+      showControlsOnly();
+      resetAutoHideTimer();
+    }
+
+    function updateIptvPlayPauseButton() {
+      const btn = document.getElementById('btnIptvPlayPause');
+      if (!btn || !video) return;
+      const playing = !window.__iptvUserPaused && !video.ended;
+      btn.classList.toggle('is-playing', playing);
+      btn.setAttribute('aria-pressed', playing ? 'true' : 'false');
+      btn.title = playing ? 'Dừng phát' : 'Tiếp tục phát';
+    }
+
+    let iptvPlayPending = false;
+    let lastIptvToggleAt = 0;
+    let iptvPlaybackGeneration = 0;
+    window.setIptvPlaying = function(playing) {
+      window.userPaused = !playing;
+      window.__iptvUserPaused = !playing;
+      updateIptvPlayPauseButton();
+      if (!video) return;
+      if (!playing) {
+        video.pause();
+        reportIptvPlayback(false);
+        return;
+      }
+      requestIptvPlay();
+    };
+    function requestIptvPlay() {
+      if (!video || window.__iptvUserPaused || iptvPlayPending) return;
+      const generation = iptvPlaybackGeneration;
+      iptvPlayPending = true;
+      const attempt = video.play();
+      if (attempt && typeof attempt.then === 'function') {
+        attempt.catch(() => {
+          // Wait for a new user action or HLS recovery; never retry in a loop.
+        }).finally(() => {
+          if (generation === iptvPlaybackGeneration) iptvPlayPending = false;
+        });
+      } else iptvPlayPending = false;
+    }
+    function toggleIptvPlayPause(e) {
+      if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+      const now = Date.now();
+      if (now - lastIptvToggleAt < 350) return;
+      lastIptvToggleAt = now;
+      closeIptvQuickSettings();
+      window.setIptvPlaying(!!window.__iptvUserPaused);
+      showControlsOnly();
+      resetAutoHideTimer();
+    }
+    function goAppHome(e) {
+      if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+      // Native WebViewClient intercepts this intent URL and returns to dashboard.
+      window.location.href = 'intent:home';
+    }
+
+    function resetAutoHideTimer() {
+      if (autoHideTimer) {
+        clearTimeout(autoHideTimer);
+        autoHideTimer = null;
+      }
+      // Dashboard mode must stay clean; standalone IPTV gets a 10s idle timer.
+      if (window.isDashboardMode) {
+        hideChannelsAndControls();
+        return;
+      }
+      const quickMenu = document.getElementById('iptvQuickMenu');
+      if (quickMenu && quickMenu.classList.contains('open')) return;
+      autoHideTimer = setTimeout(() => {
+        if (modalEl && modalEl.style.display === 'flex') {
+          resetAutoHideTimer();
+          return;
+        }
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput && document.activeElement === searchInput) {
+          resetAutoHideTimer();
+          return;
+        }
+        hideChannelsAndControls();
+      }, AUTO_HIDE_DELAY);
+    }
+
+    function hideChannelsAndControls() {
+      // A playback/native aspect update must not dismiss an active selection.
+      const menu = document.getElementById('iptvQuickMenu');
+      if (!window.isDashboardMode && menu && menu.classList.contains('open')) {
+        showControlsOnly();
+        return;
+      }
+      closeIptvQuickSettings();
+      const body = document.querySelector('.main-body');
+      if (!body) return;
+      body.classList.add('channels-hidden');
+      body.classList.add('controls-hidden');
+      const btn = document.getElementById('btnToggleFs');
+      if (btn) btn.innerHTML = '&#x26F6;'; // ⛶
+    }
+
+
+    function showControlsOnly() {
+      const body = document.querySelector('.main-body');
+      if (!body) return;
+      body.classList.add('channels-hidden');
+      body.classList.remove('controls-hidden');
+      body.classList.remove('fullscreen-video');
+      const btn = document.getElementById('btnToggleFs');
+      if (btn) btn.innerHTML = '&#x26F6;';
+    }
+    function showChannelsAndControls() {
+      closeIptvQuickSettings();
+      const body = document.querySelector('.main-body');
+      if (!body) return;
+      body.classList.remove('channels-hidden');
+      body.classList.remove('controls-hidden');
+      body.classList.remove('fullscreen-video');
+      const btn = document.getElementById('btnToggleFs');
+      if (btn) btn.innerHTML = '&#10005;'; // ✕
+    }
+
+    function toggleChannels(e) {
+      if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+      const body = document.querySelector('.main-body');
+      if (!body) return;
+      if (body.classList.contains('channels-hidden')) {
+        showChannelsAndControls();
+      } else {
+        showControlsOnly();
+      }
+      resetAutoHideTimer();
+    }
+
+    function showToast(msg) {
+      let toast = document.getElementById('iptvToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'iptvToast';
+        toast.style.cssText = 'position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#00E5FF;padding:5px 14px;border-radius:14px;font-size:11px;font-weight:600;pointer-events:none;z-index:100;transition:opacity 0.25s ease;border:1px solid rgba(0,229,255,0.35);backdrop-filter:blur(6px);box-shadow:0 4px 12px rgba(0,0,0,0.6);';
+        const ps = document.getElementById('playerSection') || document.body;
+        ps.appendChild(toast);
+      }
+      toast.textContent = msg;
+      toast.style.opacity = '1';
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+    }
+
+    const FIT_MODES = ['fill', 'contain', 'cover', '4:3', '21:9'];
+    let currentFitMode = localStorage.getItem('iptv_fit_mode') || 'fill';
+
+    function applyFitMode(mode) {
+      currentFitMode = mode;
+      localStorage.setItem('iptv_fit_mode', mode);
+      const v = document.getElementById('videoPlayer');
+      const btn = document.getElementById('btnToggleFit');
+      if (!v) return;
+      v.classList.remove('fit-contain', 'fit-cover', 'fit-fill', 'fit-4-3', 'fit-21-9');
+      if (mode === '4:3') {
+        v.classList.add('fit-4-3');
+      } else if (mode === '21:9') {
+        v.classList.add('fit-21-9');
+      } else {
+        v.classList.add('fit-' + mode);
+      }
+      if (btn) {
+        if (mode === 'fill') {
+          btn.style.color = '#00E5FF';
+          btn.title = 'Tràn viền (Toàn bộ màn hình, không viền đen)';
+        } else if (mode === 'contain') {
+          btn.style.color = '#94A3B8';
+          btn.title = 'Vừa khung (Tỷ lệ 16:9 chuẩn, có viền đen)';
+        } else if (mode === 'cover') {
+          btn.style.color = '#FFD54F';
+          btn.title = 'Phóng to (Cắt mép - Zoom)';
+        } else if (mode === '4:3') {
+          btn.style.color = '#A78BFA';
+          btn.title = 'Tỷ lệ 4:3 (Truyền hình cổ điển)';
+        } else if (mode === '21:9') {
+          btn.style.color = '#34D399';
+          btn.title = 'Tỷ lệ 21:9 (Màn hình siêu rộng)';
+        }
+      }
+    }
+
+    function toggleVideoFit(e) {
+      if (e) e.stopPropagation();
+      const nextIdx = (FIT_MODES.indexOf(currentFitMode) + 1) % FIT_MODES.length;
+      const nextMode = FIT_MODES[nextIdx];
+      applyFitMode(nextMode);
+      if (nextMode === 'fill') {
+        showToast('📺 Tràn viền (Toàn màn hình, không viền đen)');
+      } else if (nextMode === 'contain') {
+        showToast('📺 Vừa khung (Tỷ lệ 16:9 gốc)');
+      } else if (nextMode === 'cover') {
+        showToast('📺 Phóng to (Cắt mép - Zoom)');
+      } else if (nextMode === '4:3') {
+        showToast('📺 Tỷ lệ 4:3 (Truyền hình cổ điển)');
+      } else if (nextMode === '21:9') {
+        showToast('📺 Tỷ lệ 21:9 (Màn hình siêu rộng)');
+      }
+      resetAutoHideTimer();
+    }
+
+    function initVideoFit() {
+      applyFitMode(currentFitMode);
+    }
+
+    window.userPaused = false;
+    window.__iptvUserPaused = false;
+    window.setUserPaused = function(val) {
+      window.userPaused = !!val;
+      window.__iptvUserPaused = !!val;
+      updateIptvPlayPauseButton();
+    };
+
+    let lastIptvReportedState = null;
+    function reportIptvPlayback(playing) {
+      if (lastIptvReportedState === playing) return;
+      lastIptvReportedState = playing;
+      if (window.AndroidVoice && typeof window.AndroidVoice.onPlaybackStateChanged === 'function') {
+        try { window.AndroidVoice.onPlaybackStateChanged(playing); } catch(e) {}
+      }
+    }
+    if (video) {
+      video.addEventListener('playing', () => {
+        if (window.__iptvUserPaused) { video.pause(); return; }
+        updateIptvPlayPauseButton();
+        reportIptvPlayback(true);
+      });
+      video.addEventListener('pause', () => {
+        updateIptvPlayPauseButton();
+        if (window.__iptvUserPaused) reportIptvPlayback(false);
+        // A source change/decoder recovery is not a user pause and must not
+        // launch a competing play() while HLS attaches the new source.
+      });
+    }
+    let lastTapTime = 0;
+    const playerSection = document.getElementById('playerSection');
+    const touchWakeLayer = document.getElementById('iptvTouchWakeLayer');
+
+    function wakeIptvControlsFromTouch() {
+      const body = document.querySelector('.main-body');
+      if (!body) return;
+      // Never force the channel panel open from a simple screen tap.
+      // Only reveal the left toolbar and restart the 10-second timer.
+      showControlsOnly();
+      resetAutoHideTimer();
+    }
+
+    if (touchWakeLayer) {
+      // pointerdown is the most reliable path on recent Android/WebView;
+      // touchstart is kept for head units that do not dispatch PointerEvent.
+      touchWakeLayer.addEventListener('pointerdown', wakeIptvControlsFromTouch, { passive: true });
+      touchWakeLayer.addEventListener('touchstart', wakeIptvControlsFromTouch, { passive: true });
+    }
+    if (playerSection) {
+      playerSection.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-fs') || e.target.closest('#btnShowChannels') || e.target.closest('.badge-live') || e.target.closest('.iptv-dock-bar') || e.target.closest('#iptvQuickMenu')) {
+          return;
+        }
+        const now = Date.now();
+        if (now - lastTapTime < 350) {
+          toggleVideoFit(e);
+          lastTapTime = 0;
+          return;
+        }
+        lastTapTime = now;
+
+        // Touching the video always reveals the toolbar. If the channel panel
+        // is open, close only the panel and keep the toolbar visible.
+        showControlsOnly();
+        resetAutoHideTimer();
+      });
+
+      // Some Android Auto head units deliver touchstart without a reliable click.
+      playerSection.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.iptv-dock-bar') || e.target.closest('.channels-section') || e.target.closest('#iptvQuickMenu')) return;
+        const body = document.querySelector('.main-body');
+        if (body && body.classList.contains('controls-hidden')) {
+          showControlsOnly();
+          resetAutoHideTimer();
+        }
+      }, { passive: true });
+    }
+
+    function handleVideoAspectRatio(mode) {
+      if (mode === 'split' || mode === 'channels') {
+        showControlsOnly();
+        applyFitMode('fill');
+        showToast('📺 Danh sách kênh mở bằng nút Kênh TV');
+        return;
+      }
+
+      hideChannelsAndControls();
+      applyFitMode(mode);
+
+      if (mode === 'fill') {
+        showToast('📺 Toàn màn hình (Tràn viền 100%)');
+      } else if (mode === 'contain') {
+        showToast('📺 Toàn màn hình (Chuẩn 16:9)');
+      } else if (mode === 'cover') {
+        showToast('📺 Toàn màn hình (Phóng to Zoom)');
+      } else if (mode === '4:3') {
+        showToast('📺 Tỷ lệ 4:3 (Cổ điển)');
+      } else if (mode === '21:9') {
+        showToast('📺 Tỷ lệ 21:9 (Siêu rộng)');
+      }
+    }
+
+    window.toggleChannels = toggleChannels;
+    window.toggleVideoFit = toggleVideoFit;
+    window.setFitMode = handleVideoAspectRatio;
+    window.setVideoAspectRatio = handleVideoAspectRatio;
+    window.hideChannelsAndControls = hideChannelsAndControls;
+    window.showChannelsAndControls = showChannelsAndControls;
+
+    const channelsSection = document.querySelector('.channels-section');
+    if (channelsSection) {
+      ['click', 'touchstart', 'scroll', 'input', 'keydown'].forEach(evt => {
+        channelsSection.addEventListener(evt, () => {
+          resetAutoHideTimer();
+        }, { passive: true });
+      });
+    }
+
+    const iptvDockBar = document.getElementById('iptvDockBar');
+    if (iptvDockBar) {
+      ['click', 'touchstart'].forEach(evt => {
+        iptvDockBar.addEventListener(evt, () => resetAutoHideTimer(), { passive: true });
+      });
+    }
+
+    let flingAnim = null;
+
+    function scrollChannelPage(direction) {
+      const listEl = document.getElementById('channelList');
+      if (!listEl) return;
+      if (flingAnim) { cancelAnimationFrame(flingAnim); flingAnim = null; }
+      const amount = direction * 220;
+      listEl.scrollBy({ top: amount, behavior: 'smooth' });
+      resetAutoHideTimer();
+    }
+
+    window.scrollChannelList = function(deltaY) {
+      const listEl = document.getElementById('channelList');
+      if (!listEl) return;
+      if (flingAnim) { cancelAnimationFrame(flingAnim); flingAnim = null; }
+      listEl.scrollTop += deltaY;
+    };
+
+    window.flingChannelList = function(vy) {
+      const listEl = document.getElementById('channelList');
+      if (!listEl) return;
+      if (flingAnim) {
+        cancelAnimationFrame(flingAnim);
+        flingAnim = null;
+      }
+      let v = Math.max(Math.min(vy, 65), -65);
+      function step() {
+        if (Math.abs(v) < 0.35) {
+          flingAnim = null;
+          return;
+        }
+        listEl.scrollTop += v;
+        v *= 0.94;
+        flingAnim = requestAnimationFrame(step);
+      }
+      flingAnim = requestAnimationFrame(step);
+    };
+
+    function setupChannelListDragScroll() {
+      const listEl = document.getElementById('channelList');
+      if (!listEl) return;
+
+      let isDown = false;
+      let startY = 0;
+      let lastY = 0;
+      let lastTime = 0;
+      let velocityY = 0;
+      let hasMoved = false;
+
+      function onDown(y) {
+        if (flingAnim) { cancelAnimationFrame(flingAnim); flingAnim = null; }
+        isDown = true;
+        hasMoved = false;
+        startY = y;
+        lastY = y;
+        lastTime = performance.now();
+        velocityY = 0;
+      }
+
+      function onMove(y) {
+        if (!isDown) return;
+        const diff = y - lastY;
+        const now = performance.now();
+        const dt = Math.max(now - lastTime, 1);
+
+        if (Math.abs(y - startY) > 6) {
+          hasMoved = true;
+        }
+
+        if (hasMoved) {
+          listEl.scrollTop -= diff;
+          velocityY = -diff / (dt / 16.6);
+        }
+
+        lastY = y;
+        lastTime = now;
+      }
+
+      function onUp() {
+        if (!isDown) return;
+        isDown = false;
+        if (hasMoved && Math.abs(velocityY) > 0.8) {
+          window.flingChannelList(velocityY * 1.1);
+        }
+        setTimeout(() => { hasMoved = false; }, 120);
+      }
+
+      // Pointer / mouse drag events (for mouse/trackpad in DHU or desktop)
+      listEl.addEventListener('mousedown', (e) => {
+        if (e.button === 0) onDown(e.clientY);
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (isDown) onMove(e.clientY);
+      });
+      window.addEventListener('mouseup', onUp);
+
+      // Prevent accidental click when dragging
+      listEl.addEventListener('click', (e) => {
+        if (hasMoved) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+      }, true);
+    }
+
+    function getM3uUrl() {
+      if (window.AndroidIptv && window.AndroidIptv.getCustomUrl) {
+        return window.AndroidIptv.getCustomUrl() || DEFAULT_URL;
+      }
+      return localStorage.getItem('custom_iptv_url') || DEFAULT_URL;
+    }
+
+    function init() {
+      initVideoFit();
+      hideChannelsAndControls();
+      setupChannelListDragScroll();
+      urlInput.value = getM3uUrl();
+      if (window.AndroidIptv && window.AndroidIptv.getChannelsJson) {
+        try {
+          const jsonStr = window.AndroidIptv.getChannelsJson();
+          if (jsonStr) {
+            allChannels = JSON.parse(jsonStr);
+            if (allChannels && allChannels.length > 0) {
+              buildDynamicTabs();
+              renderChannels();
+              return;
+            }
+          }
+        } catch(e) {
+          console.error('Error parsing initial channels JSON', e);
+        }
+      }
+      reloadChannels();
+    }
+
+    function parseM3u(content) {
+      const lines = content.split('\n');
+      allChannels = [];
+      let curName = '', curLogo = '', curGroup = 'Truyền Hình', id = 0;
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
+        if (line.startsWith('#EXTINF:')) {
+          const logoM = line.match(/tvg-logo="([^"]+)"/);
+          curLogo = logoM ? logoM[1] : '';
+          const groupM = line.match(/group-title="([^"]+)"/);
+          curGroup = groupM ? groupM[1].trim() : 'Truyền Hình';
+          const comma = line.lastIndexOf(',');
+          curName = comma !== -1 ? line.substring(comma + 1).trim() : 'Kênh ' + (++id);
+        } else if (line.length > 0 && !line.startsWith('#')) {
+          if (!curLogo.includes('info_card.php') && !line.endsWith('.jpg') && !line.endsWith('.png')) {
+            allChannels.push({
+              id: 'ch_' + (++id),
+              name: curName,
+              logoUrl: curLogo,
+              groupTitle: curGroup,
+              streamUrl: line
+            });
+          }
+        }
+      }
+    }
+
+    function buildDynamicTabs() {
+      const tabsBar = document.getElementById('tabsBar');
+      if (!tabsBar) return;
+      tabsBar.innerHTML = '';
+
+      const allBtn = document.createElement('button');
+      allBtn.className = 'tab-btn' + (activeTab === 'all' ? ' active' : '');
+      allBtn.textContent = 'Tất cả';
+      allBtn.onclick = () => switchTab('all', allBtn);
+      tabsBar.appendChild(allBtn);
+
+      const groups = new Set();
+      allChannels.forEach(ch => {
+        if (ch.groupTitle && ch.groupTitle.trim()) {
+          groups.add(ch.groupTitle.trim());
+        }
+      });
+
+      if (groups.size === 0) {
+        const tvBtn = document.createElement('button');
+        tvBtn.className = 'tab-btn' + (activeTab === 'tv' ? ' active' : '');
+        tvBtn.textContent = '📺 Truyền Hình';
+        tvBtn.onclick = () => switchTab('tv', tvBtn);
+        tabsBar.appendChild(tvBtn);
+      } else {
+        groups.forEach(grp => {
+          if (grp.toLowerCase().includes('bóng đá')) return;
+          const grpBtn = document.createElement('button');
+          grpBtn.className = 'tab-btn' + (activeTab === grp ? ' active' : '');
+          const prefix = (grp.toLowerCase().includes('thể thao') || grp.toLowerCase().includes('sport')) ? '⚽ ' : '📺 ';
+          grpBtn.textContent = prefix + grp;
+          grpBtn.onclick = () => switchTab(grp, grpBtn);
+          tabsBar.appendChild(grpBtn);
+        });
+      }
+    }
+
+    function switchTab(tab, btn) {
+      activeTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      renderChannels();
+    }
+
+    function filterChannels() {
+      renderChannels();
+    }
+
+    function renderChannels() {
+      const q = document.getElementById('searchInput').value.toLowerCase().trim();
+      const listEl = document.getElementById('channelList');
+      listEl.innerHTML = '';
+
+      const filtered = allChannels.filter(ch => {
+        const matchesQuery = !q || ch.name.toLowerCase().includes(q) || (ch.groupTitle && ch.groupTitle.toLowerCase().includes(q));
+        if (!matchesQuery) return false;
+        if (activeTab === 'all') return true;
+        if (activeTab === 'tv') {
+          return !ch.name.toLowerCase().includes('vs');
+        }
+        return ch.groupTitle === activeTab;
+      });
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = '<div class="loading-spin">Không tìm thấy kênh nào phù hợp</div>';
+        return;
+      }
+
+      filtered.forEach(ch => {
+        const item = document.createElement('div');
+        item.className = 'channel-item';
+        const isSport = (ch.groupTitle && (ch.groupTitle.toLowerCase().includes('thể thao') || ch.groupTitle.toLowerCase().includes('sport'))) || ch.name.toLowerCase().includes('sport') || ch.name.toLowerCase().includes('vs');
+        const icon = isSport ? '⚽' : '📺';
+        const logoHtml = ch.logoUrl ? `<img src="${ch.logoUrl}" onerror="this.outerHTML='<span>${icon}</span>'">` : `<span>${icon}</span>`;
+
+        item.innerHTML = `
+          <div class="channel-logo">${logoHtml}</div>
+          <div class="channel-meta">
+            <div class="channel-name">${ch.name}</div>
+            <div class="channel-group">${ch.groupTitle || 'Truyền Hình'}</div>
+          </div>
+        `;
+        const handleSelect = (e) => {
+          if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+          playStream(ch, item);
+        };
+        item.onclick = handleSelect;
+        listEl.appendChild(item);
+      });
+
+      if (!video.src && filtered.length > 0) {
+        if (!checkPendingVoiceChannel()) {
+          try {
+            const lastChan = localStorage.getItem('iptv_last_channel_name');
+            if (lastChan && window.playChannelByName(lastChan)) {
+              console.log('[IPTV] Auto-resumed last played channel: ' + lastChan);
+            } else {
+              playStream(filtered[0], listEl.children[0]);
+            }
+          } catch(e) {
+            playStream(filtered[0], listEl.children[0]);
+          }
+        }
+      }
+    }
+
+    function checkPendingVoiceChannel() {
+      try {
+        const hash = window.location.hash || '';
+        const search = window.location.search || '';
+        let target = '';
+        if (hash.includes('channel=')) {
+          target = decodeURIComponent(hash.split('channel=')[1].split('&')[0]);
+        } else if (search.includes('channel=')) {
+          target = decodeURIComponent(search.split('channel=')[1].split('&')[0]);
+        }
+        if (target && window.playChannelByName) {
+          return window.playChannelByName(target);
+        }
+      } catch(e) {}
+      return false;
+    }
+
+    window.playChannelByName = function(targetName) {
+      if (!targetName || !allChannels || allChannels.length === 0) return false;
+      const clean = targetName.toLowerCase().replace(/\s+/g, '');
+      
+      // 1. Exact match (e.g. "vtv1" === "vtv1")
+      let match = allChannels.find(ch => ch.name.toLowerCase().replace(/\s+/g, '') === clean);
+      
+      // 2. StartsWith match (e.g. "vtv1" matches "VTV1 HD")
+      if (!match) {
+        match = allChannels.find(ch => ch.name.toLowerCase().replace(/\s+/g, '').startsWith(clean));
+      }
+      
+      // 3. Contains match
+      if (!match) {
+        match = allChannels.find(ch => ch.name.toLowerCase().replace(/\s+/g, '').includes(clean));
+      }
+
+      if (match) {
+        let matchedEl = null;
+        const items = document.querySelectorAll('.channel-item');
+        for (let it of items) {
+          if (it.textContent.toLowerCase().replace(/\s+/g, '').includes(clean)) {
+            matchedEl = it;
+            break;
+          }
+        }
+        playStream(match, matchedEl);
+        return true;
+      }
+      return false;
+    };
+
+    window.playChannelByUrl = function(streamUrl, channelName) {
+      if (!streamUrl) return false;
+      let match = allChannels ? allChannels.find(ch => ch.streamUrl === streamUrl) : null;
+      if (!match && channelName && allChannels) {
+        match = allChannels.find(ch => ch.name.toLowerCase() === channelName.toLowerCase());
+      }
+      if (!match) {
+        match = {
+          name: channelName || 'Truyền hình',
+          streamUrl: streamUrl,
+          groupTitle: 'Truyền Hình',
+          logoUrl: ''
+        };
+      }
+      playStream(match, null);
+      return true;
+    };
+
+    window.selectChannelById = function(channelId) {
+      if (!channelId || !allChannels || allChannels.length === 0) return false;
+      const cleanId = channelId.toLowerCase().replace(/\s+/g, '');
+      let match = allChannels.find(ch => (ch.id && ch.id.toLowerCase().replace(/\s+/g, '') === cleanId) || ch.name.toLowerCase().replace(/\s+/g, '') === cleanId);
+      if (!match) {
+        match = allChannels.find(ch => (ch.id && ch.id.toLowerCase().includes(cleanId)) || ch.name.toLowerCase().includes(cleanId));
+      }
+      if (match) {
+        playStream(match, null);
+        return true;
+      }
+      return false;
+    };
+
+    let currentChannelIndex = 0;
+
+    function nextChannel(e) {
+      if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+      if (!allChannels || allChannels.length === 0) return;
+      currentChannelIndex = (currentChannelIndex + 1) % allChannels.length;
+      const channel = allChannels[currentChannelIndex];
+      const items = document.querySelectorAll('.channel-item');
+      const el = items[currentChannelIndex] || null;
+      playStream(channel, el);
+    }
+
+    function prevChannel(e) {
+      if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+      if (!allChannels || allChannels.length === 0) return;
+      currentChannelIndex = (currentChannelIndex - 1 + allChannels.length) % allChannels.length;
+      const channel = allChannels[currentChannelIndex];
+      const items = document.querySelectorAll('.channel-item');
+      const el = items[currentChannelIndex] || null;
+      playStream(channel, el);
+    }
+
+    function reloadCurrentChannel(e) {
+      if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+      if (currentChannelIndex >= 0 && allChannels[currentChannelIndex]) {
+        playStream(allChannels[currentChannelIndex], null);
+        showToast('🔄 Đã tải lại luồng kênh');
+      } else {
+        reloadChannels();
+      }
+    }
+
+    function toggleFavCurrent(e) {
+      if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+      if (currentChannelIndex >= 0 && allChannels[currentChannelIndex]) {
+        const ch = allChannels[currentChannelIndex];
+        showToast('⭐ Đã lưu kênh: ' + ch.name);
+      }
+    }
+
+    window.nextChannel = nextChannel;
+    window.prevChannel = prevChannel;
+    window.reloadCurrentChannel = reloadCurrentChannel;
+    window.toggleFavCurrent = toggleFavCurrent;
+
+    function playStream(channel, el) {
+      if (!channel) return;
+      iptvPlaybackGeneration++;
+      iptvPlayPending = false;
+      window.userPaused = false;
+      window.__iptvUserPaused = false;
+      updateIptvPlayPauseButton();
+      const idx = allChannels.indexOf(channel);
+      if (idx >= 0) {
+        currentChannelIndex = idx;
+      }
+
+      try {
+        if (channel.name) {
+          localStorage.setItem('iptv_last_channel_name', channel.name);
+        }
+      } catch(e) {}
+
+      document.querySelectorAll('.channel-item').forEach(i => i.classList.remove('active'));
+      if (el) el.classList.add('active');
+
+      titleEl.textContent = channel.name;
+      liveBadge.style.display = 'inline-flex';
+
+      showToast('📺 Đang phát: ' + channel.name);
+
+      if (!window.isDashboardMode) {
+        showControlsOnly();
+        resetAutoHideTimer();
+      } else {
+        hideChannelsAndControls();
+      }
+
+      try {
+        if (window.AndroidVoice && window.AndroidVoice.onTrackChanged) {
+          window.AndroidVoice.onTrackChanged(channel.name, channel.groupTitle || 'Truyền Hình', channel.logoUrl || '');
+        }
+      } catch(e) {}
+
+      const url = channel.streamUrl;
+      if (!url) return;
+      if (hlsInstance) {
+        try { hlsInstance.destroy(); } catch(e) {}
+        hlsInstance = null;
+      }
+
+      try {
+        if (window.AndroidVoice && window.AndroidVoice.onUserSelectedVideo) {
+          window.AndroidVoice.onUserSelectedVideo(url);
+        }
+      } catch(e) {}
+
+      if (video) {
+        try {
+          if (video.muted) video.muted = false;
+          if (video.volume < 0.5) video.volume = 1.0;
+        } catch(e) {}
+      }
+
+      if (window.Hls && Hls.isSupported() && (url.includes('.m3u8') || !url.includes('.'))) {
+        if (hlsInstance) {
+          try { hlsInstance.destroy(); } catch(e) {}
+          hlsInstance = null;
+        }
+        hlsInstance = new Hls({
+          enableWorker: true,
+          lowLatencyMode: false,
+          startLevel: -1,
+          capLevelToPlayerSize: true,
+          backBufferLength: 30,
+          maxBufferLength: 40,
+          maxMaxBufferLength: 75,
+          maxBufferSize: 60 * 1000 * 1000,
+          maxBufferHole: 0.5,
+          highBufferWatchdogPeriod: 3,
+          liveSyncDurationCount: 3,
+          liveMaxLatencyDurationCount: 8,
+          startFragPrefetch: true,
+          abrBandWidthFactor: 0.85,
+          abrBandWidthUpFactor: 0.70,
+          manifestLoadingTimeOut: 15000,
+          manifestLoadingMaxRetry: 4,
+          levelLoadingTimeOut: 15000,
+          levelLoadingMaxRetry: 4,
+          fragLoadingTimeOut: 20000,
+          fragLoadingMaxRetry: 6
+        });
+        hlsInstance.loadSource(url);
+        hlsInstance.attachMedia(video);
+        const streamHls = hlsInstance;
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+          if (hlsInstance !== streamHls || window.__iptvUserPaused) return;
+          requestIptvPlay();
+        });
+        let hlsRecoveries = 0;
+        hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+          if (hlsInstance !== streamHls || window.__iptvUserPaused) return;
+          if (!data || !data.fatal) return;
+          hlsRecoveries += 1;
+          if (hlsRecoveries > 6) {
+            try { hlsInstance.destroy(); } catch(e) {}
+            hlsInstance = null;
+            return;
+          }
+          switch(data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              setTimeout(() => {
+                try { if (hlsInstance === streamHls && !window.__iptvUserPaused) streamHls.startLoad(-1); } catch(e) {}
+              }, Math.min(3000, 400 * hlsRecoveries));
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              setTimeout(() => {
+                try { if (hlsInstance === streamHls && !window.__iptvUserPaused) streamHls.recoverMediaError(); } catch(e) {}
+              }, 250);
+              break;
+            default:
+              // Stop after an unrecoverable error instead of rebuilding forever.
+              try { hlsInstance.destroy(); } catch(e) {}
+              hlsInstance = null;
+              showToast('Không tải được kênh. Chọn Tải lại nguồn để thử lại.');
+              break;
+          }
+        });
+      } else {
+        video.src = url;
+        requestIptvPlay();
+      }
+    }
+
+    function reloadChannels() {
+      document.getElementById('channelList').innerHTML = '<div class="loading-spin">⏳ Đang làm mới danh sách kênh...</div>';
+      if (window.AndroidIptv && window.AndroidIptv.refresh) {
+        window.AndroidIptv.refresh();
+      } else {
+        const u = getM3uUrl();
+        fetch(u)
+          .then(r => r.text())
+          .then(txt => {
+            parseM3u(txt);
+            buildDynamicTabs();
+            renderChannels();
+          })
+          .catch(err => {
+            document.getElementById('channelList').innerHTML = '<div class="loading-spin">⚠️ Không thể tải danh sách. Bấm Cài đặt Link để kiểm tra đường dẫn.</div>';
+          });
+      }
+    }
+
+    function openIptvModal() {
+      urlInput.value = getM3uUrl();
+      modalEl.style.display = 'flex';
+    }
+
+    function closeIptvModal() {
+      modalEl.style.display = 'none';
+    }
+
+    function resetDefaultIptv() {
+      urlInput.value = DEFAULT_URL;
+    }
+
+    function saveIptvUrl() {
+      const u = urlInput.value.trim();
+      if (!u) return;
+      localStorage.setItem('custom_iptv_url', u);
+      if (window.AndroidIptv && window.AndroidIptv.saveCustomUrl) {
+        window.AndroidIptv.saveCustomUrl(u);
+      } else {
+        reloadChannels();
+      }
+      closeIptvModal();
+    }
+
+    function handleM3uFileSelected(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const content = e.target.result;
+        parseM3u(content);
+        buildDynamicTabs();
+        renderChannels();
+        if (window.AndroidIptv && window.AndroidIptv.saveCustomM3uString) {
+          window.AndroidIptv.saveCustomM3uString(file.name, content);
+        }
+        urlInput.value = "File: " + file.name;
+        closeIptvModal();
+      };
+      reader.readAsText(file);
+    }
+
+    window.onChannelsUpdated = function(channelsJson) {
+      try {
+        allChannels = JSON.parse(channelsJson);
+        buildDynamicTabs();
+        renderChannels();
+        checkPendingVoiceChannel();
+      } catch(e) {
+        console.error(e);
+      }
+    };
+
+    window.addEventListener('hashchange', () => {
+      checkPendingVoiceChannel();
+    });
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

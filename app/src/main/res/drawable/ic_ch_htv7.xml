@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="36dp"
+    android:viewportWidth="48"
+    android:viewportHeight="36">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M6,0 L42,0 C45.3,0 48,2.7 48,6 L48,30 C48,33.3 45.3,36 42,36 L6,36 C2.7,36 0,33.3 0,30 L0,6 C0,2.7 2.7,0 6,0 Z" />
+    <!-- HTV Red Oval & Blue Star -->
+    <path
+        android:fillColor="#DC2626"
+        android:pathData="M6,12 L16,12 L16,16 L12,16 L12,18 L16,18 L16,24 L10,24 L10,20 L8,20 L8,24 L6,24 Z" />
+    <path
+        android:fillColor="#2563EB"
+        android:pathData="M18,12 L30,12 L30,16 L26,16 L26,24 L22,24 L22,16 L18,16 Z" />
+    <!-- '7' Blue shape -->
+    <path
+        android:fillColor="#0284C7"
+        android:pathData="M33,12 L43,12 L38,24 L34,24 L38.5,15.5 L33,15.5 Z" />
+</vector>

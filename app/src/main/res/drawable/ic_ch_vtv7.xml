@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="36dp"
+    android:viewportWidth="48" android:viewportHeight="36">
+    <path android:fillColor="#FFFFFF" android:pathData="M6,0 L42,0 C45.3,0 48,2.7 48,6 L48,30 C48,33.3 45.3,36 42,36 L6,36 C2.7,36 0,33.3 0,30 L0,6 C0,2.7 2.7,0 6,0 Z" />
+    <!-- Complete VTV wordmark: red V, green T, blue V. -->
+    <group >
+        <path android:fillColor="#E11D48" android:pathData="M3,10 L6,24 L9,24 L12,10 L9,10 L7.5,18 L6,10 Z" />
+        <path android:fillColor="#10B981" android:pathData="M13,10 L22,10 L22,13 L19,13 L19,24 L16,24 L16,13 L13,13 Z" />
+        <path android:fillColor="#0284C7" android:pathData="M23,10 L26,24 L29,24 L32,10 L29,10 L27.5,18 L26,10 Z" />
+    </group>
+    <path android:fillColor="#F59E0B" android:pathData="M35.5,10 L44,10 L44,12.5 L39.5,24 L36.5,24 L40.8,12.5 L35.5,12.5 Z" xmlns:android="http://schemas.android.com/apk/res/android" />
+</vector>

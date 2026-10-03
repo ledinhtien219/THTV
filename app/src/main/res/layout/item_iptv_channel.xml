@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="66dp"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_card_frosted_phone"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp">
+
+    <!-- Channel Logo Box -->
+    <ImageView
+        android:id="@+id/iptvItemLogo"
+        android:layout_width="52dp"
+        android:layout_height="36dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_ch_vtv1" />
+
+    <!-- Channel Details -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/iptvItemTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-bold"
+            android:text="VTV1 HD"
+            android:textColor="#FFFFFF"
+            android:textSize="13.5sp" />
+
+        <TextView
+            android:id="@+id/iptvItemCategory"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:fontFamily="sans-serif"
+            android:text="Truyền hình Việt Nam"
+            android:textColor="#94A3B8"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <!-- Favorite Star Button -->
+    <ImageView
+        android:id="@+id/iptvItemStar"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="2dp"
+        android:src="@drawable/ic_star_filled" />
+</LinearLayout>

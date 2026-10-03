@@ -1,0 +1,86 @@
+﻿<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="90dp"
+    android:viewportWidth="120"
+    android:viewportHeight="90">
+    <!-- Shadow under car -->
+    <path
+        android:fillColor="#40000000"
+        android:pathData="M15,82 Q60,92 105,82 Q60,76 15,82 Z" />
+    <!-- Tires -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M18,60 L28,60 L28,80 L18,80 Z" />
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M92,60 L102,60 L102,80 L92,80 Z" />
+    <!-- Lower bumper / Diffuser -->
+    <path
+        android:fillColor="#22272E"
+        android:pathData="M22,68 L98,68 L94,82 L26,82 Z" />
+    <!-- Dual Exhaust Pipes -->
+    <path
+        android:fillColor="#555555"
+        android:strokeColor="#888888"
+        android:strokeWidth="1"
+        android:pathData="M30,76 Q35,76 35,79 Q35,82 30,82 Q25,82 25,79 Q25,76 30,76 Z" />
+    <path
+        android:fillColor="#555555"
+        android:strokeColor="#888888"
+        android:strokeWidth="1"
+        android:pathData="M90,76 Q95,76 95,79 Q95,82 90,82 Q85,82 85,79 Q85,76 90,76 Z" />
+    <!-- Main Car Body (Silver/Pearl White metallic) -->
+    <path
+        android:fillColor="#E2E8F0"
+        android:pathData="M20,62 Q16,58 20,48 Q23,38 32,32 Q42,26 60,26 Q78,26 88,32 Q97,38 100,48 Q104,58 100,62 L98,72 Q60,76 22,72 Z" />
+    <!-- Rear Bumper Accent -->
+    <path
+        android:fillColor="#CBD5E1"
+        android:pathData="M24,56 Q60,60 96,56 L97,68 Q60,73 23,68 Z" />
+    <!-- License plate recess -->
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M46,62 L74,62 L73,70 L47,70 Z" />
+    <!-- License plate -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,63 L72,63 L71,69 L49,69 Z" />
+    <!-- Rear Cabin / Roof -->
+    <path
+        android:fillColor="#CBD5E1"
+        android:pathData="M34,34 Q44,14 60,14 Q76,14 86,34 Q60,32 34,34 Z" />
+    <!-- Rear Windshield (Dark Tinted Glass) -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M36,33 Q46,16 60,16 Q74,16 84,33 Q60,36 36,33 Z" />
+    <!-- Windshield Reflection Highlight -->
+    <path
+        android:fillColor="#33FFFFFF"
+        android:pathData="M40,31 Q48,18 58,18 Q54,26 44,32 Z" />
+    <!-- Side Mirrors -->
+    <path
+        android:fillColor="#94A3B8"
+        android:pathData="M16,42 Q10,40 12,46 Q16,47 20,44 Z" />
+    <path
+        android:fillColor="#94A3B8"
+        android:pathData="M104,42 Q110,40 108,46 Q104,47 100,44 Z" />
+    <!-- Left Tail Light (Vibrant LED Red) -->
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M20,50 Q38,50 42,54 Q38,57 22,56 Q18,53 20,50 Z" />
+    <path
+        android:fillColor="#FCA5A5"
+        android:pathData="M24,51 Q36,51 39,53 Q36,54 25,54 Z" />
+    <!-- Right Tail Light (Vibrant LED Red) -->
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M100,50 Q82,50 78,54 Q82,57 98,56 Q102,53 100,50 Z" />
+    <path
+        android:fillColor="#FCA5A5"
+        android:pathData="M96,51 Q84,51 81,53 Q84,54 95,54 Z" />
+    <!-- Center Trunk Accent Line -->
+    <path
+        android:strokeColor="#94A3B8"
+        android:strokeWidth="1"
+        android:pathData="M44,52 Q60,54 76,52" />
+</vector>

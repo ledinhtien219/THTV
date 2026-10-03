@@ -1,0 +1,42 @@
+﻿<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- TV360 red -->
+    <path
+        android:fillColor="#E62129"
+        android:pathData="M2,2H22V22H2Z"/>
+
+    <!-- TV -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M4,5H12V7H9.3V13H6.7V7H4Z"/>
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M11,5H13.6L15.5,10.2L17.4,5H20L16.8,13H14.2Z"/>
+
+    <!-- 360 -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.25"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M5,16C6,15 8,15 8,16.3C8,17.1 7.1,17.3 6.2,17.3C7.4,17.3 8.3,17.8 7.9,18.8C7.5,20 5.4,20 4.7,19"/>
+
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.25"
+        android:strokeLineCap="round"
+        android:pathData="M12.8,15.4C10.6,15 9.5,16.6 9.7,18C9.9,19.7 12.7,20 13.3,18.3C13.7,17 11.9,16.6 10.1,17.8"/>
+
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.25"
+        android:pathData="M17.3,15.2C15.4,15.2 15.3,20 17.3,20C19.4,20 19.4,15.2 17.3,15.2Z"/>
+</vector>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="carhud_bg">#FF07121F</color>
+    <color name="carhud_card">#FF102032</color>
+    <color name="carhud_border">#FF1F374E</color>
+    <color name="carhud_accent">#FF3498DB</color>
+    <color name="carhud_muted">#FF8E9DAE</color>
+    <color name="tcar_icon_bg">#FF0A1119</color>
+</resources>

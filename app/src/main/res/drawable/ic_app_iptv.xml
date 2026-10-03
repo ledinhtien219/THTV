@@ -1,0 +1,83 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Antennas with glowing tips -->
+    <path
+        android:pathData="M17,3 L23,8"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M31,3 L25,8"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M17,3m-1.5,0a1.5,1.5 0,1 1,3 0a1.5,1.5 0,1 1,-3 0"
+        android:fillColor="#00E5FF" />
+    <path
+        android:pathData="M31,3m-1.5,0a1.5,1.5 0,1 1,3 0a1.5,1.5 0,1 1,-3 0"
+        android:fillColor="#00E5FF" />
+
+    <!-- TV Stand -->
+    <path
+        android:pathData="M22,34 H26 V39 H22 Z"
+        android:fillColor="#475569" />
+    <path
+        android:pathData="M15,39 C15,38.5 15.5,38 16,38 H32 C32.5,38 33,38.5 33,39 L34,42 H14 Z"
+        android:fillColor="#64748B" />
+
+    <!-- Outer TV Body Frame -->
+    <path
+        android:pathData="M9,8 H39 C41.2,8 43,9.8 43,12 V30 C43,32.2 41.2,34 39,34 H9 C6.8,34 5,32.2 5,30 V12 C5,9.8 6.8,8 9,8 Z"
+        android:fillColor="#1E293B" />
+
+    <!-- TV Screen Gradient -->
+    <path
+        android:pathData="M10,10 H38 C39.1,10 40,10.9 40,12 V28 C40,29.1 39.1,30 38,30 H10 C8.9,30 8,29.1 8,28 V12 C8,10.9 8.9,10 10,10 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="8"
+                android:startY="10"
+                android:endX="40"
+                android:endY="30"
+                android:type="linear">
+                <item android:color="#2563EB" android:offset="0.0" />
+                <item android:color="#7C3AED" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- TV Screen Inner Glow Line -->
+    <path
+        android:pathData="M10,10.5 H38 C38.8,10.5 39.5,11.2 39.5,12"
+        android:strokeColor="#80FFFFFF"
+        android:strokeWidth="1"
+        android:strokeLineCap="round" />
+
+    <!-- Center Play Triangle (White) -->
+    <path
+        android:pathData="M19,14.5 L29,20 L19,25.5 Z"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Live Broadcast Waves (Cyan) -->
+    <path
+        android:pathData="M31,16.5 C32.5,17.6 32.5,22.4 31,23.5"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M34,14 C36.5,16 36.5,24 34,26"
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round" />
+
+    <!-- Live indicator badge (Red Dot) -->
+    <path
+        android:pathData="M12,13m-1.5,0a1.5,1.5 0,1 1,3 0a1.5,1.5 0,1 1,-3 0"
+        android:fillColor="#EF4444" />
+</vector>

@@ -1,0 +1,133 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Nền tím Zing MP3 -->
+    <path
+        android:fillColor="#7B00F5"
+        android:pathData="
+            M5,2
+            H19
+            C20.8,2 22,3.2 22,5
+            V19
+            C22,20.8 20.8,22 19,22
+            H5
+            C3.2,22 2,20.8 2,19
+            V5
+            C2,3.2 3.2,2 5,2
+            Z" />
+
+    <!-- Viền trắng đĩa -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="
+            M12,3.6
+            A8.4,8.4 0,1 1,12,20.4
+            A8.4,8.4 0,1 1,12,3.6
+            Z" />
+
+    <!-- Mảng xanh dương -->
+    <path
+        android:fillColor="#08A5D7"
+        android:pathData="
+            M12,12
+            L10.1,5
+            A7.2,7.2 0,0 0,4.8,10.2
+            Z" />
+
+    <!-- Mảng xanh lá -->
+    <path
+        android:fillColor="#47B346"
+        android:pathData="
+            M12,12
+            L10.1,5
+            A7.2,7.2 0,0 1,18.9,9.7
+            Z" />
+
+    <!-- Mảng cam -->
+    <path
+        android:fillColor="#FF7A1A"
+        android:pathData="
+            M12,12
+            L18.9,9.7
+            A7.2,7.2 0,0 1,14,18.9
+            Z" />
+
+    <!-- Mảng hồng -->
+    <path
+        android:fillColor="#F51C68"
+        android:pathData="
+            M12,12
+            L14,18.9
+            A7.2,7.2 0,0 1,4.8,10.2
+            Z" />
+
+    <!-- Vòng tối nhẹ ở tâm -->
+    <path
+        android:fillColor="#000000"
+        android:fillAlpha="0.12"
+        android:pathData="
+            M12,9
+            A3,3 0,1 1,12,15
+            A3,3 0,1 1,12,9
+            Z" />
+
+    <!-- Tâm trắng -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="
+            M12,9.7
+            A2.3,2.3 0,1 1,12,14.3
+            A2.3,2.3 0,1 1,12,9.7
+            Z" />
+
+    <!-- Chấm tím giữa -->
+    <path
+        android:fillColor="#7B00F5"
+        android:pathData="
+            M12,11
+            A1,1 0,1 1,12,13
+            A1,1 0,1 1,12,11
+            Z" />
+
+    <!-- Vạch chuyển động bên trái -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.55"
+        android:strokeLineCap="round"
+        android:pathData="
+            M7.4,8.3
+            C6.4,9.3 6,10.7 6.1,12.1" />
+
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.45"
+        android:strokeLineCap="round"
+        android:pathData="
+            M8.2,8.9
+            C7.5,9.8 7.2,10.7 7.3,11.7" />
+
+    <!-- Vạch chuyển động bên phải -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.55"
+        android:strokeLineCap="round"
+        android:pathData="
+            M17.7,12
+            C17.8,13.5 17.3,14.8 16.3,15.9" />
+
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.45"
+        android:strokeLineCap="round"
+        android:pathData="
+            M16.6,12.3
+            C16.7,13.3 16.3,14.3 15.7,15" />
+
+</vector>

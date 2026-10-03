@@ -1,0 +1,2301 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/phoneRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:background="#070A11">
+
+    <!-- Main Vertical Column -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Top Header Bar (Screen 1) -->
+        <LinearLayout
+            android:id="@+id/phoneTopBar"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:background="#0B111D"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp">
+
+            <!-- Compact THTV wordmark -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <!-- Kept only for backward source compatibility; not displayed. -->
+                <View
+                    android:id="@+id/phoneBrandDot"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/phoneBrandTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:text="THTV"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/phoneBrandHeaderLogo"
+                    android:layout_width="104dp"
+                    android:layout_height="30dp"
+                    android:adjustViewBounds="true"
+                    android:contentDescription="THTV"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/thtv_wordmark" />
+            </LinearLayout>
+
+            <!-- Settings gear icon button (Hidden) -->
+            <FrameLayout
+                android:id="@+id/btnPhoneSettings"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:background="@drawable/bg_search_pill"
+                android:clickable="true"
+                android:focusable="true"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_bar_setting"
+                    android:tint="#FFFFFF" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <!-- Dynamic Content Frame (Tabs & Subscreens) -->
+        <FrameLayout
+            android:id="@+id/phoneContentFrame"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <!-- ================= SCREEN 1: TAB HOME ================= -->
+            <ScrollView
+                android:id="@+id/tabHomeView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:background="#070A11"
+                android:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingStart="16dp"
+                    android:paddingTop="12dp"
+                    android:paddingEnd="16dp"
+                    android:paddingBottom="16dp">
+
+                    <!-- Cockpit Hero Card with Wallpaper, Greeting & Big Clock -->
+                    <FrameLayout
+                        android:id="@+id/cardPhoneCockpitPreview"
+                        android:layout_width="match_parent"
+                        android:layout_height="215dp"
+                        android:background="@drawable/bg_card_frosted_phone"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:clipToOutline="true">
+
+                        <ImageView
+                            android:id="@+id/phoneWallpaperView"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/bg_wallpaper_bugatti"
+                            android:visibility="visible" />
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="#35000000" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <!-- Greeting -->
+                            <TextView
+                                android:id="@+id/phoneGreetingText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif-medium"
+                                android:shadowColor="#80000000"
+                                android:shadowDx="0"
+                                android:shadowDy="1"
+                                android:shadowRadius="3"
+                                android:text="Chào buổi tối, Phạm Nam"
+                                android:textColor="#FFFFFF"
+                                android:textSize="14.5sp" />
+
+                            <!-- Huge Clock -->
+                            <TextView
+                                android:id="@+id/phoneClockText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif"
+                                android:includeFontPadding="false"
+                                android:shadowColor="#99000000"
+                                android:shadowDx="0"
+                                android:shadowDy="2"
+                                android:shadowRadius="5"
+                                android:text="21:30"
+                                android:textColor="#FFFFFF"
+                                android:textSize="44sp"
+                                android:textStyle="bold" />
+
+                            <!-- Solar Date -->
+                            <TextView
+                                android:id="@+id/phoneDateText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="sans-serif"
+                                android:text="Thứ Hai, 28/09/2026"
+                                android:textColor="#E2E8F0"
+                                android:textSize="12.5sp" />
+
+                            <!-- Lunar Date -->
+                            <TextView
+                                android:id="@+id/phoneLunarDateText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:fontFamily="sans-serif"
+                                android:text="ÂL: 18/08 - Năm Bính Ngọ"
+                                android:textColor="#CBD5E1"
+                                android:textSize="11.5sp" />
+
+                            <!-- Search bar pill -->
+                            <LinearLayout
+                                android:id="@+id/phoneSearchBar"
+                                android:layout_width="match_parent"
+                                android:layout_height="38dp"
+                                android:layout_marginTop="10dp"
+                                android:background="@drawable/bg_search_pill"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center_vertical"
+                                android:paddingStart="12dp"
+                                android:paddingEnd="12dp">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ic_bar_search"
+                                    android:tint="#CBD5E1" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
+                                    android:layout_weight="1"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="Tìm kiếm video, bài hát, IPTV..."
+                                    android:textColor="#CBD5E1"
+                                    android:textSize="11.5sp" />
+
+                                <ImageView
+                                    android:id="@+id/phoneMicBtn"
+                                    android:layout_width="18dp"
+                                    android:layout_height="18dp"
+                                    android:src="@drawable/ic_bar_mic"
+                                    android:tint="#38BDF8" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </FrameLayout>
+
+                    <!-- 2x2 Services Grid -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:orientation="vertical">
+
+                        <!-- Row 1: YouTube & IPTV -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <!-- YouTube Card -->
+                            <LinearLayout
+                                android:id="@+id/phoneCardYoutube"
+                                android:layout_width="0dp"
+                                android:layout_height="86dp"
+                                android:layout_marginEnd="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_card_frosted_phone"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:padding="12dp">
+
+                                <FrameLayout
+                                    android:layout_width="40dp"
+                                    android:layout_height="40dp"
+                                    android:background="@drawable/bg_button_blue"
+                                    android:backgroundTint="#E11D48">
+
+                                    <ImageView
+                                        android:layout_width="24dp"
+                                        android:layout_height="24dp"
+                                        android:layout_gravity="center"
+                                        android:src="@drawable/ic_bar_play"
+                                        android:tint="#FFFFFF" />
+                                </FrameLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="10dp"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:fontFamily="sans-serif-bold"
+                                        android:text="YouTube"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="13.5sp" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:fontFamily="sans-serif"
+                                        android:text="Xem video"
+                                        android:textColor="#94A3B8"
+                                        android:textSize="10.5sp" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- IPTV Card -->
+                            <LinearLayout
+                                android:id="@+id/phoneCardIptv"
+                                android:layout_width="0dp"
+                                android:layout_height="86dp"
+                                android:layout_marginStart="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_card_frosted_phone"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:padding="12dp">
+
+                                <FrameLayout
+                                    android:layout_width="40dp"
+                                    android:layout_height="40dp"
+                                    android:background="@drawable/bg_button_blue"
+                                    android:backgroundTint="#7C3AED">
+
+                                    <ImageView
+                                        android:layout_width="22dp"
+                                        android:layout_height="22dp"
+                                        android:layout_gravity="center"
+                                        android:src="@drawable/ic_nav_tv"
+                                        android:tint="#FFFFFF" />
+                                </FrameLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="10dp"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:fontFamily="sans-serif-bold"
+                                        android:text="IPTV"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="13.5sp" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:fontFamily="sans-serif"
+                                        android:text="Truyền hình"
+                                        android:textColor="#94A3B8"
+                                        android:textSize="10.5sp" />
+                                </LinearLayout>
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Row 2: M3U & Browser -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:orientation="horizontal">
+
+                            <!-- M3U Card -->
+                            <LinearLayout
+                                android:id="@+id/phoneCardM3u"
+                                android:layout_width="0dp"
+                                android:layout_height="86dp"
+                                android:layout_marginEnd="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_card_frosted_phone"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:padding="12dp">
+
+                                <FrameLayout
+                                    android:layout_width="40dp"
+                                    android:layout_height="40dp"
+                                    android:background="@drawable/bg_button_blue"
+                                    android:backgroundTint="#10B981">
+
+                                    <ImageView
+                                        android:layout_width="22dp"
+                                        android:layout_height="22dp"
+                                        android:layout_gravity="center"
+                                        android:src="@drawable/ic_tab_bookmark"
+                                        android:tint="#FFFFFF" />
+                                </FrameLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="10dp"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:fontFamily="sans-serif-bold"
+                                        android:text="M3U"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="13.5sp" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:fontFamily="sans-serif"
+                                        android:text="Danh sách"
+                                        android:textColor="#94A3B8"
+                                        android:textSize="10.5sp" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Browser Card -->
+                            <LinearLayout
+                                android:id="@+id/phoneCardBrowser"
+                                android:layout_width="0dp"
+                                android:layout_height="86dp"
+                                android:layout_marginStart="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_card_frosted_phone"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:padding="12dp">
+
+                                <FrameLayout
+                                    android:layout_width="40dp"
+                                    android:layout_height="40dp"
+                                    android:background="@drawable/bg_button_blue"
+                                    android:backgroundTint="#0284C7">
+
+                                    <ImageView
+                                        android:layout_width="22dp"
+                                        android:layout_height="22dp"
+                                        android:layout_gravity="center"
+                                        android:src="@drawable/ic_tab_globe"
+                                        android:tint="#FFFFFF" />
+                                </FrameLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="10dp"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:fontFamily="sans-serif-bold"
+                                        android:text="Trình duyệt"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="13.5sp" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:fontFamily="sans-serif"
+                                        android:text="Web tự do"
+                                        android:textColor="#94A3B8"
+                                        android:textSize="10.5sp" />
+                                </LinearLayout>
+                            </LinearLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Section: Kênh yêu thích -->
+                    <LinearLayout
+                        android:id="@+id/sectionFavChannels"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="10dp"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="Kênh yêu thích"
+                            android:textColor="#CBD5E1"
+                            android:textSize="12sp" />
+
+                        <HorizontalScrollView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:scrollbars="none">
+
+                            <LinearLayout
+                                android:id="@+id/quickChannelsRow"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+                                <!-- Populated dynamically: VTV1, VTV3, HTV7, K+ Sport, + -->
+                            </LinearLayout>
+                        </HorizontalScrollView>
+                    </LinearLayout>
+                </LinearLayout>
+            </ScrollView>
+
+            <!-- ================= SCREEN 2: CHỌN HÌNH NỀN ================= -->
+            <ScrollView
+                android:id="@+id/subviewWallpaper"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#070A11"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingBottom="14dp">
+
+                        <ImageView
+                            android:id="@+id/btnBackWallpaper"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:src="@drawable/ic_bar_back"
+                            android:tint="#FFFFFF" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="Hình nền"
+                            android:textColor="#FFFFFF"
+                            android:textSize="17sp" />
+
+                        <View
+                            android:layout_width="28dp"
+                            android:layout_height="28dp" />
+                    </LinearLayout>
+
+                    <!-- Category Pills Filter -->
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp"
+                        android:scrollbars="none">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/btnWpCatDefault"
+                                android:layout_width="wrap_content"
+                                android:layout_height="34dp"
+                                android:background="@drawable/bg_pill_blue"
+                                android:gravity="center"
+                                android:paddingStart="16dp"
+                                android:paddingEnd="16dp"
+                                android:text="Mặc định"
+                                android:textColor="#FFFFFF"
+                                android:textSize="12sp"
+                                android:fontFamily="sans-serif-bold" />
+
+                            <TextView
+                                android:id="@+id/btnWpCatCars"
+                                android:layout_width="wrap_content"
+                                android:layout_height="34dp"
+                                android:layout_marginStart="8dp"
+                                android:background="@drawable/bg_pill_dark"
+                                android:gravity="center"
+                                android:paddingStart="16dp"
+                                android:paddingEnd="16dp"
+                                android:text="Xe hơi"
+                                android:textColor="#CBD5E1"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/btnWpCatAnime"
+                                android:layout_width="wrap_content"
+                                android:layout_height="34dp"
+                                android:layout_marginStart="8dp"
+                                android:background="@drawable/bg_pill_dark"
+                                android:gravity="center"
+                                android:paddingStart="16dp"
+                                android:paddingEnd="16dp"
+                                android:text="Anime"
+                                android:textColor="#CBD5E1"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/btnWpCatCustom"
+                                android:layout_width="wrap_content"
+                                android:layout_height="34dp"
+                                android:layout_marginStart="8dp"
+                                android:background="@drawable/bg_pill_dark"
+                                android:gravity="center"
+                                android:paddingStart="16dp"
+                                android:paddingEnd="16dp"
+                                android:text="📁 Tự chọn"
+                                android:textColor="#38BDF8"
+                                android:textSize="12sp"
+                                android:fontFamily="sans-serif-medium" />
+                        </LinearLayout>
+                    </HorizontalScrollView>
+
+                    <!-- 2-Column Wallpaper Grid -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Row 1 -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="116dp"
+                            android:layout_marginBottom="10dp"
+                            android:orientation="horizontal">
+
+                            <!-- Item 1: Bugatti Red -->
+                            <FrameLayout
+                                android:id="@+id/wpCardBugatti"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_marginEnd="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_card_frosted_phone"
+                                android:clipToOutline="true"
+                                android:clickable="true"
+                                android:focusable="true">
+
+                                <ImageView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:scaleType="centerCrop"
+                                    android:src="@drawable/bg_wallpaper_bugatti" />
+
+                                <ImageView
+                                    android:id="@+id/wpBadgeBugatti"
+                                    android:layout_width="22dp"
+                                    android:layout_height="22dp"
+                                    android:layout_gravity="top|end"
+                                    android:layout_margin="8dp"
+                                    android:src="@drawable/ic_badge_check"
+                                    android:visibility="visible" />
+                            </FrameLayout>
+
+                            <!-- Item 2: Silver Porsche -->
+                            <FrameLayout
+                                android:id="@+id/wpCardSilver"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_marginStart="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_card_frosted_phone"
+                                android:clipToOutline="true"
+                                android:clickable="true"
+                                android:focusable="true">
+
+                                <ImageView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:scaleType="centerCrop"
+                                    android:src="@drawable/bg_wallpaper_silver" />
+
+                                <ImageView
+                                    android:id="@+id/wpBadgeSilver"
+                                    android:layout_width="22dp"
+                                    android:layout_height="22dp"
+                                    android:layout_gravity="top|end"
+                                    android:layout_margin="8dp"
+                                    android:src="@drawable/ic_badge_check"
+                                    android:visibility="gone" />
+                            </FrameLayout>
+                        </LinearLayout>
+
+                        <!-- Row 2 -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="116dp"
+                            android:layout_marginBottom="10dp"
+                            android:orientation="horizontal">
+
+                            <!-- Item 3: Blue Alpine -->
+                            <FrameLayout
+                                android:id="@+id/wpCardBlue"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_marginEnd="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_card_frosted_phone"
+                                android:clipToOutline="true"
+                                android:clickable="true"
+                                android:focusable="true">
+
+                                <ImageView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:scaleType="centerCrop"
+                                    android:src="@drawable/bg_wallpaper_blue" />
+
+                                <ImageView
+                                    android:id="@+id/wpBadgeBlue"
+                                    android:layout_width="22dp"
+                                    android:layout_height="22dp"
+                                    android:layout_gravity="top|end"
+                                    android:layout_margin="8dp"
+                                    android:src="@drawable/ic_badge_check"
+                                    android:visibility="gone" />
+                            </FrameLayout>
+
+                            <!-- Item 4: Cyberpunk Neon -->
+                            <FrameLayout
+                                android:id="@+id/wpCardCyber"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_marginStart="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_card_frosted_phone"
+                                android:clipToOutline="true"
+                                android:clickable="true"
+                                android:focusable="true">
+
+                                <ImageView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:scaleType="centerCrop"
+                                    android:src="@drawable/bg_wallpaper_cyber" />
+
+                                <ImageView
+                                    android:id="@+id/wpBadgeCyber"
+                                    android:layout_width="22dp"
+                                    android:layout_height="22dp"
+                                    android:layout_gravity="top|end"
+                                    android:layout_margin="8dp"
+                                    android:src="@drawable/ic_badge_check"
+                                    android:visibility="gone" />
+                            </FrameLayout>
+                        </LinearLayout>
+
+                        <!-- Row 3 -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="116dp"
+                            android:layout_marginBottom="10dp"
+                            android:orientation="horizontal">
+
+                            <!-- Item 5: Sunset Supercar -->
+                            <FrameLayout
+                                android:id="@+id/wpCardSunset"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_marginEnd="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_card_frosted_phone"
+                                android:clipToOutline="true"
+                                android:clickable="true"
+                                android:focusable="true">
+
+                                <ImageView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:scaleType="centerCrop"
+                                    android:src="@drawable/bg_wallpaper_sunset" />
+
+                                <ImageView
+                                    android:id="@+id/wpBadgeSunset"
+                                    android:layout_width="22dp"
+                                    android:layout_height="22dp"
+                                    android:layout_gravity="top|end"
+                                    android:layout_margin="8dp"
+                                    android:src="@drawable/ic_badge_check"
+                                    android:visibility="gone" />
+                            </FrameLayout>
+
+                            <!-- Item 6: Scenic Anime -->
+                            <FrameLayout
+                                android:id="@+id/wpCardScenic"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_marginStart="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_card_frosted_phone"
+                                android:clipToOutline="true"
+                                android:clickable="true"
+                                android:focusable="true">
+
+                                <ImageView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:scaleType="centerCrop"
+                                    android:src="@drawable/bg_wallpaper_scenic" />
+
+                                <ImageView
+                                    android:id="@+id/wpBadgeScenic"
+                                    android:layout_width="22dp"
+                                    android:layout_height="22dp"
+                                    android:layout_gravity="top|end"
+                                    android:layout_margin="8dp"
+                                    android:src="@drawable/ic_badge_check"
+                                    android:visibility="gone" />
+                            </FrameLayout>
+                        </LinearLayout>
+
+                        <!-- Row 4 -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="116dp"
+                            android:layout_marginBottom="10dp"
+                            android:orientation="horizontal">
+
+                            <!-- Item 7: Cockpit Charcoal -->
+                            <FrameLayout
+                                android:id="@+id/wpCardDark"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_marginEnd="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_cockpit_charcoal"
+                                android:clipToOutline="true"
+                                android:clickable="true"
+                                android:focusable="true">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="center"
+                                    android:text="🌑 Tối Giản"
+                                    android:textColor="#94A3B8"
+                                    android:textSize="13sp"
+                                    android:fontFamily="sans-serif-bold" />
+
+                                <ImageView
+                                    android:id="@+id/wpBadgeDark"
+                                    android:layout_width="22dp"
+                                    android:layout_height="22dp"
+                                    android:layout_gravity="top|end"
+                                    android:layout_margin="8dp"
+                                    android:src="@drawable/ic_badge_check"
+                                    android:visibility="gone" />
+                            </FrameLayout>
+
+                            <!-- Item 8: Custom Gallery -->
+                            <FrameLayout
+                                android:id="@+id/wpCardCustom"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_marginStart="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_card_frosted_phone"
+                                android:clipToOutline="true"
+                                android:clickable="true"
+                                android:focusable="true">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="center"
+                                    android:text="📁 Tự Chọn Ảnh"
+                                    android:textColor="#38BDF8"
+                                    android:textSize="13sp"
+                                    android:fontFamily="sans-serif-bold" />
+
+                                <ImageView
+                                    android:id="@+id/wpBadgeCustom"
+                                    android:layout_width="22dp"
+                                    android:layout_height="22dp"
+                                    android:layout_gravity="top|end"
+                                    android:layout_margin="8dp"
+                                    android:src="@drawable/ic_badge_check"
+                                    android:visibility="gone" />
+                            </FrameLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </ScrollView>
+
+            <!-- ================= SCREEN 3: CÀI ĐẶT GIAO DIỆN ================= -->
+            <ScrollView
+                android:id="@+id/subviewDisplaySettings"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#070A11"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingBottom="14dp">
+
+                        <ImageView
+                            android:id="@+id/btnBackDisplaySettings"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:src="@drawable/ic_bar_back"
+                            android:tint="#FFFFFF" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="Cài đặt giao diện"
+                            android:textColor="#FFFFFF"
+                            android:textSize="17sp" />
+
+                        <View
+                            android:layout_width="28dp"
+                            android:layout_height="28dp" />
+                    </LinearLayout>
+
+                    <!-- Toggle Switches Card -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_card_frosted_phone"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <!-- 1. Clock & Greeting -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="⏰  Hiện khối chào + đồng hồ"
+                                android:textColor="#FFFFFF"
+                                android:textSize="13sp" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switchShowHeroClock"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true" />
+                        </LinearLayout>
+
+                        <!-- 2. Search Bar -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="🔍  Hiện thanh tìm kiếm"
+                                android:textColor="#FFFFFF"
+                                android:textSize="13sp" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switchShowSearchBar"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true" />
+                        </LinearLayout>
+
+                        <!-- 3. YouTube -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="▶️  Hiện nhanh YouTube"
+                                android:textColor="#FFFFFF"
+                                android:textSize="13sp" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switchShowCardYoutube"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true" />
+                        </LinearLayout>
+
+                        <!-- 4. IPTV -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="📺  Hiện nhanh IPTV"
+                                android:textColor="#FFFFFF"
+                                android:textSize="13sp" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switchShowCardIptv"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true" />
+                        </LinearLayout>
+
+                        <!-- 5. M3U -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="📑  Hiện nhanh M3U"
+                                android:textColor="#FFFFFF"
+                                android:textSize="13sp" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switchShowCardM3u"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true" />
+                        </LinearLayout>
+
+                        <!-- 6. Browser -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="🌐  Hiện nhanh Trình duyệt"
+                                android:textColor="#FFFFFF"
+                                android:textSize="13sp" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switchShowCardBrowser"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true" />
+                        </LinearLayout>
+
+                        <!-- 7. Fav Channels -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="⭐  Hiện danh sách kênh yêu thích"
+                                android:textColor="#FFFFFF"
+                                android:textSize="13sp" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switchShowFavChannels"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true" />
+                        </LinearLayout>
+
+                        <!-- 8. Media Player -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="🎵  Hiện thanh media player"
+                                android:textColor="#FFFFFF"
+                                android:textSize="13sp" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switchShowMiniPlayer"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true" />
+                        </LinearLayout>
+
+                        <!-- 9. Bottom Nav -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="🧭  Hiện thanh điều hướng dưới"
+                                android:textColor="#FFFFFF"
+                                android:textSize="13sp" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switchShowBottomNav"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Restore Button -->
+                    <Button
+                        android:id="@+id/btnRestoreDefaultLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:layout_marginTop="14dp"
+                        android:background="@drawable/bg_button_blue"
+                        android:fontFamily="sans-serif-bold"
+                        android:text="Khôi phục bố cục mặc định"
+                        android:textColor="#FFFFFF"
+                        android:textSize="13sp" />
+
+                    <!-- Section: Giao diện (Theme & Accent Color) -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:background="@drawable/bg_card_frosted_phone"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="Giao diện"
+                            android:textColor="#38BDF8"
+                            android:textSize="13.5sp" />
+
+                        <!-- Subtitle: Chủ đề -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:fontFamily="sans-serif"
+                            android:text="Chủ đề"
+                            android:textColor="#CBD5E1"
+                            android:textSize="12sp" />
+
+                        <!-- Segmented Control: Tối | Sáng | Tự động -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="40dp"
+                            android:layout_marginTop="6dp"
+                            android:background="@drawable/bg_segment_container"
+                            android:orientation="horizontal"
+                            android:padding="3dp">
+
+                            <TextView
+                                android:id="@+id/btnThemeDark"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_segment_selected"
+                                android:gravity="center"
+                                android:text="Tối"
+                                android:textColor="#FFFFFF"
+                                android:fontFamily="sans-serif-bold"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/btnThemeLight"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:gravity="center"
+                                android:text="Sáng"
+                                android:textColor="#94A3B8"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/btnThemeAuto"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:gravity="center"
+                                android:text="Tự động"
+                                android:textColor="#94A3B8"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <!-- Subtitle: Màu nhấn -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:fontFamily="sans-serif"
+                            android:text="Màu nhấn"
+                            android:textColor="#CBD5E1"
+                            android:textSize="12sp" />
+
+                        <!-- Accent Color Palette Dots -->
+                        <LinearLayout
+                            android:id="@+id/accentPaletteContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+                            <!-- Injected or styled in code: Cyan, Red, Orange, Amber, Green, Blue, Purple, Pink, Teal -->
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </ScrollView>
+
+            <!-- ================= SCREEN 4: CẤP QUYỀN CẦN THIẾT ================= -->
+            <ScrollView
+                android:id="@+id/subviewPermissions"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#070A11"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingBottom="18dp">
+
+                        <ImageView
+                            android:id="@+id/btnBackPermissions"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:src="@drawable/ic_bar_back"
+                            android:tint="#FFFFFF" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="Cấp quyền cần thiết"
+                            android:textColor="#FFFFFF"
+                            android:textSize="17sp" />
+
+                        <View
+                            android:layout_width="28dp"
+                            android:layout_height="28dp" />
+                    </LinearLayout>
+
+                    <!-- Card 1: Quyền Vị Trí -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp"
+                        android:background="@drawable/bg_card_frosted_phone"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="44dp"
+                                android:layout_height="44dp"
+                                android:background="@drawable/dashboard_chip_dark"
+                                android:gravity="center"
+                                android:text="📍"
+                                android:textSize="20sp" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="14dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="sans-serif-bold"
+                                    android:text="Quyền vị trí"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="14sp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:fontFamily="sans-serif"
+                                    android:text="Cần thiết để hiển thị thời tiết, gợi ý địa điểm và dịch vụ theo vị trí."
+                                    android:textColor="#94A3B8"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/btnPermGrantLocation"
+                            android:layout_width="match_parent"
+                            android:layout_height="42dp"
+                            android:layout_marginTop="14dp"
+                            android:background="@drawable/bg_button_blue"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="Cấp quyền vị trí"
+                            android:textColor="#FFFFFF"
+                            android:textSize="12.5sp" />
+                    </LinearLayout>
+
+                    <!-- Card 2: Quyền Ghi Âm -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp"
+                        android:background="@drawable/bg_card_frosted_phone"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="44dp"
+                                android:layout_height="44dp"
+                                android:background="@drawable/dashboard_chip_dark"
+                                android:gravity="center"
+                                android:text="🎙️"
+                                android:textSize="20sp" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="14dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="sans-serif-bold"
+                                    android:text="Quyền ghi âm"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="14sp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:fontFamily="sans-serif"
+                                    android:text="Cần thiết để sử dụng tìm kiếm bằng giọng nói."
+                                    android:textColor="#94A3B8"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/btnPermGrantMic"
+                            android:layout_width="match_parent"
+                            android:layout_height="42dp"
+                            android:layout_marginTop="14dp"
+                            android:background="@drawable/bg_button_blue"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="Cấp quyền ghi âm"
+                            android:textColor="#FFFFFF"
+                            android:textSize="12.5sp" />
+                    </LinearLayout>
+
+                    <!-- Card 3: Thông Báo -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp"
+                        android:background="@drawable/bg_card_frosted_phone"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="44dp"
+                                android:layout_height="44dp"
+                                android:background="@drawable/dashboard_chip_dark"
+                                android:gravity="center"
+                                android:text="🔔"
+                                android:textSize="20sp" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="14dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="sans-serif-bold"
+                                    android:text="Thông báo"
+                                    android:textColor="#FFFFFF"
+                                    android:textSize="14sp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:fontFamily="sans-serif"
+                                    android:text="Giữ cho phát nhạc/video chạy nền ổn định."
+                                    android:textColor="#94A3B8"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/btnPermGrantNotification"
+                            android:layout_width="match_parent"
+                            android:layout_height="42dp"
+                            android:layout_marginTop="14dp"
+                            android:background="@drawable/bg_button_blue"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="Cấp quyền thông báo"
+                            android:textColor="#FFFFFF"
+                            android:textSize="12.5sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </ScrollView>
+
+            <!-- ================= SCREEN 5: TAB YOUTUBE ================= -->
+            <LinearLayout
+                android:id="@+id/tabYoutubeView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#FFFFFF"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Native duplicate header hidden; use YouTube's own top bar. -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="#FFFFFF"
+                    android:visibility="gone"
+                    android:gravity="center_vertical"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp">
+
+                    <ImageView
+                        android:id="@+id/btnBackYoutube"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:src="@drawable/ic_bar_back"
+                        android:contentDescription="Quay lại ứng dụng"
+                        android:tint="#0F0F0F" />
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_marginStart="12dp"
+                        android:src="@drawable/ic_nav_youtube"
+                        android:tint="#E11D48" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:fontFamily="sans-serif-bold"
+                        android:text="YouTube"
+                        android:textColor="#0F0F0F"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/btnYoutubeAccount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="48dp"
+                        android:gravity="center"
+                        android:paddingHorizontal="12dp"
+                        android:background="?attr/selectableItemBackground"
+                        android:text="Đăng nhập"
+                        android:textColor="#065FD4"
+                        android:textSize="14sp"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <ImageView
+                        android:id="@+id/btnSearchYoutube"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:padding="12dp"
+                        android:contentDescription="Tìm trên YouTube"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:src="@drawable/ic_bar_search"
+                        android:tint="#0F0F0F" />
+                </LinearLayout>
+
+                <!-- YouTube Mobile WebView -->
+                <FrameLayout
+                    android:id="@+id/youtubeContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1">
+
+                    <com.carhud.aaproxy.BackgroundAudioWebView
+                        android:id="@+id/phoneYoutubeWeb"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+                </FrameLayout>
+            </LinearLayout>
+
+            <!-- ================= SCREEN 6: TAB IPTV ================= -->
+            <LinearLayout
+                android:id="@+id/tabIptvView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#070A11"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Header -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:background="#0B111D"
+                    android:gravity="center_vertical"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp">
+
+                    <ImageView
+                        android:id="@+id/btnBackIptv"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:src="@drawable/ic_bar_back"
+                        android:tint="#FFFFFF" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:fontFamily="sans-serif-bold"
+                        android:text="IPTV Truyền hình"
+                        android:textColor="#FFFFFF"
+                        android:textSize="16sp" />
+
+                    <ImageView
+                        android:id="@+id/btnSearchIptv"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginEnd="14dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:src="@drawable/ic_bar_search"
+                        android:tint="#E2E8F0" />
+
+                    <ImageView
+                        android:id="@+id/btnSettingsIptv"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:src="@drawable/ic_bar_setting"
+                        android:tint="#E2E8F0" />
+                </LinearLayout>
+
+                <!-- Category Filter Pills -->
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#0B111D"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:paddingBottom="10dp"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/btnIptvCatAll"
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:background="@drawable/bg_pill_blue"
+                            android:gravity="center"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:text="Tất cả"
+                            android:textColor="#FFFFFF"
+                            android:fontFamily="sans-serif-bold"
+                            android:textSize="11.5sp" />
+
+                        <TextView
+                            android:id="@+id/btnIptvCatFav"
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_pill_dark"
+                            android:gravity="center"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:text="Yêu thích"
+                            android:textColor="#CBD5E1"
+                            android:fontFamily="sans-serif-bold"
+                            android:textSize="11.5sp" />
+
+                        <TextView
+                            android:id="@+id/btnIptvCatVtv"
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_pill_dark"
+                            android:gravity="center"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:text="VTV"
+                            android:textColor="#CBD5E1"
+                            android:textSize="11.5sp" />
+
+                        <TextView
+                            android:id="@+id/btnIptvCatHtv"
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_pill_dark"
+                            android:gravity="center"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:text="HTV"
+                            android:textColor="#CBD5E1"
+                            android:textSize="11.5sp" />
+
+                        <TextView
+                            android:id="@+id/btnIptvCatSport"
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/bg_pill_dark"
+                            android:gravity="center"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:text="Thể thao"
+                            android:textColor="#CBD5E1"
+                            android:textSize="11.5sp" />
+                    </LinearLayout>
+                </HorizontalScrollView>
+
+                <!-- Channels List (Screen 6) -->
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:padding="14dp">
+
+                    <LinearLayout
+                        android:id="@+id/iptvChannelsContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+                        <!-- Channel items dynamically added: VTV1 HD, VTV3 HD, VTV6 HD, HTV7 HD, HTV9 HD, K+ Sport... -->
+                    </LinearLayout>
+                </ScrollView>
+
+                <!-- Hidden / Background WebView for HLS Media Playback -->
+                <com.carhud.aaproxy.BackgroundAudioWebView
+                    android:id="@+id/phoneIptvWeb"
+                    android:layout_width="1dp"
+                    android:layout_height="1dp"
+                    android:visibility="invisible" />
+            </LinearLayout>
+
+            <!-- ================= TAB 4: SETTINGS HUB ================= -->
+            <ScrollView
+                android:id="@+id/tabSettingsView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:background="#070A11"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Settings Card 1: Wallpaper Selector (Screen 2 entry) -->
+                    <LinearLayout
+                        android:id="@+id/settingCardWallpaper"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:background="@drawable/bg_card_frosted_phone"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="🎨 HÌNH NỀN BUỒNG LÁI (WALLPAPER)"
+                            android:textColor="#38BDF8"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/settingWallpaperSubtext"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="sans-serif"
+                            android:text="Đang dùng: Siêu xe Bugatti Red &amp; Black (Chạm để đổi ảnh)"
+                            android:textColor="#E2E8F0"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- Settings Card 2: Display / Interface Settings (Screen 3 entry) -->
+                    <LinearLayout
+                        android:id="@+id/settingCardDisplay"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:background="@drawable/bg_card_frosted_phone"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="⚙️ CÀI ĐẶT GIAO DIỆN &amp; HIỂN THỊ"
+                            android:textColor="#38BDF8"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="sans-serif"
+                            android:text="Bật/tắt thanh tìm kiếm, dịch vụ nhanh, chủ đề, màu nhấn"
+                            android:textColor="#E2E8F0"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- Settings Card 3: Permissions (Screen 4 entry) -->
+                    <LinearLayout
+                        android:id="@+id/settingCardPermissions"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:background="@drawable/bg_card_frosted_phone"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="🔐 CẤP QUYỀN CẦN THIẾT"
+                            android:textColor="#38BDF8"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/settingPermissionsSubtext"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="sans-serif"
+                            android:text="Vị trí (GPS), Ghi âm (Giọng nói), Thông báo nền"
+                            android:textColor="#E2E8F0"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- Settings Card 4: User Profile & Greeting -->
+                    <LinearLayout
+                        android:id="@+id/settingCardUser"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:background="@drawable/bg_card_frosted_phone"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="👤 TÊN HIỂN THỊ LỜI CHÀO"
+                            android:textColor="#38BDF8"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/settingUserSubtext"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="sans-serif"
+                            android:text="Tên hiện tại: Phạm Nam (Nhấn để đổi tên)"
+                            android:textColor="#E2E8F0"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- Settings Card 5: IPTV & M3U Manager -->
+                    <LinearLayout
+                        android:id="@+id/settingCardIptv"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:background="@drawable/bg_card_frosted_phone"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="📺 QUẢN LÝ DANH SÁCH KÊNH IPTV (M3U)"
+                            android:textColor="#38BDF8"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/settingIptvSubtext"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="sans-serif"
+                            android:text="Nguồn kênh: Gói mặc định (VTV, HTV, Thể thao)"
+                            android:textColor="#E2E8F0"
+                            android:textSize="12sp" />
+
+                        <!-- Buttons Row -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:orientation="horizontal">
+
+                            <Button
+                                android:id="@+id/btnPickM3uFile"
+                                android:layout_width="0dp"
+                                android:layout_height="40dp"
+                                android:layout_marginEnd="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_search_pill"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="📁 Chọn file .M3U"
+                                android:textColor="#38BDF8"
+                                android:textSize="11.5sp" />
+
+                            <Button
+                                android:id="@+id/btnInputM3uUrl"
+                                android:layout_width="0dp"
+                                android:layout_height="40dp"
+                                android:layout_marginStart="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_search_pill"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="🔗 Nhập link web"
+                                android:textColor="#38BDF8"
+                                android:textSize="11.5sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Settings Card 6: Waze Traffic Alerts & HUD -->
+                    <LinearLayout
+                        android:id="@+id/settingCardWazeHud"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:background="@drawable/bg_card_frosted_phone"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="sans-serif-bold"
+                                    android:text="🧭 CẢNH BÁO GIAO THÔNG (WAZE MODE)"
+                                    android:textColor="#38BDF8"
+                                    android:textSize="13sp" />
+
+                                <TextView
+                                    android:id="@+id/settingWazeSubtext"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="3dp"
+                                    android:fontFamily="sans-serif"
+                                    android:text="HUD nổi: Đang bật • Mẫu #1 Bubble Ngang"
+                                    android:textColor="#CBD5E1"
+                                    android:textSize="11.5sp" />
+                            </LinearLayout>
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switchWazeHud"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
+                        </LinearLayout>
+
+                        <!-- HUD Action Buttons -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:orientation="horizontal">
+
+                            <Button
+                                android:id="@+id/btnChooseHudStyle"
+                                android:layout_width="0dp"
+                                android:layout_height="38dp"
+                                android:layout_marginEnd="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_search_pill"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="🎨 Chọn Mẫu HUD"
+                                android:textColor="#38BDF8"
+                                android:textSize="11.5sp" />
+
+                            <Button
+                                android:id="@+id/btnTestWazeAlert"
+                                android:layout_width="0dp"
+                                android:layout_height="38dp"
+                                android:layout_marginStart="6dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_search_pill"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="🧪 Thử Cảnh Báo"
+                                android:textColor="#38BDF8"
+                                android:textSize="11.5sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Settings Card 5: Advanced Settings -->
+                    <LinearLayout
+                        android:id="@+id/settingCardAdvanced"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:background="@drawable/bg_card_frosted_phone"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-bold"
+                            android:text="🛠️ CÀI ĐẶT NÂNG CAO"
+                            android:textColor="#38BDF8"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:fontFamily="sans-serif"
+                            android:text="Tùy chỉnh âm báo cảnh báo tốc độ, vị trí HUD &amp; tham số hệ thống"
+                            android:textColor="#CBD5E1"
+                            android:textSize="11.5sp" />
+
+                        <Button
+                            android:id="@+id/btnOpenAdvancedSettings"
+                            android:layout_width="match_parent"
+                            android:layout_height="40dp"
+                            android:layout_marginTop="10dp"
+                            android:background="@drawable/bg_search_pill"
+                            android:fontFamily="sans-serif-medium"
+                            android:text="⚙️ CÀI ĐẶT ÂM BÁO &amp; TỌA ĐỘ HUD XE"
+                            android:textColor="#E2E8F0"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- App Version -->
+                    <TextView
+                        android:id="@+id/phoneAppVersionText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center"
+                        android:text="THTV • Pro Automotive Edition"
+                        android:textColor="#64748B"
+                        android:textSize="11sp" />
+                </LinearLayout>
+            </ScrollView>
+        </FrameLayout>
+
+        <!-- ================= MINI PLAYER BAR (FLOATING DOCKED) ================= -->
+        <LinearLayout
+            android:id="@+id/phoneMiniPlayer"
+            android:layout_width="match_parent"
+            android:layout_height="62dp"
+            android:background="@drawable/bg_player_card_frosted"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="6dp">
+
+            <!-- Thumbnail -->
+            <FrameLayout
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:background="@drawable/bg_thumb_rounded"
+                android:clipToOutline="true">
+
+                <ImageView
+                    android:id="@+id/phonePlayerThumbnail"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/bg_wallpaper_sunset"
+                    android:visibility="visible" />
+
+                <ImageView
+                    android:id="@+id/phonePlayerFallbackIcon"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_nav_youtube"
+                    android:tint="#CBD5E1"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <!-- Details -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:gravity="center_vertical"
+                android:orientation="vertical">
+
+                <com.carhud.aaproxy.SmoothMarqueeTextView
+                    android:id="@+id/phonePlayerTitleText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:includeFontPadding="false"
+                    android:singleLine="true"
+                    android:text="YouTube Music"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12.5sp" />
+
+                <TextView
+                    android:id="@+id/phonePlayerSubtitleText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif"
+                    android:singleLine="true"
+                    android:text="TCar Auto"
+                    android:textColor="#94A3B8"
+                    android:textSize="10.5sp" />
+
+                <!-- Progress bar -->
+                <ProgressBar
+                    android:id="@+id/phonePlayerProgressBar"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="2.5dp"
+                    android:layout_marginTop="3dp"
+                    android:max="100"
+                    android:progress="35"
+                    android:progressDrawable="@drawable/bg_progress_blue" />
+            </LinearLayout>
+
+            <!-- Controls -->
+            <ImageView
+                android:id="@+id/btnPhonePlayerPrev"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:src="@drawable/ic_player_prev"
+                android:tint="#FFFFFF" />
+
+            <ImageView
+                android:id="@+id/btnPhonePlayerPlayPause"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginStart="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:src="@drawable/ic_player_play"
+                android:tint="#FFFFFF" />
+
+            <ImageView
+                android:id="@+id/btnPhonePlayerNext"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:src="@drawable/ic_player_next"
+                android:tint="#FFFFFF" />
+        </LinearLayout>
+
+        <!-- ================= MODERN BOTTOM NAVIGATION BAR ================= -->
+        <LinearLayout
+            android:id="@+id/phoneBottomNav"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:background="@drawable/bg_phone_bottom_nav"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- Nav 1: Trang chủ -->
+            <LinearLayout
+                android:id="@+id/navTabHome"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/navIconHome"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_nav_home"
+                    android:tint="#38BDF8" />
+
+                <TextView
+                    android:id="@+id/navLabelHome"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:fontFamily="sans-serif-bold"
+                    android:text="Trang chủ"
+                    android:textColor="#38BDF8"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <!-- Nav 2: YouTube -->
+            <LinearLayout
+                android:id="@+id/navTabYoutube"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/navIconYoutube"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_nav_youtube"
+                    android:tint="#94A3B8" />
+
+                <TextView
+                    android:id="@+id/navLabelYoutube"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="YouTube"
+                    android:textColor="#94A3B8"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <!-- Nav 3: IPTV -->
+            <LinearLayout
+                android:id="@+id/navTabIptv"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/navIconIptv"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_nav_tv"
+                    android:tint="#94A3B8" />
+
+                <TextView
+                    android:id="@+id/navLabelIptv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="IPTV"
+                    android:textColor="#94A3B8"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <!-- Nav 4: Cài đặt -->
+            <LinearLayout
+                android:id="@+id/navTabSettings"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:id="@+id/navIconSettings"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_nav_settings"
+                    android:tint="#94A3B8" />
+
+                <TextView
+                    android:id="@+id/navLabelSettings"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Cài đặt"
+                    android:textColor="#94A3B8"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+    <uses-permission android:name="android.permission.BIND_APPWIDGET" tools:ignore="ProtectedPermissions"/>
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+
+    <uses-permission android:name="androidx.car.app.ACCESS_SURFACE"/>
+    <uses-permission android:name="androidx.car.app.NAVIGATION_TEMPLATES"/>
+
+    <uses-feature android:name="android.hardware.location.gps" android:required="false"/>
+    <uses-feature android:name="android.hardware.microphone" android:required="false"/>
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN"/>
+            <category android:name="android.intent.category.APP_BROWSER"/>
+        </intent>
+        <package android:name="com.waze"/>
+        <package android:name="com.waze.mod"/>
+        <package android:name="com.google.android.apps.maps"/>
+        <package android:name="com.google.android.projection.gearhead"/>
+        <package android:name="com.andrerinas.openheadunit"/>
+        <package android:name="com.andrerinas.headunitrevived"/>
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
+        </intent>
+        <provider android:name="androidx.car.app.connection.provider" android:authorities="androidx.car.app.connection"/>
+    </queries>
+
+    <attribution
+        android:tag="default"
+        android:label="@string/app_name" />
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:theme="@style/Theme.CarHud"
+        android:allowBackup="false"
+        android:supportsRtl="true"
+        android:hardwareAccelerated="true"
+        android:largeHeap="true"
+        android:usesCleartextTraffic="true">
+
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc"/>
+
+        <meta-data
+            android:name="androidx.car.app.minCarApiLevel"
+            android:value="1"/>
+
+        <!-- Main Phone Activity: CarStream Dashboard & Multimedia Hub -->
+        <activity
+            android:name="com.carhud.aaproxy.MainActivity"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|uiMode"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+        </activity>
+
+        <!-- Secondary Phone Activity: Detailed Settings -->
+        <activity
+            android:name="com.carhud.aaproxy.SettingsActivity"
+            android:exported="true"
+            android:theme="@style/Theme.CarHud" />
+
+        <activity
+            android:name="com.carhud.aaproxy.ActivationActivity"
+            android:exported="true"
+            android:theme="@style/Theme.CarHud"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name="com.carhud.aaproxy.PhoneSearchActivity"
+            android:exported="true"
+            android:theme="@style/Theme.CarHud.Dialog"
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="stateAlwaysVisible|adjustResize"
+            android:excludeFromRecents="true"/>
+
+        <!-- Android Auto CarAppService -->
+        <service
+            android:name="com.carhud.aaproxy.CarHudAutoService"
+            android:exported="true"
+            android:label="THTV"
+            android:icon="@drawable/ic_carhud_logo">
+            <intent-filter>
+                <action android:name="androidx.car.app.CarAppService"/>
+                <category android:name="androidx.car.app.category.NAVIGATION"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:scheme="carhud"/>
+            </intent-filter>
+        </service>
+
+        <!-- Android Auto MediaBrowserService -->
+        <service
+            android:name="com.carhud.aaproxy.CarMediaBrowserService"
+            android:exported="true"
+            android:label="THTV Media"
+            android:foregroundServiceType="mediaPlayback"
+            android:icon="@drawable/ic_carhud_media">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+            <meta-data
+                android:name="com.google.android.gms.car.notification.SmallIcon"
+                android:resource="@drawable/ic_carhud_media"/>
+        </service>
+        
+        <receiver android:name="androidx.media.session.MediaButtonReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
+        <service
+            android:name="androidx.car.app.CarAppMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="androidx.car.app.CarAppMetadataHolderService.CAR_HARDWARE_MANAGER"
+                android:value="androidx.car.app.hardware.ProjectedCarHardwareManager"/>
+        </service>
+
+        <activity
+            android:name="androidx.car.app.CarAppPermissionActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <service
+            android:name="com.carhud.aaproxy.VietmapNotificationListenerService"
+            android:label="THTV Waze &amp; Maps Data Sync"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+    </application>
+</manifest>

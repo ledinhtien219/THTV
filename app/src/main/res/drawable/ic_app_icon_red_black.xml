@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer Metallic Crimson Red Circle Ring (Full Bleed) -->
+    <path
+        android:pathData="M54,8 C79.4,8 100,28.6 100,54 C100,79.4 79.4,100 54,100 C28.6,100 8,79.4 8,54 C8,28.6 28.6,8 54,8 Z"
+        android:strokeWidth="4.5"
+        android:strokeColor="#DC2626"/>
+
+    <!-- Inner Red Neon Ring -->
+    <path
+        android:pathData="M54,13 C76.6,13 95,31.4 95,54 C95,76.6 76.6,95 54,95 C31.4,95 13,76.6 13,54 C13,31.4 31.4,13 54,13 Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FF2A55"/>
+
+    <!-- Dark Inner Circular Canvas -->
+    <path
+        android:pathData="M54,14 C76,14 94,32 94,54 C94,76 76,94 54,94 C32,94 14,76 14,54 C14,32 32,14 54,14 Z"
+        android:fillColor="#0B0F17"/>
+
+    <!-- Red TV Antennae -->
+    <path
+        android:pathData="M42,26 L30,14 M66,26 L78,14"
+        android:strokeWidth="3.5"
+        android:strokeColor="#EF4444"
+        android:strokeLineCap="round"/>
+
+    <!-- 3D Dark TV Monitor Outer Frame -->
+    <path
+        android:pathData="M30,26 L78,26 C83,26 87,30 87,35 L87,67 C87,72 83,76 78,76 L30,76 C25,76 21,72 21,67 L21,35 C21,30 25,26 30,26 Z"
+        android:fillColor="#121824"
+        android:strokeWidth="2.5"
+        android:strokeColor="#EF4444"/>
+
+    <!-- Inner Glass TV Display Screen -->
+    <path
+        android:pathData="M32,30 L76,30 C78.5,30 80.5,32 80.5,34.5 L80.5,64.5 C80.5,67 78.5,69 76,69 L32,69 C29.5,69 27.5,67 27.5,64.5 L27.5,34.5 C27.5,32 29.5,30 32,30 Z"
+        android:fillColor="#070B12"/>
+
+    <!-- Red Play Button in Center Screen -->
+    <path
+        android:pathData="M47,38 L65,47 L47,56 Z"
+        android:fillColor="#E11D48"/>
+
+    <!-- 3D "TH" Silver Metallic Text -->
+    <!-- 'T' -->
+    <path
+        android:pathData="M20,57 L35,57 L35,62.5 L30,62.5 L30,76 L25,76 L25,62.5 L20,62.5 Z"
+        android:fillColor="#FFFFFF"/>
+    <!-- 'H' -->
+    <path
+        android:pathData="M36,57 L41,57 L41,64.5 L46,64.5 L46,57 L51,57 L51,76 L46,76 L46,68.5 L41,68.5 L41,76 L36,76 Z"
+        android:fillColor="#F1F5F9"/>
+
+    <!-- 3D "TV" Red Gradient Metallic Text -->
+    <!-- 'T' -->
+    <path
+        android:pathData="M52,57 L67,57 L67,62.5 L61.5,62.5 L61.5,76 L56.5,76 L56.5,62.5 L52,62.5 Z"
+        android:fillColor="#E11D48"/>
+    <!-- 'V' -->
+    <path
+        android:pathData="M67.5,57 L72.5,57 L77,70 L81.5,57 L86.5,57 L79.5,76 L74.5,76 Z"
+        android:fillColor="#FF2A55"/>
+</vector>

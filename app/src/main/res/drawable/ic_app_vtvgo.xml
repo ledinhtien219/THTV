@@ -1,0 +1,168 @@
+﻿<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="18dp"
+    android:viewportWidth="327"
+    android:viewportHeight="239">
+
+    <!-- Nền đỏ -->
+    <path
+        android:fillColor="#C42514"
+        android:pathData="M0,0H327V239H0Z" />
+
+    <!-- V đỏ -->
+    <path
+        android:fillColor="#DA2F2E"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M153,26
+                          L150,23
+                          L108,25
+                          L91,57
+                          L85,64
+                          L75,54
+                          L60,25
+                          L19,24
+                          L17,29
+                          L72,128
+                          L80,136
+                          L87,136
+                          L93,131
+                          Z" />
+
+    <!-- T xanh lá -->
+    <path
+        android:fillColor="#0D974F"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M214,25
+                          L166,24
+                          L161,27
+                          L141,64
+                          L141,134
+                          L143,136
+                          L187,135
+                          L188,61
+                          L191,58
+                          L234,58
+                          L226,41
+                          Z" />
+
+    <!-- V xanh dương -->
+    <path
+        android:fillColor="#302E84"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M307,25
+                          L302,23
+                          L267,23
+                          L262,27
+                          L253,46
+                          L240,64
+                          L232,66
+                          L195,66
+                          L234,134
+                          L242,137
+                          L250,132
+                          L308,28
+                          Z" />
+
+    <!-- chữ g -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="
+            M149,167
+            L144,167
+            L142,171
+            L139,171
+            L136,168
+            L132,167
+            L124,168
+            L117,171
+            L112,177
+            L109,185
+            L109,190
+            L113,199
+            L117,203
+            L126,207
+            L133,207
+            L139,203
+            L143,204
+            L142,211
+            L139,215
+            L134,218
+            L125,218
+            L119,214
+            L113,213
+            L113,216
+            L118,221
+            L126,224
+            L133,224
+            L140,221
+            L146,215
+            L149,207
+            Z
+
+            M125,172
+            L133,172
+            L137,174
+            L142,180
+            L144,188
+            L141,196
+            L137,201
+            L124,201
+            L115,192
+            L116,181
+            Z" />
+
+    <!-- chữ o -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="
+            M173,167
+            C161,167 156,176 156,187
+            C156,199 164,207 176,207
+            C188,207 196,199 196,187
+            C196,175 188,167 173,167
+            Z
+
+            M176,173
+            C185,173 191,179 191,188
+            C191,196 185,202 176,202
+            C168,202 162,196 162,188
+            C162,179 168,173 176,173
+            Z" />
+
+    <!-- 4 ô vuông cạnh chữ go -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M196,147H203V154H196Z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M207,147H214V154H207Z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M217,148H224V155H217Z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M207,158H214V165H207Z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M217,158H224V165H217Z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M217,169H224V176H217Z" />
+
+</vector>
