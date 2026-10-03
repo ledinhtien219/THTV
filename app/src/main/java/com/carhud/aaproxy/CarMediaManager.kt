@@ -353,7 +353,8 @@ object CarMediaManager {
             if (isDesktop) {
                 web.settings.userAgentString = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
             } else {
-                web.settings.userAgentString = null
+                val defaultUa = android.webkit.WebSettings.getDefaultUserAgent(appCtx)
+                web.settings.userAgentString = defaultUa.replace("; wv", "").replace(Regex("Version/\\d+\\.\\d+\\s?"), "")
             }
             val autoResume = prefs.getBoolean(SettingsActivity.KEY_AUTO_RESUME_LAST_TRACK, true)
             val lastUrl = prefs.getString(SettingsActivity.KEY_LAST_PLAYED_URL, null)

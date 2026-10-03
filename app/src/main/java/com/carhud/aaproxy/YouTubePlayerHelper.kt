@@ -1359,7 +1359,7 @@ object YouTubePlayerHelper {
                 setEnableSmoothTransition(true)
 
                 val ua = userAgentString
-                userAgentString = ua.replace("; wv", "")
+                userAgentString = ua.replace("; wv", "").replace(Regex("Version/\\d+\\.\\d+\\s?"), "")
             }
 
             val isDay = SettingsActivity.resolveIsDay(context)

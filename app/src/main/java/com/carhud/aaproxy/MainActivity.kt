@@ -976,35 +976,13 @@ class MainActivity : AppCompatActivity() {
             showSearchDialog()
         }
         findViewById<TextView>(R.id.btnYoutubeAccount)?.setOnClickListener {
-            showYoutubeAccountDialog()
-        }
-    }
-
-    private fun showYoutubeAccountDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Tài khoản YouTube")
-            .setMessage("Đăng nhập và xem YouTube bằng trình duyệt trên điện thoại. Tài khoản được lưu trong trình duyệt, không đồng bộ vào trình phát của ứng dụng.")
-            .setPositiveButton("Mở YouTube") { _, _ ->
-                val browserIntent = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_BROWSER)
-                val browsers = packageManager.queryIntentActivities(browserIntent, PackageManager.MATCH_DEFAULT_ONLY)
-                val preferredBrowser = packageManager.resolveActivity(browserIntent, PackageManager.MATCH_DEFAULT_ONLY)
-                val browser = browsers.firstOrNull { it.activityInfo.packageName == preferredBrowser?.activityInfo?.packageName }
-                    ?: browsers.firstOrNull()
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://m.youtube.com/feed/you"))
-                    .addCategory(Intent.CATEGORY_BROWSABLE)
-                if (browser == null) {
-                    Toast.makeText(this, "Bạn cần cài trình duyệt để đăng nhập YouTube.", Toast.LENGTH_LONG).show()
-                    return@setPositiveButton
-                }
-                intent.setPackage(browser.activityInfo.packageName)
-                try {
-                    startActivity(intent)
-                } catch (_: android.content.ActivityNotFoundException) {
-                    Toast.makeText(this, "Bạn cần cài trình duyệt để đăng nhập YouTube.", Toast.LENGTH_LONG).show()
-                }
+            val currentUrl = youtubeWeb?.url ?: ""
+            if (currentUrl.contains("accounts.google.com") || currentUrl.contains("signin")) {
+                youtubeWeb?.loadUrl("https://m.youtube.com")
+            } else {
+                youtubeWeb?.loadUrl("https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fm.youtube.com%2F")
             }
-            .setNegativeButton("Đóng", null)
-            .show()
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -1023,10 +1001,15 @@ class MainActivity : AppCompatActivity() {
             javaScriptEnabled = true
             domStorageEnabled = true
             mediaPlaybackRequiresUserGesture = false
-            // Keep the installed WebView's current mobile UA rather than spoofing Chrome.
-            userAgentString = android.webkit.WebSettings.getDefaultUserAgent(this@MainActivity)
+            // Clean User-Agent removing '; wv' and 'Version/4.0' so Google Sign-In is supported natively inside WebView
+            val cleanUa = android.webkit.WebSettings.getDefaultUserAgent(this@MainActivity)
+                .replace("; wv", "")
+                .replace(Regex("Version/\\d+\\.\\d+\\s?"), "")
+            userAgentString = cleanUa
             useWideViewPort = true
             loadWithOverviewMode = true
+            setSupportMultipleWindows(false)
+            javaScriptCanOpenWindowsAutomatically = true
         }
         w.setBackgroundColor(Color.WHITE)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -1043,10 +1026,6 @@ class MainActivity : AppCompatActivity() {
         w.webViewClient = object : android.webkit.WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                 val target = request?.url?.toString() ?: return false
-                if (request.isForMainFrame && request.url.host.equals("accounts.google.com", ignoreCase = true)) {
-                    showYoutubeAccountDialog()
-                    return true
-                }
                 if (target.startsWith("intent:") ||
                     target.startsWith("snssdk") ||
                     target.startsWith("market:") ||
@@ -1058,8 +1037,11 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun shouldInterceptRequest(view: WebView?, request: android.webkit.WebResourceRequest?): android.webkit.WebResourceResponse? {
-                YouTubeAdBlocker.shouldIntercept(request)?.let { return it }
                 val url = request?.url?.toString()
+                if (url != null && (url.contains("accounts.google.com") || url.contains("ssl.gstatic.com/accounts") || url.contains("myaccount.google.com"))) {
+                    return super.shouldInterceptRequest(view, request)
+                }
+                YouTubeAdBlocker.shouldIntercept(request)?.let { return it }
                 if (url != null && YouTubePlayerHelper.isAdUrl(url)) {
                     val origin = request.requestHeaders?.get("Origin") ?: request.requestHeaders?.get("origin")
                     return YouTubePlayerHelper.createEmptyResponse(origin)
@@ -1070,8 +1052,6 @@ class MainActivity : AppCompatActivity() {
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
                 YouTubeAdBlocker.onPageFinished(view, url)
-                // Car cleanup hides YouTube's search, chips and bottom tabs.
-                // Keep the mobile site's own responsive layout and interactions.
                 YouTubePlayerHelper.trackVideoHistory(view)
                 android.webkit.CookieManager.getInstance().flush()
             }

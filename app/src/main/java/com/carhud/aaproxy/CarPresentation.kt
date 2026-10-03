@@ -39,7 +39,7 @@ import kotlin.math.roundToInt
 class CarPresentation(
     context: Context,
     display: Display,
-    existingWebView: WebView? = null
+    private val existingWebView: WebView? = null
 ) : Presentation(android.view.ContextThemeWrapper(context, R.style.Theme_CarHud), display, R.style.Theme_CarHud), SharedPreferences.OnSharedPreferenceChangeListener {
 
     private var web: WebView = existingWebView ?: BackgroundAudioWebView(try { context.createDisplayContext(display) } catch (e: Exception) { context }).apply {
@@ -1759,7 +1759,8 @@ class CarPresentation(
         } else if (isDesktop) {
             web.settings.userAgentString = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
         } else {
-            web.settings.userAgentString = android.webkit.WebSettings.getDefaultUserAgent(context)
+            val defaultUa = android.webkit.WebSettings.getDefaultUserAgent(context)
+            web.settings.userAgentString = defaultUa.replace("; wv", "").replace(Regex("Version/\\d+\\.\\d+\\s?"), "")
         }
 
         web.settings.javaScriptEnabled = true
