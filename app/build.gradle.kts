@@ -12,8 +12,8 @@ android {
         applicationId = "com.tcar.auto"
         minSdk = 29
         targetSdk = 35
-        versionCode = 192
-        versionName = "1.0.19"
+        versionCode = 193
+        versionName = "1.0.20"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -27,14 +27,12 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            val debugKey = file(System.getProperty("user.home") + "/.android/debug.keystore")
-            if (debugKey.exists()) {
-                storeFile = debugKey
-                storePassword = "android"
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
-            }
+        create("stableCi") {
+            val stableKey = file(System.getProperty("user.home") + "/.android/debug.keystore")
+            storeFile = stableKey
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
     }
 
@@ -42,7 +40,7 @@ android {
         release {
             isDebuggable = true
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("stableCi")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -51,7 +49,7 @@ android {
         debug {
             isDebuggable = true
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("stableCi")
         }
     }
 
