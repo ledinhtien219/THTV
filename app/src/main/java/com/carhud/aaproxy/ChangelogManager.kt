@@ -27,8 +27,19 @@ object ChangelogManager {
 
     val RELEASE_NOTES = listOf(
         ReleaseNote(
-            versionName = "1.0.20",
+            versionName = "1.0.21",
             releaseDate = "Mới nhất",
+            features = listOf(
+                "🎨 Bộ icon cảnh báo mới: Thay emoji bằng icon đồ họa đậm nét, màu sắc theo phong cách Waze cho HUD.",
+                "🏘️ Khu dân cư: Dùng biểu tượng biển giao thông khu dân cư thay cho hình nhà thông thường.",
+                "🧭 HUD cảnh báo: Camera tốc độ, camera đèn đỏ, CSGT, đèn giao thông, công trường, đường sắt, nguy hiểm, ùn tắc, tai nạn và cấm vượt đều có icon riêng.",
+                "🧹 Dọn màn Cài đặt: Bỏ hẳn thẻ CẢNH BÁO GIAO THÔNG (WAZE MODE), công tắc và hai nút Chọn mẫu HUD / Thử cảnh báo.",
+                "📋 Dòng phiên bản ở Cài đặt dùng nhãn Nhật ký cập nhật động, không còn ghi cứng v1.0.16."
+            )
+        ),
+        ReleaseNote(
+            versionName = "1.0.20",
+            releaseDate = "Trước đó",
             features = listOf(
                 "🔐 Khóa chữ ký cập nhật: Debug APK được ép dùng keystore CI cố định thay vì debug key tự sinh của Gradle.",
                 "⬆️ Ổn định cài đè: Từ bản 1.0.20 trở đi các APK tiếp theo dùng cùng certificate để cập nhật trực tiếp.",
