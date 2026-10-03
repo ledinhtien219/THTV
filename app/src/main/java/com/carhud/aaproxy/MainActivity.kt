@@ -996,6 +996,20 @@ class MainActivity : AppCompatActivity() {
         val bgAudio = prefs.getBoolean(SettingsActivity.KEY_BACKGROUND_AUDIO, true)
         w.enableBackgroundAudio = bgAudio
 
+        w.isFocusable = true
+        w.isFocusableInTouchMode = true
+        w.requestFocus()
+        w.setOnTouchListener { v, event ->
+            if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                if (!v.hasFocus()) {
+                    v.requestFocus()
+                }
+            } else if (event.action == android.view.MotionEvent.ACTION_UP) {
+                v.performClick()
+            }
+            false
+        }
+
         YouTubePlayerHelper.applyUltraPerformance(w)
         w.settings.apply {
             javaScriptEnabled = true
@@ -1180,6 +1194,20 @@ class MainActivity : AppCompatActivity() {
         iptvWeb = w
         val bgAudio = prefs.getBoolean(SettingsActivity.KEY_BACKGROUND_AUDIO, true)
         w.enableBackgroundAudio = bgAudio
+
+        w.isFocusable = true
+        w.isFocusableInTouchMode = true
+        w.requestFocus()
+        w.setOnTouchListener { v, event ->
+            if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                if (!v.hasFocus()) {
+                    v.requestFocus()
+                }
+            } else if (event.action == android.view.MotionEvent.ACTION_UP) {
+                v.performClick()
+            }
+            false
+        }
 
         w.settings.apply {
             javaScriptEnabled = true

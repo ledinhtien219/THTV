@@ -51,14 +51,6 @@ class BackgroundAudioWebView @JvmOverloads constructor(
         super.dispatchVisibilityChanged(changedView, visibility)
     }
 
-    override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
-        if (enableBackgroundAudio) {
-            super.onWindowFocusChanged(true)
-            return
-        }
-        super.onWindowFocusChanged(hasWindowFocus)
-    }
-
     override fun onPause() {
         if (enableBackgroundAudio) {
             // Keep Chromium media timers and decoding active in background
