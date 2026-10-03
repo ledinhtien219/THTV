@@ -8,6 +8,32 @@
 
 ---
 
+## 📸 Giao Diện Ứng Dụng (Screenshots)
+
+### 🏎️ 1. Màn Hình Xe Hơi (Android Auto / Projected Screen)
+
+<div align="center">
+
+| 🖥️ Dashboard Buồng Lái Multi-Cards | 🛡️ Cảnh Báo Giao Thông HUD Tương Phản Cao |
+| :---: | :---: |
+| <img src="docs/images/thtv_aa_dashboard.png" width="450" alt="Android Auto Dashboard" /> | <img src="docs/images/thtv_aa_hud.png" width="450" alt="Vietmap HUD Speed Alert" /> |
+| *YouTube/IPTV, Đồng hồ tốc độ GPS, Lịch & Thời tiết* | *Tốc độ giới hạn, Camera phạt nguội & Cảnh báo Waze* |
+
+</div>
+
+### 📱 2. Màn Hình Điện Thoại (Phone Controls & Settings)
+
+<div align="center">
+
+| 🏠 Trang Chính Điều Khiển | 📺 Danh Sách Kênh IPTV | ⚙️ Cài Đặt Hệ Thống |
+| :---: | :---: | :---: |
+| <img src="docs/images/thtv_phone_main.png" width="280" alt="Phone Main Screen" /> | <img src="docs/images/thtv_phone_iptv.png" width="280" alt="Phone IPTV Screen" /> | <img src="docs/images/thtv_phone_settings.png" width="280" alt="Phone Settings Screen" /> |
+| *Bàn điều khiển & Trình phát* | *Danh sách Kênh TV & WebApp* | *Tùy chỉnh HUD, Media & Âm thanh* |
+
+</div>
+
+---
+
 ## 🌟 Tính Năng Nổi Bật
 
 ### 📺 1. Trình Phát YouTube Không Quảng Cáo & SponsorBlock
@@ -78,7 +104,8 @@ THTV PRO/
 │   │   │   ├── LicenseManager.kt              # Quản lý và xác thực bản quyền
 │   │   │   └── AppCrashHandler.kt             # Bộ bắt lỗi crash ứng dụng
 │   │   └── res/                               # Drawable, Layout, Layouts HUD, Strings (VI/EN)
-├── docs/                                      # Tài liệu tính năng & hình ảnh giao diện
+├── docs/
+│   └── images/                                # Hình ảnh chụp màn hình giao diện ứng dụng
 ├── telegram_bot_apps_script.js                # Code Google Apps Script cho Bot Telegram cấp key
 ├── HUONG_DAN_TAO_BOT_TELEGRAM.md             # Hướng dẫn tạo Bot Telegram kích hoạt bản quyền
 ├── build.gradle.kts
