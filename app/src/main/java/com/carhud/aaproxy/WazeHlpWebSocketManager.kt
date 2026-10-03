@@ -44,6 +44,8 @@ object WazeHlpWebSocketManager {
     private var clientJob: Job? = null
     private var webSocketClient: WebSocket? = null
     private var server: WazeHlpServer? = null
+    @Volatile private var currentSession: Long? = null
+    @Volatile private var lastStateTs: Long = -1L
 
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
@@ -96,7 +98,13 @@ object WazeHlpWebSocketManager {
             Log.i(TAG, "Waze Mod connected from $remoteAddr, resource=$res")
             _isConnected.value = true
             _statusText.value = "Đã kết nối Waze Mod ($remoteAddr)"
+            currentSession = null
+            lastStateTs = -1L
             VietmapStateRepository.updateConnection(true)
+
+            // HLP/1: alrs and lan are opt-in fields. Without a dev declaration,
+            // WazeMod falls back after ~500 ms and deliberately omits alrs.
+            conn?.let { sendDeviceDeclaration(it) }
         }
 
         override fun onClose(conn: JvmWebSocket?, code: Int, reason: String?, remote: Boolean) {
@@ -104,6 +112,9 @@ object WazeHlpWebSocketManager {
             if (connections.isEmpty()) {
                 _isConnected.value = false
                 _statusText.value = "Chờ Waze Mod kết nối (Cổng $WS_PORT)..."
+                currentSession = null
+                lastStateTs = -1L
+                VietmapStateRepository.clearHlpAlerts()
                 VietmapStateRepository.updateConnection(false)
             }
         }
@@ -111,15 +122,14 @@ object WazeHlpWebSocketManager {
         override fun onMessage(conn: JvmWebSocket?, message: String?) {
             if (message.isNullOrBlank()) return
             Log.d(TAG, "WAZE_RAW(server)=$message")
-            handleJsonMessage(message)
+            handleIncomingMessage(message) { reply -> conn?.send(reply) }
         }
 
         override fun onError(conn: JvmWebSocket?, ex: Exception?) {
             Log.w(TAG, "Waze Mod server error: ${ex?.message}")
             if (conn == null && ex is java.net.BindException) {
-                Log.e(TAG, "Port $WS_PORT already bound. Falling back to client mode...")
-                _statusText.value = "Cổng $WS_PORT bận - Thử chế độ Client..."
-                startClientFallback()
+                Log.e(TAG, "Port $WS_PORT already bound; WazeMod needs this app to be the WebSocket server")
+                _statusText.value = "Cổng $WS_PORT đang bị ứng dụng khác sử dụng"
             }
         }
     }
@@ -130,7 +140,9 @@ object WazeHlpWebSocketManager {
         if (server == null) {
             startServer()
         }
-        startClientFallback()
+        // WazeMod is the WebSocket client. Do not connect this process back to
+        // its own localhost server; that creates a false-positive connection.
+        stopClientFallback()
         startKeepAliveMonitor()
     }
 
@@ -138,6 +150,8 @@ object WazeHlpWebSocketManager {
         stopKeepAliveMonitor()
         stopClientFallback()
         stopServer()
+        currentSession = null
+        lastStateTs = -1L
         _isConnected.value = false
         _statusText.value = "Đã dừng Server"
     }
