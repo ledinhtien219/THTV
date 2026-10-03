@@ -27,22 +27,31 @@ object ChangelogManager {
 
     val RELEASE_NOTES = listOf(
         ReleaseNote(
-            versionName = "1.0.16",
+            versionName = "1.0.19",
             releaseDate = "Mới nhất",
             features = listOf(
-                "⌨️ Fix Bàn phím điện thoại: Khắc phục triệt để lỗi không mở được bàn phím ảo (IME) khi gõ tài khoản Google / nhập dữ liệu web trên điện thoại.",
-                "🔄 Cài đè trực tiếp: Đồng bộ mã phiên bản (versionCode 189) và chữ ký ký ứng dụng giúp cập nhật ứng dụng trực tiếp không cần xóa app cũ.",
-                "⚡ Tối ưu hiệu năng WebView: Cập nhật cơ chế Chromium giúp WebView phát nhạc nền mượt mà, không bị gián đoạn khi chuyển tab.",
-                "🚗 Tối ưu giao diện xe: Nâng cấp tương thích màn hình Android Auto và bong bóng Vietmap HUD."
+                "🧭 Đồng bộ nhật ký phiên bản: Màn hình cập nhật hiển thị đúng versionName/versionCode hiện tại, không còn lệch sang bản cũ.",
+                "🪪 Ổn định mã máy kích hoạt: Mã thiết bị không còn phụ thuộc chữ ký APK; giữ ổn định giữa các bản cập nhật tiếp theo.",
+                "🔐 Cài đè ổn định: GitHub Actions dùng signing key cố định để các bản từ 1.0.17 trở đi cập nhật trực tiếp.",
+                "🫧 HUD Waze gọn hơn: Toàn bộ mẫu bong bóng dùng ô cảnh báo icon + khoảng cách, phù hợp Android Auto."
             )
         ),
         ReleaseNote(
-            versionName = "1.0.15",
+            versionName = "1.0.18",
             releaseDate = "Trước đó",
             features = listOf(
-                "📺 Nâng cấp IPTV: Hỗ trợ nạp danh sách kênh M3U mượt mà, tối ưu logo và kênh yêu thích.",
-                "🎙 Tìm kiếm giọng nói: Tối ưu nhận diện giọng nói tiếng Việt cho bài hát YouTube và kênh truyền hình.",
-                "🎨 Giao diện buồng lái: Thêm nhiều bộ hình nền Bugatti, Cyberpunk, Scenic cao cấp."
+                "🪪 Nâng cấp mã thiết bị: Chuyển khỏi ANDROID_ID bị phụ thuộc chữ ký APK sang mã nhận dạng phần cứng ổn định hơn.",
+                "♻️ Migration bản quyền: Tự chuyển chữ ký license cũ sang mã máy mới khi dữ liệu kích hoạt cũ còn hợp lệ.",
+                "🧹 Dọn cài đặt Waze: Bỏ quyền đọc thông báo, tiếng Ting, TTS thử nghiệm và các nút mô phỏng cảnh báo không còn dùng."
+            )
+        ),
+        ReleaseNote(
+            versionName = "1.0.17",
+            releaseDate = "Trước đó",
+            features = listOf(
+                "🚘 Làm lại bong bóng HUD Waze: Giữ HUD nhỏ gọn, cảnh báo hiện bằng icon lớn + khoảng cách ngay bên phải.",
+                "📷 Bổ sung icon rõ hơn cho camera tốc độ, camera đèn đỏ, đèn giao thông và các cảnh báo HLP.",
+                "🛠 Tối ưu toàn bộ 5 kiểu HUD có sẵn để dùng chung logic cảnh báo mới."
             )
         )
     )
