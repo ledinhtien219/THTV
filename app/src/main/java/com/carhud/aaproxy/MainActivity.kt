@@ -123,7 +123,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var settingUserSubtext: TextView
     private lateinit var settingWallpaperSubtext: TextView
     private lateinit var settingIptvSubtext: TextView
-    private lateinit var settingWazeSubtext: TextView
 
     private var activeTab = TAB_HOME
     private var activeAccentColor = Color.parseColor("#38BDF8")
@@ -427,7 +426,6 @@ class MainActivity : AppCompatActivity() {
         settingUserSubtext = findViewById(R.id.settingUserSubtext)
         settingWallpaperSubtext = findViewById(R.id.settingWallpaperSubtext)
         settingIptvSubtext = findViewById(R.id.settingIptvSubtext)
-        settingWazeSubtext = findViewById(R.id.settingWazeSubtext)
 
         phonePlayerTitleText.isSelected = true
     }
@@ -1317,7 +1315,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupSettingsTab() {
         val verTv = findViewById<TextView>(R.id.phoneAppVersionText)
-        verTv?.text = "THTV v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE}) • Nhật ký v1.0.16 📋"
+        verTv?.text = "THTV v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE}) • Nhật ký cập nhật 📋"
         verTv?.setOnClickListener {
             ChangelogManager.showChangelogDialog(this)
         }
@@ -1408,25 +1406,6 @@ class MainActivity : AppCompatActivity() {
                 .show()
         }
 
-        updateWazeSettingsText()
-
-        // 6. Waze HUD Switch
-        val switchWazeHud = findViewById<SwitchCompat>(R.id.switchWazeHud)
-        switchWazeHud?.isChecked = WazeHudManager.isFloatingOverlayEnabled(this)
-        switchWazeHud?.setOnCheckedChangeListener { _, isChecked ->
-            WazeHudManager.setFloatingOverlayEnabled(this, isChecked)
-            updateWazeSettingsText()
-            Toast.makeText(this, if (isChecked) "Đã bật Cảnh Báo Giao Thông HUD" else "Đã tắt Cảnh Báo Giao Thông HUD", Toast.LENGTH_SHORT).show()
-        }
-
-        findViewById<Button>(R.id.btnChooseHudStyle)?.setOnClickListener {
-            showHudStyleChooserDialog()
-        }
-
-        findViewById<Button>(R.id.btnTestWazeAlert)?.setOnClickListener {
-            testWazeAlertDemo()
-        }
-
         findViewById<Button>(R.id.btnOpenAdvancedSettings)?.setOnClickListener {
             val intent = Intent(this, SettingsActivity::class.java)
             startActivity(intent)
@@ -1463,14 +1442,6 @@ class MainActivity : AppCompatActivity() {
             val url = IptvManager.getM3uUrl(this)
             if (url == IptvManager.DEFAULT_IPTV_URL) "Nguồn kênh: Gói mặc định (VTV, HTV, Thể thao)" else "Nguồn kênh: $url"
         }
-    }
-
-    private fun updateWazeSettingsText() {
-        val enabled = WazeHudManager.isFloatingOverlayEnabled(this)
-        val styleId = WazeHudManager.getActiveStyleId(this)
-        val style = WazeHudManager.STYLES.find { it.id == styleId } ?: WazeHudManager.STYLES[0]
-        settingWazeSubtext.text =
-            if (enabled) "HUD nổi: Đang BẬT • ${style.name}" else "HUD nổi: Đang TẮT (Gạt công tắc để bật)"
     }
 
     private fun showSearchDialog() {
