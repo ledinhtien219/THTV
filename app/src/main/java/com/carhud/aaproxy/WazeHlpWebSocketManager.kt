@@ -152,9 +152,6 @@ object WazeHlpWebSocketManager {
                         Log.i(TAG, "KeepAlive: Server is null, auto-restarting Waze Mod listener...")
                         startServer()
                     }
-                    if (!_isConnected.value && clientJob?.isActive != true) {
-                        startClientFallback()
-                    }
                 } catch (e: Exception) {
                     Log.w(TAG, "KeepAlive error: $e")
                 }
@@ -176,10 +173,10 @@ object WazeHlpWebSocketManager {
             server = s
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start WazeHlpServer", e)
-            if (e is java.net.BindException) {
-                startClientFallback()
+            _statusText.value = if (e is java.net.BindException) {
+                "Cổng $WS_PORT đang bị ứng dụng khác sử dụng"
             } else {
-                _statusText.value = "Lỗi Server: ${e.message}"
+                "Lỗi Server: ${e.message}"
             }
         }
     }
@@ -199,6 +196,8 @@ object WazeHlpWebSocketManager {
         _statusText.value = "Đang khởi động lại..."
         stopClientFallback()
         stopServer()
+        currentSession = null
+        lastStateTs = -1L
         scope.launch {
             delay(500)
             startServer()
@@ -241,7 +240,7 @@ object WazeHlpWebSocketManager {
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
                     Log.d(TAG, "WAZE_RAW(client)=$text")
-                    handleJsonMessage(text)
+                    handleIncomingMessage(text) { reply -> webSocket.send(reply) }
                 }
 
                 override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
@@ -289,6 +288,226 @@ object WazeHlpWebSocketManager {
             Log.e(TAG, "Error detecting IP addresses", e)
         }
         return list
+    }
+
+
+    private fun buildDeviceDeclarationPayload(): String = JSONObject().apply {
+        put("v", 1)
+        put("t", "dev")
+        put("name", "THTV-PRO")
+        put("fw", "1.0")
+        put("proto", JSONArray().put(1))
+        put("can", JSONArray().apply {
+            listOf("speed", "limit", "turn", "lanes", "street", "eta", "avgzone", "alerts")
+                .forEach { put(it) }
+        })
+        put("want", JSONObject().apply {
+            put("rate", 8)
+            put("fields", JSONArray().apply {
+                listOf(
+                    "nav", "spd", "lim", "min", "over",
+                    "trn", "trn2", "dst", "exit", "lan",
+                    "st", "st2", "eta", "rmin", "rm", "rkm",
+                    "avg", "avgL", "avgR", "avgP",
+                    "alr", "alrD", "alrV", "alrS", "alrM", "alrs"
+                ).forEach { put(it) }
+            })
+        })
+    }.toString()
+
+    private fun sendDeviceDeclaration(conn: JvmWebSocket) {
+        try {
+            val payload = buildDeviceDeclarationPayload()
+            Log.i(TAG, "HLP_TX dev=$payload")
+            conn.send(payload)
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to send HLP dev declaration", t)
+        }
+    }
+
+    /** Handles HLP envelope before the state parser. */
+    private fun handleIncomingMessage(jsonStr: String, reply: (String) -> Unit = {}) {
+        try {
+            val root = JSONObject(jsonStr)
+            if (root.optInt("v", 1) != 1) return
+            when (root.optString("t", "s")) {
+                "ping" -> {
+                    reply("{\"v\":1,\"t\":\"pong\"}")
+                    return
+                }
+                "pong" -> return
+                "hi" -> {
+                    val sess = if (root.has("sess")) root.optLong("sess") else -1L
+                    val previousSession = currentSession
+                    if (sess >= 0L && sess != previousSession) {
+                        currentSession = sess
+                        lastStateTs = -1L
+                        VietmapStateRepository.beginHlpSession()
+
+                        // If WazeMod restarts while the WebSocket stays alive, HLP requires
+                        // the receiver to negotiate again for the new session. Avoid a
+                        // duplicate declaration on the very first hi because onOpen already
+                        // sent it.
+                        if (previousSession != null) {
+                            reply(buildDeviceDeclarationPayload())
+                        }
+                    }
+                    val fields = root.opt("fields")?.toString().orEmpty()
+                    Log.i(TAG, "HLP_HI sess=$sess fields=$fields")
+                    return
+                }
+                "bye" -> {
+                    lastStateTs = -1L
+                    VietmapStateRepository.clearHlpAlerts()
+                    return
+                }
+                "s" -> {
+                    val ts = if (root.has("ts")) root.optLong("ts", -1L) else -1L
+                    if (ts >= 0L && lastStateTs >= 0L && ts < lastStateTs) {
+                        Log.d(TAG, "Ignoring stale HLP state ts=$ts < $lastStateTs sess=$currentSession")
+                        return
+                    }
+                    if (ts >= 0L) lastStateTs = ts
+                    handleJsonMessage(jsonStr)
+                }
+                else -> return
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "Invalid HLP envelope: $jsonStr", t)
+        }
+    }
+
+    /** HLP/1 v1 alert code -> broad HUD policy category. */
+    fun alertCodeToWarningType(code: Int): VietmapWarningType = when (code) {
+        1 -> VietmapWarningType.POLICE
+        2 -> VietmapWarningType.SPEED_CAMERA
+        3 -> VietmapWarningType.RED_LIGHT_CAMERA
+        4 -> VietmapWarningType.HAZARD
+        5 -> VietmapWarningType.ACCIDENT
+        6 -> VietmapWarningType.TRAFFIC_JAM
+        7 -> VietmapWarningType.HAZARD
+        8, 22 -> VietmapWarningType.SPEED_LIMIT_ZONE
+        9 -> VietmapWarningType.NO_OVERTAKING
+        10 -> VietmapWarningType.END_NO_OVERTAKING
+        12 -> VietmapWarningType.TOLL_BOOTH
+        14 -> VietmapWarningType.CONSTRUCTION
+        23 -> VietmapWarningType.RESIDENTIAL_START
+        24 -> VietmapWarningType.RESIDENTIAL_END
+        in 40..46 -> VietmapWarningType.SPEED_CAMERA
+        else -> if (code > 0) VietmapWarningType.HAZARD else VietmapWarningType.NONE
+    }
+
+    fun alertCodeLabel(code: Int): String = when (code) {
+        1 -> "Cảnh sát giao thông"
+        2 -> "Camera tốc độ"
+        3 -> "Camera đèn đỏ"
+        4 -> "Nguy hiểm"
+        5 -> "Tai nạn"
+        6 -> "Kẹt xe"
+        7 -> "Đường đóng"
+        8 -> "Giảm giới hạn tốc độ"
+        9 -> "Cấm vượt"
+        10 -> "Hết cấm vượt"
+        11 -> "Giao cắt đường sắt"
+        12 -> "Trạm thu phí"
+        13 -> "Xe dừng trên đường"
+        14 -> "Công trường"
+        15 -> "Ổ gà / sụt lún"
+        16 -> "Thời tiết xấu"
+        17 -> "Làn đường bị chặn"
+        18 -> "Đường nguy hiểm"
+        19 -> "Lối ra cao tốc"
+        20 -> "Trạm dừng cao tốc"
+        21 -> "Trạm dừng nghỉ"
+        22 -> "Hết hạn chế tốc độ"
+        23 -> "Bắt đầu khu dân cư"
+        24 -> "Hết khu dân cư"
+        25 -> "Hết mọi lệnh cấm"
+        26 -> "Cấm ô tô"
+        27 -> "Cấm xe máy"
+        28 -> "Cấm rẽ trái"
+        29 -> "Cấm rẽ phải"
+        30 -> "Cấm quay đầu"
+        31 -> "Cấm đi thẳng"
+        32 -> "Bắt buộc đi thẳng"
+        33 -> "Bắt buộc rẽ phải"
+        34 -> "Bắt buộc rẽ trái"
+        35 -> "Làn ô tô"
+        36 -> "Làn xe máy"
+        37 -> "Đường một chiều"
+        38 -> "Đường cấm"
+        39 -> "Biển cấm kết hợp"
+        40 -> "Camera phạt nguội"
+        41 -> "Camera mô hình"
+        42 -> "Camera dây an toàn"
+        43 -> "Camera khoảng cách"
+        44 -> "Camera làn xe buýt"
+        45 -> "Camera tiếng ồn"
+        46 -> "Camera biển STOP"
+        47 -> "Động vật trên đường"
+        48 -> "Vật cản trên đường"
+        49 -> "Xác động vật"
+        50 -> "Ngập nước"
+        51 -> "Sương mù"
+        52 -> "Mưa đá"
+        53 -> "Tuyết"
+        54 -> "Băng tuyết"
+        55 -> "Đường trơn"
+        56 -> "Gờ giảm tốc"
+        57 -> "Khu vực trường học"
+        58 -> "Nhập làn"
+        59 -> "Khúc cua nguy hiểm"
+        60 -> "Đường phân nhánh"
+        61 -> "Đèn tín hiệu hỏng"
+        62 -> "Người đi xe đạp"
+        63 -> "Xe ưu tiên"
+        64 -> "Cảnh báo an toàn"
+        65 -> "Cấm thẳng và rẽ phải"
+        66 -> "Cấm trái và quay đầu"
+        67 -> "Cấm thẳng và rẽ trái"
+        68 -> "Cấm trái và rẽ phải"
+        69 -> "Ô tô cấm trái và quay đầu"
+        70 -> "Ô tô cấm phải và quay đầu"
+        71 -> "Cấm phải và quay đầu"
+        72 -> "Ô tô cấm rẽ trái"
+        73 -> "Ô tô cấm rẽ phải"
+        74 -> "Ô tô cấm quay đầu"
+        75 -> "Đèn giao thông"
+        else -> "Cảnh báo"
+    }
+
+    fun alertCodeEmoji(code: Int): String = when (code) {
+        1 -> "👮"
+        2, in 40..46 -> "📷"
+        3, 61, 75 -> "🚦"
+        5 -> "💥"
+        6 -> "🚗"
+        7, in 26..39, in 65..74 -> "⛔"
+        8, 22 -> "⭕"
+        9 -> "🚫"
+        10, 25 -> "✅"
+        11 -> "🚂"
+        12 -> "💰"
+        13 -> "🚙"
+        14 -> "🚧"
+        15 -> "🕳️"
+        16, 51, 52, 53, 54, 55 -> "🌧️"
+        19 -> "↗️"
+        20, 21 -> "🅿️"
+        23 -> "🏘️"
+        24 -> "🛣️"
+        47 -> "🐄"
+        48 -> "⚠️"
+        49 -> "🐾"
+        50 -> "🌊"
+        56 -> "〰️"
+        57 -> "🏫"
+        58, 60 -> "🔀"
+        59 -> "↪️"
+        62 -> "🚴"
+        63 -> "🚑"
+        64 -> "🛡️"
+        else -> "⚠️"
     }
 
 
@@ -417,8 +636,8 @@ object WazeHlpWebSocketManager {
     }
 
     private fun parseLaneGuidance(json: JSONObject): String? {
-        firstString(json, "laneGuidance", "lane_guidance", "lane", "lanes", "ln")?.let { return it }
-        val arr = firstArray(json, "lanes", "laneGuidance", "lane_guidance") ?: return null
+        firstString(json, "laneGuidance", "lane_guidance", "lane", "lanes", "lan", "ln")?.let { return it }
+        val arr = firstArray(json, "lan", "lanes", "laneGuidance", "lane_guidance") ?: return null
         val parts = mutableListOf<String>()
         for (i in 0 until arr.length()) {
             val item = arr.opt(i) ?: continue
@@ -442,7 +661,7 @@ object WazeHlpWebSocketManager {
                 ?.takeIf { it >= 0 }
             val limit = firstInt(json, "speed_limit", "limit", "max_speed", "maxSpeed", "lim", "sl", "speedLimit")
                 ?.takeIf { it > 0 }
-            val secondaryLimit = firstInt(json, "secondarySpeedLimit", "secondary_speed_limit", "alrS", "nextSpeedLimit", "next_speed_limit")
+            var secondaryLimit = firstInt(json, "secondarySpeedLimit", "secondary_speed_limit", "nextSpeedLimit", "next_speed_limit")
                 ?.takeIf { it > 0 }
 
             // Navigation / maneuver
