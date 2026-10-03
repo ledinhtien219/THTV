@@ -58,6 +58,6 @@ jobs:
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: THTV-v1.0.17-debug-apk
+          name: THTV-v1.0.18-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14
