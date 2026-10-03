@@ -55,6 +55,15 @@ object CarMediaManager {
     private var phoneWebView: WebView? = null
     var mainActivityRoot: android.view.ViewGroup? = null
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val steeringNextHandler = SteeringNextPressHandler(
+        clock = { android.os.SystemClock.uptimeMillis() },
+        schedule = { delay, action ->
+            val task = Runnable { action() }
+            mainHandler.postDelayed(task, delay)
+            val cancel: () -> Unit = { mainHandler.removeCallbacks(task) }
+            cancel
+        }
+    )
     private var wakeLock: PowerManager.WakeLock? = null
 
     var isPlaying = false
@@ -728,6 +737,33 @@ object CarMediaManager {
         }
     }
 
+    internal fun handleSteeringNext(context: Context, event: android.view.KeyEvent? = null) {
+        val appContext = context.applicationContext
+        val keyDownTime = event?.downTime
+        val repeatCount = event?.repeatCount ?: 0
+        val source = if (event == null) SteeringNextPressHandler.Source.TRANSPORT else SteeringNextPressHandler.Source.KEY_EVENT
+        val handle = Runnable {
+            val prefs = appContext.getSharedPreferences(SettingsActivity.PREFS, Context.MODE_PRIVATE)
+            val appAtPress = activeAppId
+            steeringNextHandler.press(
+                source = source,
+                keyDownTime = keyDownTime,
+                repeatCount = repeatCount,
+                doubleClickVoice = prefs.getBoolean(SettingsActivity.KEY_STEERING_DOUBLE_CLICK_VOICE, true),
+                windowMs = prefs.getInt(SettingsActivity.KEY_STEERING_DOUBLE_CLICK_SPEED, 500).toLong(),
+                singlePressVoice = prefs.getString(SettingsActivity.KEY_STEERING_NEXT_ACTION, "next") == "voice",
+                onSingle = { if (activeAppId == appAtPress) playNext() },
+                onVoice = { startGlobalVoiceSearch(appContext) }
+            )
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) handle.run() else mainHandler.post(handle)
+    }
+
+    internal fun cancelPendingSteeringNext() {
+        if (Looper.myLooper() == Looper.getMainLooper()) steeringNextHandler.cancelPending()
+        else mainHandler.post { steeringNextHandler.cancelPending() }
+    }
+
     fun playNext() {
         mainHandler.post {
             try {
@@ -745,6 +781,7 @@ object CarMediaManager {
 
     fun playPrevious() {
         mainHandler.post {
+            steeringNextHandler.cancelPending()
             try {
                 getActiveWebView()?.let { web ->
                     val url = web.url ?: ""
@@ -867,6 +904,7 @@ object CarMediaManager {
 
     fun startGlobalVoiceSearch(context: Context) {
         mainHandler.post {
+            steeringNextHandler.cancelPending()
             try {
                 activeVoiceManager?.startListening()
             } catch (e: Exception) {

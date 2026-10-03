@@ -14,10 +14,10 @@
 
 <div align="center">
 
-| 🖥️ Dashboard Buồng Lái Multi-Cards | 🛡️ Cảnh Báo Giao Thông HUD Tương Phản Cao |
+| 🖥️ Dashboard Buồng Lái Multi-Cards | 🚗 Hiển Thị Trực Tiếp Trên Màn Xe Ô Tô |
 | :---: | :---: |
-| <img src="docs/images/thtv_aa_dashboard.png" width="450" alt="Android Auto Dashboard" /> | <img src="docs/images/thtv_aa_hud.png" width="450" alt="Vietmap HUD Speed Alert" /> |
-| *YouTube/IPTV, Đồng hồ tốc độ GPS, Lịch & Thời tiết* | *Tốc độ giới hạn, Camera phạt nguội & Cảnh báo Waze* |
+| <img src="docs/images/thtv_aa_dashboard.png" width="450" alt="Android Auto Dashboard" /> | <img src="docs/images/thtv_aa_real_car.jpg" width="450" alt="Real Car Screen" /> |
+| *Giao diện Dashboard Cockpit Bugatti, GPS Speed, YouTube/IPTV* | *Trải nghiệm thực tế trên màn hình Android Auto / Screen Projection* |
 
 </div>
 
@@ -50,9 +50,9 @@
 * **Đồng bộ cảnh báo Waze HLP (`WazeHudManager.kt`)**: Kết nối WebSocket thời gian thực nhận dữ liệu kẹt xe, tai nạn, cảnh báo chướng ngại vật từ Waze.
 * **Đồng hồ tốc độ GPS thực tế (`GpsSpeedManager.kt`)**: Đo tốc độ di chuyển theo thời gian thực với độ chính xác cao.
 
-### 🎙️ 4. Tìm Kiếm Giọng Nói Tiếng Việt 0ms & Bộ Gõ Telex Ô TÔ
+### 🎙️ 4. Tìm Kiếm Giọng Nói Tiếng Việt 0ms & Phím Vô Lăng
 * **Ultra-Low Latency Engine (`VoiceSearchManager.kt`)**: Nhận diện giọng nói tiếng Việt siêu tốc, tự động ngắt câu sau 350ms để trả về kết quả ngay lập tức.
-* **Tích hợp phím vô lăng**: Tương thích hoàn toàn với nút bấm giọng nói trên vô lăng (`KEYCODE_VOICE_ASSIST` / `KEYCODE_SEARCH`).
+* **Tích hợp phím vô lăng thông minh**: Tương thích hoàn toàn với nút bấm giọng nói và phím chuyển bài trên vô lăng (`KEYCODE_VOICE_ASSIST` / `KEYCODE_MEDIA_NEXT` / `MediaSession`).
 * **Bộ gõ Telex màn hình xe (`VietnameseTelexEngine.kt`)**: Bộ gõ tiếng Việt tối ưu riêng cho thao tác chạm trên màn hình ô tô.
 
 ### 🎛️ 5. Giao Diện Buồng Lái Cockpit & Đồng Bộ Thanh Viên Thuốc (Capsule Toolbars)

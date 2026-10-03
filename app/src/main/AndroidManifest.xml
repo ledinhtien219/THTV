@@ -83,6 +83,18 @@
 
         <!-- Secondary Phone Activity: Detailed Settings -->
         <activity
+            android:name="com.carhud.aaproxy.SystemVoiceActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
             android:name="com.carhud.aaproxy.SettingsActivity"
             android:exported="true"
             android:theme="@style/Theme.CarHud" />
@@ -127,10 +139,6 @@
             android:icon="@drawable/ic_carhud_media">
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService"/>
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH"/>
-                <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
             <meta-data
                 android:name="com.google.android.gms.car.notification.SmallIcon"

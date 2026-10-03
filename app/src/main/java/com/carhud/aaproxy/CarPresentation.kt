@@ -39,7 +39,7 @@ import kotlin.math.roundToInt
 class CarPresentation(
     context: Context,
     display: Display,
-    private val existingWebView: WebView? = null
+    existingWebView: WebView? = null
 ) : Presentation(android.view.ContextThemeWrapper(context, R.style.Theme_CarHud), display, R.style.Theme_CarHud), SharedPreferences.OnSharedPreferenceChangeListener {
 
     private var web: WebView = existingWebView ?: BackgroundAudioWebView(try { context.createDisplayContext(display) } catch (e: Exception) { context }).apply {
@@ -70,6 +70,10 @@ class CarPresentation(
     private var browserLoading = false
     private var browserNeedsHistoryReset = false
     private var isWebVideoFullscreen = false
+    private var systemVoiceGeneration = 0L
+    private var systemVoiceSearchPending = false
+    private val systemVoiceSearchScript by lazy { context.assets.open("system_voice_search.js").bufferedReader().use { it.readText() } }
+    private val systemVoiceReceiver: (SystemVoiceCommand) -> Unit = { handleSystemVoiceCommand(it) }
     private var appGridOverlay: FrameLayout? = null
     private var appGridPanel: LinearLayout? = null
     private var appGridPosToggleBtn: TextView? = null
@@ -168,6 +172,7 @@ class CarPresentation(
         onStateChanged = { state, text ->
             mainHandler.post {
                 if (state == VoiceSearchManager.State.LISTENING || state == VoiceSearchManager.State.RECOGNIZING) {
+                    if (state == VoiceSearchManager.State.LISTENING) cancelSystemVoiceRequest()
                     YouTubePlayerHelper.setDuckingVolume(web, 0.0f)
                 } else if (state == VoiceSearchManager.State.IDLE || state == VoiceSearchManager.State.ERROR || state == VoiceSearchManager.State.SUCCESS) {
                     YouTubePlayerHelper.setDuckingVolume(web, 1.0f)
@@ -727,6 +732,7 @@ class CarPresentation(
             false
         }
         web.setOnTouchListener { _, event ->
+            if (event.actionMasked == MotionEvent.ACTION_DOWN && systemVoiceSearchPending) cancelSystemVoiceRequest()
             onUserInteraction()
             if (event.actionMasked == MotionEvent.ACTION_UP && isBrowserApp()) {
                 openFocusedWebInput(event.x, event.y)
@@ -831,6 +837,7 @@ class CarPresentation(
                 ContextCompat.RECEIVER_EXPORTED
             )
         } catch (e: Exception) {}
+        SystemVoiceModule.attach(systemVoiceReceiver)
     }
 
     private fun isHudOverlayEnabled(): Boolean {
@@ -935,6 +942,7 @@ class CarPresentation(
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         mainHandler.post {
+            if (key == SystemVoiceModule.PREF_ENABLED) cancelSystemVoiceRequest()
             if (key == SettingsActivity.KEY_DESKTOP_MODE && currentActiveAppId == "youtube") {
                 applyDesktopMode(web)
                 val isDesktop = prefs.getBoolean(SettingsActivity.KEY_DESKTOP_MODE, false)
@@ -1572,7 +1580,93 @@ class CarPresentation(
         }
     }
 
+    private fun cancelSystemVoiceRequest() {
+        systemVoiceGeneration++
+        systemVoiceSearchPending = false
+    }
+
+    private fun handleSystemVoiceCommand(command: SystemVoiceCommand) {
+        if (!SystemVoiceModule.isEnabled(context)) return
+        cancelSystemVoiceRequest()
+        hideSearchOverlay()
+        CarMediaManager.userWantsPlayback = true
+        when (command) {
+            SystemVoiceCommand.Resume -> {
+                CarMediaManager.resumePlayback()
+                SystemVoiceModule.report(context, "Đã yêu cầu tiếp tục nội dung đang phát.")
+            }
+            is SystemVoiceCommand.Tv -> {
+                if (command.channel.isBlank()) {
+                    CarMediaManager.userWantsPlayback = true
+                    playTvChannel("")
+                    SystemVoiceModule.report(context, "Đã mở Truyền hình.")
+                } else {
+                    val token = systemVoiceGeneration
+                    IptvManager.getChannels(context) { channels ->
+                        mainHandler.post {
+                            if (token != systemVoiceGeneration || !SystemVoiceModule.isEnabled(context) || !CarMediaManager.userWantsPlayback) return@post
+                            val key = SystemVoiceCommandParser.channelKey(command.channel)
+                            val channel = channels.firstOrNull { SystemVoiceCommandParser.channelKey(it.name) == key }
+                            if (channel == null) {
+                                SystemVoiceModule.fail(context, "Không tìm thấy kênh ${command.channel} trong danh sách IPTV.")
+                            } else {
+                                CarMediaManager.userWantsPlayback = true
+                                playTvChannel(channel.name)
+                                SystemVoiceModule.report(context, "Đã gửi yêu cầu mở kênh ${channel.name}.")
+                            }
+                        }
+                    }
+                }
+            }
+            is SystemVoiceCommand.Music -> {
+                val youtube = WebAppManager.getAllApps(context).find { it.id == "youtube" }
+                    ?: WebAppManager.DEFAULT_APPS.first { it.id == "youtube" }
+                val last = CarMediaManager.lastPlayedUrl.orEmpty()
+                val lastUri = android.net.Uri.parse(last)
+                val lastHost = lastUri.host.orEmpty()
+                val canResume = command.query.isBlank() && lastUri.scheme == "https" &&
+                    (lastHost == "youtube.com" || lastHost.endsWith(".youtube.com")) && lastUri.path == "/watch"
+                val query = command.query.ifBlank { "nhạc Việt" }
+                val host = if (WebAppManager.isAppDesktop(context, "youtube")) "https://www.youtube.com" else "https://m.youtube.com"
+                val target = if (canResume) last else "$host/results?search_query=" + android.net.Uri.encode(query)
+                CarMediaManager.userWantsPlayback = true
+                CarMediaManager.ensureAudioFocus()
+                CarMediaManager.acquireWakeLock(context)
+                switchWebApp(youtube, startUrl = target)
+                SystemVoiceModule.report(context, if (canResume) "Đang mở bài nhạc gần nhất." else "Đang tìm nhạc: $query")
+                if (!canResume) {
+                    systemVoiceSearchPending = true
+                    pollSystemVoiceMusic(query, systemVoiceGeneration, 0)
+                }
+            }
+        }
+    }
+
+    private fun pollSystemVoiceMusic(query: String, token: Long, attempt: Int) {
+        web.postDelayed({
+            if (token != systemVoiceGeneration || !systemVoiceSearchPending || currentActiveAppId != "youtube" || !SystemVoiceModule.isEnabled(context) || !CarMediaManager.userWantsPlayback) return@postDelayed
+            val quoted = org.json.JSONObject.quote(query)
+            web.evaluateJavascript(systemVoiceSearchScript + "\nwindow.__thtvSystemVoiceResult($quoted);") { result ->
+                if (token != systemVoiceGeneration || !SystemVoiceModule.isEnabled(context) || !CarMediaManager.userWantsPlayback) return@evaluateJavascript
+                val target = try { org.json.JSONTokener(result ?: "null").nextValue() as? String } catch (_: Exception) { null }
+                val uri = target?.let { android.net.Uri.parse(it) }
+                val host = uri?.host.orEmpty()
+                if (uri?.scheme == "https" && (host == "youtube.com" || host.endsWith(".youtube.com")) && uri.path == "/watch" && !uri.getQueryParameter("v").isNullOrBlank()) {
+                    systemVoiceSearchPending = false
+                    web.loadUrl(target!!)
+                    SystemVoiceModule.report(context, "Đã chọn kết quả nhạc cho: $query")
+                } else if (attempt < 99) {
+                    pollSystemVoiceMusic(query, token, attempt + 1)
+                } else {
+                    systemVoiceSearchPending = false
+                    SystemVoiceModule.fail(context, "Chưa tìm được video để phát. Kiểm tra kết nối hoặc thử tên bài khác.")
+                }
+            }
+        }, 300L)
+    }
+
     private fun handleVoiceQuery(query: String) {
+        cancelSystemVoiceRequest()
         if (isBrowserApp() && !isDashboardShowing) {
             YouTubePlayerHelper.setDuckingVolume(web, 1.0f)
             navigateBrowser(query)
@@ -1604,6 +1698,7 @@ class CarPresentation(
     }
 
     fun playTvChannel(channelName: String) {
+        cancelSystemVoiceRequest()
         val iptvApp = WebAppManager.getAllApps(context).find { it.id == "iptv" }
             ?: WebAppManager.DEFAULT_APPS.find { it.id == "iptv" }
             ?: return
@@ -1613,32 +1708,30 @@ class CarPresentation(
         CarMediaManager.notifyVoiceState(VoiceSearchManager.State.SUCCESS, "📺 Đang mở $label...")
 
         val isAlreadyIptv = (currentActiveAppId == "iptv" && web.url?.contains("iptv_player.html") == true)
+        val targetUrl = if (channelName.isNotBlank()) {
+            "file:///android_asset/iptv_player.html#channel=" + android.net.Uri.encode(channelName)
+        } else iptvApp.url
         if (isAlreadyIptv) {
+            if (isDashboardShowing) showWebFullscreen(iptvApp)
             if (channelName.isNotBlank()) {
-                web.evaluateJavascript("if (window.playChannelByName) { window.playChannelByName('$channelName'); }", null)
+                val token = systemVoiceGeneration
+                val quoted = org.json.JSONObject.quote(channelName)
+                web.evaluateJavascript("Boolean(window.playChannelByName && window.playChannelByName($quoted));") { result ->
+                    if (result != "true" && token == systemVoiceGeneration && currentActiveAppId == "iptv") web.loadUrl(targetUrl)
+                }
+            } else {
+                web.evaluateJavascript("if (window.setIptvPlaying) window.setIptvPlaying(true);", null)
             }
         } else {
-            val targetUrl = if (channelName.isNotBlank()) {
-                "file:///android_asset/iptv_player.html#channel=" + java.net.URLEncoder.encode(channelName, "UTF-8")
-            } else {
-                iptvApp.url
-            }
             switchWebApp(iptvApp.copy(url = targetUrl), embedded = isDashboardShowing)
-        }
-
-        if (channelName.isNotBlank()) {
-            web.postDelayed({
-                web.evaluateJavascript("if (window.playChannelByName) { window.playChannelByName('$channelName'); }", null)
-            }, 600L)
-            web.postDelayed({
-                web.evaluateJavascript("if (window.playChannelByName) { window.playChannelByName('$channelName'); }", null)
-            }, 1500L)
         }
     }
 
     private fun isBrowserApp(): Boolean = currentActiveAppId != "youtube" && currentActiveAppId != "iptv"
 
-    fun switchWebApp(app: WebAppItem, embedded: Boolean = false) {
+    fun switchWebApp(app: WebAppItem, embedded: Boolean = false, startUrl: String? = null) {
+        cancelSystemVoiceRequest()
+        if (currentActiveAppId != app.id) CarMediaManager.cancelPendingSteeringNext()
         if (currentActiveAppId != app.id) browserNeedsHistoryReset = app.id == "web"
         val currentUrl = web.url ?: ""
         val isYouTubeApp = (app.id == "youtube" || app.url.contains("youtube.com") || app.url.contains("youtu.be"))
@@ -1679,12 +1772,12 @@ class CarPresentation(
 
         applyWebScaleForUrl(app.url)
 
-        val homeUrl = if (app.id == "youtube") {
+        val homeUrl = startUrl ?: if (app.id == "youtube") {
             if (isDesktop) "https://www.youtube.com" else "https://m.youtube.com"
         } else {
             app.url
         }
-        if (!isAlreadyLoaded) {
+        if (!isAlreadyLoaded || startUrl != null) {
             web.loadUrl(homeUrl)
         }
 
@@ -1760,6 +1853,7 @@ class CarPresentation(
     }
 
     fun showDashboard() {
+        cancelSystemVoiceRequest()
         isDashboardShowing = true
         autoHideHandler.removeCallbacks(hideBarsRunnable)
         sidebarContainer?.animate()?.cancel()
@@ -3326,6 +3420,8 @@ class CarPresentation(
     }
 
     fun startVoiceSearch() {
+        cancelSystemVoiceRequest()
+        CarMediaManager.cancelPendingSteeringNext()
         hideSearchOverlay()
         YouTubePlayerHelper.setDuckingVolume(web, 0.0f)
         updateVoiceState(VoiceSearchManager.State.LISTENING, if (isBrowserApp() && !isDashboardShowing) "Đang lắng nghe... Nói từ khóa hoặc địa chỉ web" else "Đang lắng nghe... Hãy nói tên bài hát")
@@ -3453,6 +3549,7 @@ class CarPresentation(
     }
 
     fun goBack() {
+        cancelSystemVoiceRequest()
         if (addAppOverlay?.visibility == View.VISIBLE) {
             hideAddAppDialog()
             return
@@ -3481,15 +3578,15 @@ class CarPresentation(
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_MEDIA_NEXT) {
+            if (event.action == KeyEvent.ACTION_DOWN) CarMediaManager.handleSteeringNext(context, event)
+            return true
+        }
         if (event.action == KeyEvent.ACTION_DOWN) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_VOICE_ASSIST,
                 KeyEvent.KEYCODE_SEARCH -> {
                     startVoiceSearch()
-                    return true
-                }
-                KeyEvent.KEYCODE_MEDIA_NEXT -> {
-                    CarMediaManager.playNext()
                     return true
                 }
                 KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
@@ -3585,6 +3682,8 @@ class CarPresentation(
 
 
     override fun dismiss() {
+        cancelSystemVoiceRequest()
+        SystemVoiceModule.detach(systemVoiceReceiver)
         try {
             (web.parent as? ViewGroup)?.removeView(web)
         } catch(e: Exception) {}
@@ -3592,6 +3691,8 @@ class CarPresentation(
     }
 
     fun destroyWeb() {
+        cancelSystemVoiceRequest()
+        SystemVoiceModule.detach(systemVoiceReceiver)
         try {
             hudPrefs.unregisterOnSharedPreferenceChangeListener(hudPrefsListener)
         } catch (e: Exception) {}

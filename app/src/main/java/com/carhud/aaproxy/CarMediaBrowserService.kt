@@ -46,6 +46,13 @@ class CarMediaBrowserService : MediaBrowserServiceCompat() {
         private set
     var currentArtworkUrl: String? = null
         private set
+    private var preparedSystemVoice: Pair<String?, Bundle?>? = null
+    private val systemVoiceSettingsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == SystemVoiceModule.PREF_ENABLED) {
+            preparedSystemVoice = null
+            mediaSession?.setPlaybackState(buildPlaybackState(if (isPlayingState) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED, currentPositionSec * 1000L).build())
+        }
+    }
 
 
 
@@ -53,6 +60,7 @@ class CarMediaBrowserService : MediaBrowserServiceCompat() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        getSharedPreferences(SettingsActivity.PREFS, Context.MODE_PRIVATE).registerOnSharedPreferenceChangeListener(systemVoiceSettingsListener)
 
         createNotificationChannel()
 
@@ -97,6 +105,13 @@ class CarMediaBrowserService : MediaBrowserServiceCompat() {
                         }
 
                         if (ke != null) {
+                            if (ke.keyCode == android.view.KeyEvent.KEYCODE_MEDIA_NEXT) {
+                                lastClickKeyCode = -1
+                                if (ke.action == android.view.KeyEvent.ACTION_DOWN) {
+                                    CarMediaManager.handleSteeringNext(this@CarMediaBrowserService, ke)
+                                }
+                                return true // Consume UP too; never fall through to onSkipToNext.
+                            }
                             if (ke.action == android.view.KeyEvent.ACTION_DOWN) {
                                 val prefs = getSharedPreferences(SettingsActivity.PREFS, Context.MODE_PRIVATE)
                                 val now = System.currentTimeMillis()
@@ -107,10 +122,6 @@ class CarMediaBrowserService : MediaBrowserServiceCompat() {
                                 lastClickKeyCode = ke.keyCode
 
                                 if (isDoubleClick) {
-                                    if (ke.keyCode == android.view.KeyEvent.KEYCODE_MEDIA_NEXT && prefs.getBoolean(SettingsActivity.KEY_STEERING_DOUBLE_CLICK_VOICE, true)) {
-                                        CarMediaManager.startGlobalVoiceSearch(this@CarMediaBrowserService)
-                                        return true
-                                    }
                                     if ((ke.keyCode == android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || ke.keyCode == android.view.KeyEvent.KEYCODE_HEADSETHOOK) && prefs.getBoolean(SettingsActivity.KEY_STEERING_DOUBLE_PLAY_VOICE, false)) {
                                         CarMediaManager.startGlobalVoiceSearch(this@CarMediaBrowserService)
                                         return true
@@ -125,15 +136,6 @@ class CarMediaBrowserService : MediaBrowserServiceCompat() {
                                             CarMediaManager.startGlobalVoiceSearch(this@CarMediaBrowserService)
                                             return true
                                         }
-                                    }
-                                    android.view.KeyEvent.KEYCODE_MEDIA_NEXT -> {
-                                        val action = prefs.getString(SettingsActivity.KEY_STEERING_NEXT_ACTION, "next")
-                                        if (action == "voice") {
-                                            CarMediaManager.startGlobalVoiceSearch(this@CarMediaBrowserService)
-                                        } else {
-                                            CarMediaManager.playNext()
-                                        }
-                                        return true
                                     }
                                     android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS -> {
                                         val action = prefs.getString(SettingsActivity.KEY_STEERING_PREV_ACTION, "prev")
@@ -164,24 +166,24 @@ class CarMediaBrowserService : MediaBrowserServiceCompat() {
                     }
 
                     override fun onPlay() {
+                        preparedSystemVoice?.let { prepared ->
+                            preparedSystemVoice = null
+                            dispatchSystemVoiceRequest(prepared.first, prepared.second)
+                            return
+                        }
                         CarMediaManager.acquireWakeLock(this@CarMediaBrowserService)
                         CarMediaManager.togglePlayPause(true)
                         updatePlaybackState(PlaybackStateCompat.STATE_PLAYING)
                     }
 
                     override fun onPause() {
+                        preparedSystemVoice = null
                         CarMediaManager.togglePlayPause(false)
                         updatePlaybackState(PlaybackStateCompat.STATE_PAUSED)
                     }
 
                     override fun onSkipToNext() {
-                        val prefs = getSharedPreferences(SettingsActivity.PREFS, Context.MODE_PRIVATE)
-                        val action = prefs.getString(SettingsActivity.KEY_STEERING_NEXT_ACTION, "next")
-                        if (action == "voice") {
-                            CarMediaManager.startGlobalVoiceSearch(this@CarMediaBrowserService)
-                        } else {
-                            CarMediaManager.playNext()
-                        }
+                        CarMediaManager.handleSteeringNext(this@CarMediaBrowserService)
                     }
 
                     override fun onSkipToPrevious() {
@@ -195,6 +197,7 @@ class CarMediaBrowserService : MediaBrowserServiceCompat() {
                     }
 
                     override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
+                        preparedSystemVoice = null
                         CarMediaManager.acquireWakeLock(this@CarMediaBrowserService)
                         when (mediaId) {
                             "media_next" -> onSkipToNext()
@@ -223,10 +226,21 @@ class CarMediaBrowserService : MediaBrowserServiceCompat() {
                     }
 
                     override fun onPlayFromSearch(query: String?, extras: Bundle?) {
-                        if (!query.isNullOrBlank()) {
-                            CarMediaManager.acquireWakeLock(this@CarMediaBrowserService)
-                            CarMediaManager.search(query)
+                        preparedSystemVoice = null
+                        dispatchSystemVoiceRequest(query, extras)
+                    }
+
+                    override fun onPrepareFromSearch(query: String?, extras: Bundle?) {
+                        if (SystemVoiceModule.isEnabled(this@CarMediaBrowserService)) {
+                            preparedSystemVoice = query to extras?.let { Bundle(it) }
+                        } else {
+                            preparedSystemVoice = null
+                            reportSystemVoiceError(SystemVoiceModule.Result.DISABLED.message)
                         }
+                    }
+
+                    override fun onPrepare() {
+                        if (SystemVoiceModule.isEnabled(this@CarMediaBrowserService)) preparedSystemVoice = null to null
                     }
 
                     override fun onCustomAction(action: String?, extras: Bundle?) {
@@ -298,6 +312,9 @@ class CarMediaBrowserService : MediaBrowserServiceCompat() {
     private var currentDurationSec = 0
 
     private fun buildPlaybackState(state: Int, positionMs: Long): PlaybackStateCompat.Builder {
+        val systemVoiceActions = if (SystemVoiceModule.isEnabled(this)) {
+            PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH or PlaybackStateCompat.ACTION_PREPARE_FROM_SEARCH or PlaybackStateCompat.ACTION_PREPARE
+        } else 0L
         val prevCustom = PlaybackStateCompat.CustomAction.Builder(
             "ACTION_PREV", "Previous", android.R.drawable.ic_media_previous
         ).build()
@@ -315,7 +332,7 @@ class CarMediaBrowserService : MediaBrowserServiceCompat() {
                 PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
                 PlaybackStateCompat.ACTION_SEEK_TO or
                 PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID or
-                PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH or
+                systemVoiceActions or
                 PlaybackStateCompat.ACTION_STOP
             )
             .addCustomAction(prevCustom)
@@ -585,6 +602,9 @@ class CarMediaBrowserService : MediaBrowserServiceCompat() {
 
 
     override fun onDestroy() {
+        getSharedPreferences(SettingsActivity.PREFS, Context.MODE_PRIVATE).unregisterOnSharedPreferenceChangeListener(systemVoiceSettingsListener)
+        preparedSystemVoice = null
+        CarMediaManager.cancelPendingSteeringNext()
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -597,5 +617,18 @@ class CarMediaBrowserService : MediaBrowserServiceCompat() {
         mediaSession?.release()
         instance = null
         super.onDestroy()
+    }
+
+    private fun dispatchSystemVoiceRequest(query: String?, extras: Bundle?) {
+        val result = SystemVoiceModule.submit(this, query, extras)
+        if (result == SystemVoiceModule.Result.ACCEPTED) {
+            updatePlaybackState(PlaybackStateCompat.STATE_CONNECTING)
+        } else reportSystemVoiceError(result.message)
+    }
+
+    internal fun reportSystemVoiceError(message: String) {
+        lastState = PlaybackStateCompat.STATE_ERROR
+        mediaSession?.setPlaybackState(buildPlaybackState(PlaybackStateCompat.STATE_ERROR, currentPositionSec * 1000L)
+            .setErrorMessage(PlaybackStateCompat.ERROR_CODE_APP_ERROR, message).build())
     }
 }

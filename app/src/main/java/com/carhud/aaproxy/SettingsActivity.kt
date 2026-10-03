@@ -839,6 +839,45 @@ class SettingsActivity : AppCompatActivity() {
         )
 
         // ==========================================
+        // Independent system-assistant integration; separate from our own microphone.
+        root.addView(
+            createExpandableCard(
+                iconEmoji = "🎙️",
+                iconBgColor = if (isDarkTheme) Color.parseColor("#123047") else Color.parseColor("#DBEAFE"),
+                title = "MIC HỆ THỐNG ANDROID AUTO",
+                subtitle = "Nhận lệnh mở nhạc, mở kênh từ trợ lý Google",
+                initiallyExpanded = false
+            ) { content ->
+                content.addView(createSwitchRow(
+                    "Nhận lệnh từ mic hệ thống", "Cho phép THTV xử lý lệnh nhạc/TV do trợ lý chuyển tới",
+                    SystemVoiceModule.PREF_ENABLED, true
+                ))
+                content.addView(TextView(this).apply {
+                    text = "Mở THTV trên Android Auto, bấm mic hệ thống và nói:\n• Phát bài Nắng ấm xa dần trên THTV\n• Phát VTV1 trên THTV\n• Phát HTV7 trên THTV\n\nNếu trợ lý chưa nhận ra tên app, thử nói THTV Media. Nút mic vẫn mở trợ lý Google."
+                    textSize = 13f
+                    setTextColor(colorTextSecondary)
+                    setPadding(dp(12), dp(8), dp(12), dp(12))
+                })
+                content.addView(settingCard(
+                    title = "THỬ LỆNH TRONG THTV",
+                    subtitle = "Nhập lệnh thử khi THTV đang mở trên Android Auto; không kiểm tra mic Google",
+                    badgeText = "Thử",
+                    onClick = { showSystemVoiceTestDialog() }
+                ))
+                content.addView(settingCard(
+                    title = "LỆNH GẦN NHẤT ĐÃ NHẬN",
+                    subtitle = "Xem trợ lý đã chuyển lệnh tới THTV chưa và kết quả xử lý",
+                    badgeText = "Xem",
+                    onClick = {
+                        androidx.appcompat.app.AlertDialog.Builder(this)
+                            .setTitle("Mic hệ thống Android Auto")
+                            .setMessage(SystemVoiceModule.diagnostics(this))
+                            .setPositiveButton("Đóng", null).show()
+                    }
+                ))
+            }
+        )
+
         // CARD 3: ĐIỀU KHIỂN MEDIA & PHÍM VÔ LĂNG (EXPANDABLE)
         // ==========================================
         root.addView(
@@ -921,7 +960,7 @@ class SettingsActivity : AppCompatActivity() {
                 content.addView(
                     createSwitchRow(
                         title = "Bấm đúp phím Next mở Micro",
-                        subtitle = "Nhấn nút chuyển bài 2 lần liên tiếp để nói tên bài",
+                        subtitle = "Chờ nhận bấm đôi để mở Micro mà không chuyển bài",
                         key = KEY_STEERING_DOUBLE_CLICK_VOICE,
                         default = true
                     )
@@ -2585,6 +2624,24 @@ class SettingsActivity : AppCompatActivity() {
             grid.addView(col2)
             addView(grid)
         }
+    }
+
+    private fun showSystemVoiceTestDialog() {
+        val input = EditText(this).apply {
+            hint = "Ví dụ: mở kênh VTV1 hoặc mở nhạc Sơn Tùng"
+            setText("mở kênh VTV1")
+            setSelectAllOnFocus(true)
+            setSingleLine(true)
+        }
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Thử lệnh nhạc / TV")
+            .setMessage("Lệnh sẽ chạy trên THTV đang mở ở Android Auto. Đây là thử xử lý lệnh, không gọi mic Google.")
+            .setView(input)
+            .setPositiveButton("Thử lệnh") { _, _ ->
+                val result = SystemVoiceModule.submit(this, input.text.toString(), source = "Thử trong Cài đặt")
+                Toast.makeText(this, result.message, Toast.LENGTH_LONG).show()
+            }
+            .setNegativeButton("Hủy", null).show()
     }
 
     private fun createSwitchRow(title: String, subtitle: String, key: String, default: Boolean): LinearLayout {
