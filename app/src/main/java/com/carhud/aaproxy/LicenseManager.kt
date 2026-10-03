@@ -3,6 +3,7 @@ package com.carhud.aaproxy
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.media.MediaDrm
 import android.os.Build
 import android.provider.Settings
 import okhttp3.*
@@ -24,6 +25,8 @@ object LicenseManager {
     private const val KEY_EMAIL = "license_email"
     private const val KEY_SIGNATURE = "license_signature"
     private const val KEY_LAST_VERIFIED = "license_last_verified"
+    private const val KEY_DEVICE_ID_SCHEME = "device_id_scheme"
+    private const val DEVICE_ID_SCHEME_HARDWARE_V2 = "hardware_v2"
     private const val SECRET_SALT = "TCar_Pro_Auto_2026_Secure_Key_!@#"
 
     const val STATUS_APPROVED = "APPROVED"
@@ -43,21 +46,79 @@ object LicenseManager {
     private var cachedDeviceId: String? = null
 
     /**
-     * Tạo mã định danh máy duy nhất dạng TCAR-XXXX-XXXX từ phần cứng máy
+     * Mã máy ổn định theo thiết bị và KHÔNG phụ thuộc chữ ký APK.
+     *
+     * ANDROID_ID trên Android 8+ bị scope theo signing key, vì vậy các build ký
+     * certificate khác nhau có thể cho mã kích hoạt khác nhau trên cùng một máy.
+     * Ưu tiên Widevine device unique id (hash cục bộ, không gửi raw id); nếu ROM
+     * không hỗ trợ thì fallback sang profile phần cứng tĩnh.
      */
     @SuppressLint("HardwareIds")
     fun getDeviceId(context: Context): String {
         cachedDeviceId?.let { return it }
-        val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "UNKNOWN"
-        val rawHw = "$androidId|${Build.BOARD}|${Build.BRAND}|${Build.MANUFACTURER}|${Build.DEVICE}|${Build.HARDWARE}"
-        
-        val digest = MessageDigest.getInstance("SHA-256").digest(rawHw.toByteArray(Charsets.UTF_8))
-        val hex = digest.joinToString("") { "%02X".format(it) }
-        val part1 = hex.substring(0, 4)
-        val part2 = hex.substring(4, 8)
-        val id = "THTV-$part1-$part2"
+
+        val stableMaterial = getStableHardwareMaterial(context)
+        val id = formatDeviceId(stableMaterial)
         cachedDeviceId = id
+
+        // Marker only; the id itself remains deterministic and survives reinstall.
+        getPrefs(context).edit().putString(KEY_DEVICE_ID_SCHEME, DEVICE_ID_SCHEME_HARDWARE_V2).apply()
         return id
+    }
+
+    @SuppressLint("HardwareIds")
+    private fun getLegacyDeviceId(context: Context): String {
+        val androidId = Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ANDROID_ID
+        ) ?: "UNKNOWN"
+        val rawHw = "$androidId|${Build.BOARD}|${Build.BRAND}|${Build.MANUFACTURER}|${Build.DEVICE}|${Build.HARDWARE}"
+        return formatDeviceId(rawHw.toByteArray(Charsets.UTF_8))
+    }
+
+    private fun getStableHardwareMaterial(context: Context): ByteArray {
+        // Widevine's deviceUniqueId is device-bound and not scoped to this APK's signer.
+        try {
+            val widevineUuid = UUID.fromString("edef8ba9-79d6-4ace-a3c8-27dcd51d21ed")
+            val drm = MediaDrm(widevineUuid)
+            try {
+                val unique = drm.getPropertyByteArray(MediaDrm.PROPERTY_DEVICE_UNIQUE_ID)
+                if (unique.isNotEmpty()) {
+                    return unique
+                }
+            } finally {
+                drm.release()
+            }
+        } catch (_: Throwable) {
+            // Some head units/ROMs do not expose Widevine. Use stable build hardware
+            // properties instead; intentionally exclude OS fingerprint/version.
+        }
+
+        val fallback = listOf(
+            Build.BOARD,
+            Build.BRAND,
+            Build.MANUFACTURER,
+            Build.DEVICE,
+            Build.HARDWARE,
+            Build.MODEL,
+            Build.PRODUCT
+        ).joinToString("|")
+        if (fallback.isNotBlank()) {
+            return fallback.toByteArray(Charsets.UTF_8)
+        }
+
+        // Last resort only. This can be signing-scoped on modern Android.
+        val androidId = Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ANDROID_ID
+        ) ?: "UNKNOWN"
+        return androidId.toByteArray(Charsets.UTF_8)
+    }
+
+    private fun formatDeviceId(raw: ByteArray): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(raw)
+        val hex = digest.joinToString("") { "%02X".format(it) }
+        return "THTV-${hex.substring(0, 4)}-${hex.substring(4, 8)}"
     }
 
     fun getDeviceModel(): String {
@@ -94,7 +155,22 @@ object LicenseManager {
         val sig = prefs.getString(KEY_SIGNATURE, "") ?: ""
 
         val expectedSig = computeSignature(deviceId, email, STATUS_APPROVED, expiry)
-        return sig.isNotEmpty() && sig == expectedSig
+        if (sig.isNotEmpty() && sig == expectedSig) return true
+
+        // One-time migration from the old ANDROID_ID/signing-scoped machine code.
+        // If the stored license was valid before updating, re-sign it locally against
+        // the new stable hardware id so the user is not forced to activate again.
+        val legacyId = getLegacyDeviceId(context)
+        val legacySig = computeSignature(legacyId, email, STATUS_APPROVED, expiry)
+        if (sig.isNotEmpty() && sig == legacySig) {
+            getPrefs(context).edit()
+                .putString(KEY_SIGNATURE, expectedSig)
+                .putString(KEY_DEVICE_ID_SCHEME, DEVICE_ID_SCHEME_HARDWARE_V2)
+                .apply()
+            return true
+        }
+
+        return false
     }
 
     fun getLicenseEmail(context: Context): String {
