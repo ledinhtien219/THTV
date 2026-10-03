@@ -363,6 +363,9 @@ class MainActivity : AppCompatActivity() {
         applyDisplaySettings()
         updateWallpaperDisplay()
         startClockTicker()
+
+        // Hiển thị nhật ký cập nhật phiên bản mới khi vừa cập nhật app
+        ChangelogManager.checkAndShowChangelog(this)
         startMediaObserver()
         loadQuickChannels()
     }
@@ -1313,7 +1316,11 @@ class MainActivity : AppCompatActivity() {
     // ==========================================
 
     private fun setupSettingsTab() {
-        findViewById<TextView>(R.id.phoneAppVersionText)?.text = "THTV v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE}) • Pro Edition"
+        val verTv = findViewById<TextView>(R.id.phoneAppVersionText)
+        verTv?.text = "THTV v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE}) • Nhật ký v1.0.16 📋"
+        verTv?.setOnClickListener {
+            ChangelogManager.showChangelogDialog(this)
+        }
         updateUserSettingsText()
         updateWallpaperSettingsText()
         updateIptvStatusText()

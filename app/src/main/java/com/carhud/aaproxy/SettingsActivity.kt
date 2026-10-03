@@ -2304,14 +2304,10 @@ class SettingsActivity : AppCompatActivity() {
                 content.addView(
                     settingCard(
                         title = "PHIÊN BẢN THTV PRO",
-                        subtitle = "Phiên bản: v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})\nGói: ${packageName} • Android Auto 2026",
+                        subtitle = "Phiên bản: v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})\nChạm để xem nhật ký tính năng mới v1.0.16 ✨",
                         badgeText = "v${BuildConfig.VERSION_NAME}",
                         onClick = {
-                            Toast.makeText(
-                                this@SettingsActivity,
-                                "THTV Pro v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})\nĐang hoạt động ổn định",
-                                Toast.LENGTH_LONG
-                            ).show()
+                            ChangelogManager.showChangelogDialog(this@SettingsActivity)
                         }
                     )
                 )
