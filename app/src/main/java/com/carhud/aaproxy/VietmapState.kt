@@ -39,6 +39,17 @@ enum class VietmapWarningType(
     GAS_STATION("Trạm xăng phía trước", "⛽", "phía trước có trạm xăng", "DỊCH VỤ DỌC ĐƯỜNG", "#0284C7")
 }
 
+data class WazeAlertItem(
+    val code: Int = 0,
+    val warningType: VietmapWarningType = VietmapWarningType.NONE,
+    val title: String? = null,
+    val distanceMeters: Int? = null,
+    val value: Int? = null,
+    val jamSeverity: Int? = null,
+    val jamDelayMinutes: Int? = null,
+    val roadName: String? = null
+)
+
 data class VietmapAlertData(
     val isConnected: Boolean = false,
     val currentSpeed: Int = 0,
@@ -62,6 +73,7 @@ data class VietmapAlertData(
     val laneGuidance: String? = null,
     val trafficLevel: Int? = null,
     val trafficDelayMinutes: Int? = null,
+    val upcomingAlerts: List<WazeAlertItem> = emptyList(),
     val isOverSpeed: Boolean = false,
     /** Current best telemetry source. */
     val source: String = "UNKNOWN",
@@ -124,6 +136,7 @@ object VietmapStateRepository {
         laneGuidance: String? = null,
         trafficLevel: Int? = null,
         trafficDelayMinutes: Int? = null,
+        upcomingAlerts: List<WazeAlertItem>? = null,
         clearAlert: Boolean = false,
         source: String = "UNKNOWN"
     ) {
@@ -142,7 +155,10 @@ object VietmapStateRepository {
 
         val newSpeed = acceptedSpeed ?: cur.currentSpeed
         val newLimit = acceptedLimit ?: cur.speedLimit
-        val newSecLimit = acceptedSecondary ?: cur.secondarySpeedLimit
+        val newSecLimit = when {
+            source == "WAZE_HLP" && upcomingAlerts != null -> secondaryLimit
+            else -> acceptedSecondary ?: cur.secondarySpeedLimit
+        }
 
         // Navigation is particularly sensitive to partial notification frames.
         val allowNavigationOverride = !protectHigherQualityTelemetry || incomingSourcePriority >= currentSourcePriority
@@ -295,6 +311,12 @@ object VietmapStateRepository {
             else -> cur.sourceUpdatedAt
         }
 
+        val newUpcomingAlerts = when {
+            canClearAlert -> emptyList()
+            upcomingAlerts != null && (!protectHigherQualityTelemetry || incomingSourcePriority >= currentSourcePriority || source == "WAZE_HLP") -> upcomingAlerts
+            else -> cur.upcomingAlerts
+        }
+
         _alertState.value = cur.copy(
             isConnected = true,
             currentSpeed = newSpeed,
@@ -318,6 +340,7 @@ object VietmapStateRepository {
             laneGuidance = acceptedLaneGuidance ?: cur.laneGuidance,
             trafficLevel = acceptedTrafficLevel ?: cur.trafficLevel,
             trafficDelayMinutes = acceptedTrafficDelay ?: cur.trafficDelayMinutes,
+            upcomingAlerts = newUpcomingAlerts,
             isOverSpeed = isOver,
             source = effectiveSource,
             sourceUpdatedAt = effectiveSourceUpdatedAt,
@@ -325,6 +348,37 @@ object VietmapStateRepository {
             alertSource = newAlertSource,
             alertTimestamp = newAlertTs
         )
+    }
+
+    fun beginHlpSession() {
+        val cur = _alertState.value
+        _alertState.value = cur.copy(
+            isConnected = true,
+            alertDescription = null,
+            distanceText = null,
+            distanceMeters = null,
+            warningType = VietmapWarningType.NONE,
+            alertTitle = null,
+            upcomingAlerts = emptyList(),
+            alertSource = "UNKNOWN",
+            alertTimestamp = 0L
+        )
+    }
+
+    fun clearHlpAlerts() {
+        val cur = _alertState.value
+        if (cur.alertSource == "WAZE_HLP" || cur.upcomingAlerts.isNotEmpty()) {
+            _alertState.value = cur.copy(
+                alertDescription = null,
+                distanceText = null,
+                distanceMeters = null,
+                warningType = VietmapWarningType.NONE,
+                alertTitle = null,
+                upcomingAlerts = emptyList(),
+                alertSource = "UNKNOWN",
+                alertTimestamp = 0L
+            )
+        }
     }
 
     fun updateSpeed(speed: Int) {
