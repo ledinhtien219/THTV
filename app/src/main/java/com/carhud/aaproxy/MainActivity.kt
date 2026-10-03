@@ -1864,7 +1864,6 @@ class MainActivity : AppCompatActivity() {
 
                 setOnClickListener {
                     WazeHudManager.setActiveStyleId(this@MainActivity, style.id)
-                    updateWazeSettingsText()
                     activeDialog?.dismiss()
                     Toast.makeText(this@MainActivity, "Đã chọn: ${style.name}", Toast.LENGTH_SHORT).show()
                 }
@@ -1983,7 +1982,6 @@ class MainActivity : AppCompatActivity() {
         youtubeWeb?.resumeTimers()
         iptvWeb?.resumeTimers()
         updatePermissionStatusDisplay()
-        updateWazeSettingsText()
     }
 
     override fun onPause() {
