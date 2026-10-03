@@ -601,59 +601,63 @@ object WazeHlpWebSocketManager {
                     val itemType = firstString(item, "type", "kind", "category", "reportType", "report_type")
                     val itemSubtype = firstString(item, "subtype", "subType", "reportSubtype", "report_subtype", "hazardType", "hazard_type")
                     val itemIcon = firstString(item, "icon", "iconName", "icon_name")
-                    val itemDist = firstDistanceMeters(item, "distance", "distanceMeters", "distance_meters", "dist", "dst", "reportDistance", "report_distance", "aheadDistance", "ahead_distance")?.takeIf { it >= 0 }
+                    val itemTitleRaw = firstString(item, "title", "label", "description", "text", "message", "alert", "warning")
+                    val itemDist = firstDistanceMeters(item, "d", "distance", "distanceMeters", "distance_meters", "dist", "dst", "reportDistance", "report_distance", "aheadDistance", "ahead_distance")?.takeIf { it >= 0 }
+                    val itemValue = firstInt(item, "v", "value", "alertValue", "alert_value")
+                    val itemSeverity = firstInt(item, "s", "severity", "jamSeverity", "jam_severity")
+                    val itemDelay = firstInt(item, "m", "delay", "delayMinutes", "delay_minutes", "jamDelay", "jam_delay")
                     val itemRoad = firstString(item, "road", "street", "roadName", "road_name")
-                    val mapped = when (itemCode) {
-                        1 -> VietmapWarningType.POLICE
-                        2 -> VietmapWarningType.SPEED_CAMERA
-                        3 -> VietmapWarningType.TRAFFIC_JAM
-                        4 -> VietmapWarningType.RED_LIGHT_CAMERA
-                        5 -> VietmapWarningType.ACCIDENT
-                        6 -> VietmapWarningType.CONSTRUCTION
-                        7 -> VietmapWarningType.HAZARD
-                        8 -> VietmapWarningType.TOLL_BOOTH
-                        else -> mapWarningType(itemTitle, itemType, itemSubtype, itemIcon)
-                    }
+                    val mapped = if (itemCode > 0) alertCodeToWarningType(itemCode)
+                    else mapWarningType(itemTitleRaw, itemTypeText, itemSubtype, itemIcon)
                     if (itemCode <= 0 && mapped == VietmapWarningType.NONE) continue
-
-                    val score = WazeAlertPolicy.score(mapped, itemDist)
-                    if (score > bestScore) {
-                        bestScore = score
-                        bestCode = itemCode
-                        bestTitle = itemTitle
-                        bestTypeText = itemType
-                        bestDist = itemDist
-                        bestRoad = itemRoad
-                    }
+                    val itemTitle = itemTitleRaw ?: if (itemCode > 0) alertCodeLabel(itemCode) else mapped.label
+                    parsed += WazeAlertItem(
+                        code = itemCode,
+                        warningType = mapped,
+                        title = itemTitle,
+                        distanceMeters = itemDist,
+                        value = itemValue,
+                        jamSeverity = itemSeverity,
+                        jamDelayMinutes = itemDelay,
+                        roadName = itemRoad
+                    )
+                }
+                upcomingAlerts = parsed.take(4)
+                if (secondaryLimit == null) {
+                    secondaryLimit = parsed.firstOrNull { it.code in setOf(8, 22) && (it.value ?: 0) > 0 }?.value
                 }
 
-                if (bestScore != Int.MIN_VALUE) {
-                    if (alertCode <= 0) alertCode = bestCode
-                    if (rawAlertStr.isNullOrBlank()) rawAlertStr = bestTypeText
-                    if (rawCandidate.isNullOrBlank()) rawCandidate = bestTitle
-                    if (alertDistanceMeters == null) alertDistanceMeters = bestDist
-                    if (alertRoad.isNullOrBlank()) alertRoad = bestRoad
+                // Official alrs is already sorted near -> far and alr mirrors alrs[0].
+                // Keep that ordering instead of inventing our own priority score.
+                parsed.firstOrNull()?.let { first ->
+                    alertCode = first.code
+                    alertValue = first.value
+                    alertJamSeverity = first.jamSeverity
+                    alertJamDelay = first.jamDelayMinutes
+                    rawCandidate = first.title
+                    alertDistanceMeters = first.distanceMeters
+                    alertRoad = first.roadName
                 }
             }
 
             val alertRaw = rawAlertStr?.takeIf { !isIgnoredText(it) }?.trim()
             val alertTitleCandidate = rawCandidate?.takeIf { !isIgnoredText(it) }?.trim()
 
-            val alertDescDefault = when (alertCode) {
-                1 -> "Chốt CSGT"
-                2 -> "Camera tốc độ"
-                3 -> "Sự cố / Kẹt xe"
-                4 -> "Camera vượt đèn đỏ"
-                5 -> "Tai nạn phía trước"
-                6 -> "Công trường đang thi công"
-                7 -> "Chú ý nguy hiểm trên đường"
-                8 -> "Trạm thu phí BOT"
-                else -> null
-            }
+            val alertDescDefault = alertCode.takeIf { it > 0 }?.let(::alertCodeLabel)
 
+            if (secondaryLimit == null && alertCode in setOf(8, 22)) {
+                secondaryLimit = alertValue?.takeIf { it > 0 }
+            }
             var finalAlertDesc = alertTitleCandidate ?: alertDescDefault
-            if (secondaryLimit != null && !finalAlertDesc.isNullOrBlank() && !finalAlertDesc.contains("km/h")) {
-                finalAlertDesc += " ($secondaryLimit km/h)"
+            alertValue?.takeIf { alertCode in setOf(8, 22) && it > 0 }?.let { value ->
+                if (!finalAlertDesc.isNullOrBlank() && !finalAlertDesc.contains("km/h")) {
+                    finalAlertDesc += " ($value km/h)"
+                }
+            }
+            alertJamDelay?.takeIf { alertCode == 6 && it > 0 }?.let { delay ->
+                if (!finalAlertDesc.isNullOrBlank()) {
+                    finalAlertDesc += " (+$delay phút)"
+                }
             }
 
             val explicitClearText = alertRaw?.let {
@@ -672,15 +676,7 @@ object WazeHlpWebSocketManager {
 
             val alertType = if (!isClearExplicit) {
                 when {
-                    alertCode == 1 -> VietmapWarningType.POLICE
-                    alertCode == 2 -> VietmapWarningType.SPEED_CAMERA
-                    alertCode == 3 -> VietmapWarningType.TRAFFIC_JAM
-                    alertCode == 4 -> VietmapWarningType.RED_LIGHT_CAMERA
-                    alertCode == 5 -> VietmapWarningType.ACCIDENT
-                    alertCode == 6 -> VietmapWarningType.CONSTRUCTION
-                    alertCode == 7 -> VietmapWarningType.HAZARD
-                    alertCode == 8 -> VietmapWarningType.TOLL_BOOTH
-                    alertCode > 0 -> mapWarningType(alertRaw, finalAlertDesc)
+                    alertCode > 0 -> alertCodeToWarningType(alertCode)
                     !alertRaw.isNullOrBlank() -> mapWarningType(alertRaw, finalAlertDesc)
                     !finalAlertDesc.isNullOrBlank() -> mapWarningType(finalAlertDesc)
                     else -> VietmapWarningType.NONE
@@ -691,6 +687,20 @@ object WazeHlpWebSocketManager {
             val alertTitle = if (hasActiveAlert) (finalAlertDesc ?: alertType.label) else null
             val finalAlertDistance = alertDistanceMeters
             val finalRoad = alertRoad?.takeIf { !isIgnoredText(it) } ?: roadName
+            if (upcomingAlerts == null && hasActiveAlert) {
+                upcomingAlerts = listOf(
+                    WazeAlertItem(
+                        code = alertCode,
+                        warningType = alertType,
+                        title = alertTitle,
+                        distanceMeters = finalAlertDistance,
+                        value = alertValue,
+                        jamSeverity = alertJamSeverity,
+                        jamDelayMinutes = alertJamDelay,
+                        roadName = finalRoad
+                    )
+                )
+            }
 
             val timeFormatted = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
 
@@ -723,6 +733,7 @@ object WazeHlpWebSocketManager {
                 laneGuidance = laneGuidance,
                 trafficLevel = trafficLevel,
                 trafficDelayMinutes = trafficDelayMinutes,
+                upcomingAlerts = upcomingAlerts,
                 clearAlert = isClearExplicit,
                 source = "WAZE_HLP"
             )
