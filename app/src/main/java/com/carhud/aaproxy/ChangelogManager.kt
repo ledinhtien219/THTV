@@ -27,8 +27,17 @@ object ChangelogManager {
 
     val RELEASE_NOTES = listOf(
         ReleaseNote(
-            versionName = "1.0.19",
+            versionName = "1.0.20",
             releaseDate = "Mới nhất",
+            features = listOf(
+                "🔐 Khóa chữ ký cập nhật: Debug APK được ép dùng keystore CI cố định thay vì debug key tự sinh của Gradle.",
+                "⬆️ Ổn định cài đè: Từ bản 1.0.20 trở đi các APK tiếp theo dùng cùng certificate để cập nhật trực tiếp.",
+                "🪪 Giữ mã máy phần cứng ổn định: Gỡ/cài lại không còn làm mã kích hoạt phụ thuộc chữ ký APK."
+            )
+        ),
+        ReleaseNote(
+            versionName = "1.0.19",
+            releaseDate = "Trước đó",
             features = listOf(
                 "🧭 Đồng bộ nhật ký phiên bản: Màn hình cập nhật hiển thị đúng versionName/versionCode hiện tại, không còn lệch sang bản cũ.",
                 "🪪 Ổn định mã máy kích hoạt: Mã thiết bị không còn phụ thuộc chữ ký APK; giữ ổn định giữa các bản cập nhật tiếp theo.",
