@@ -49,7 +49,7 @@ class VietmapHudOverlay @JvmOverloads constructor(
     private var wazeDot: View? = null
     private var wazePill: LinearLayout? = null
     private var alertContainer: View? = null
-    private var alertIconText: TextView? = null
+    private var alertIconView: WazeAlertIconView? = null
     private var alertTitleText: TextView? = null
     private var alertDistanceText: TextView? = null
     private var alertUpcomingText: TextView? = null
@@ -141,7 +141,7 @@ class VietmapHudOverlay @JvmOverloads constructor(
         wazeDot = null
         wazePill = null
         alertContainer = null
-        alertIconText = null
+        alertIconView = null
         alertTitleText = null
         alertDistanceText = null
         alertUpcomingText = null
@@ -817,16 +817,16 @@ class VietmapHudOverlay @JvmOverloads constructor(
                 }
             }
 
-            alertIconText = TextView(context).apply {
-                text = "📷"
-                textSize = if (isVertical) 24f else 27f
-                typeface = Typeface.DEFAULT_BOLD
-                gravity = Gravity.CENTER
-                includeFontPadding = false
-                setTextColor(Color.WHITE)
-                maxLines = 1
+            alertIconView = WazeAlertIconView(context).apply {
+                layoutParams = LayoutParams(
+                    dp(if (isVertical) 38 else 42),
+                    dp(if (isVertical) 38 else 42)
+                ).apply {
+                    gravity = Gravity.CENTER_HORIZONTAL
+                }
+                setAlert(2, VietmapWarningType.SPEED_CAMERA)
             }
-            addView(alertIconText)
+            addView(alertIconView)
 
             alertDistanceText = TextView(context).apply {
                 text = "430 m"
@@ -1379,11 +1379,6 @@ class VietmapHudOverlay @JvmOverloads constructor(
 
             val code = primaryAlert?.code ?: 0
             val value = primaryAlert?.value
-            val icon = when {
-                code in setOf(8, 22) && (value ?: 0) > 0 -> "⭕" + value
-                code > 0 -> WazeHlpWebSocketManager.alertCodeEmoji(code)
-                else -> displayWarning.iconEmoji.ifBlank { "⚠️" }
-            }
 
             val alertDistanceMeters = primaryAlert?.distanceMeters
                 ?: WazeAlertPolicy.effectiveAlertDistanceMeters(data)
@@ -1403,8 +1398,7 @@ class VietmapHudOverlay @JvmOverloads constructor(
                 accent,
                 if (urgent) 2 else 1
             )
-            alertIconText?.text = icon
-            alertIconText?.textSize = if (code in setOf(8, 22) && (value ?: 0) > 0) 20f else 27f
+            alertIconView?.setAlert(code, displayWarning, value)
             alertDistanceText?.text = if (distance.isNotBlank()) distance else "•"
             alertDistanceText?.setTextColor(Color.WHITE)
             alertDistanceText?.visibility = VISIBLE
