@@ -52,35 +52,35 @@ object WazeHudManager {
             id = 1,
             name = "#1 Bubble Ngang Tiêu Chuẩn",
             category = CATEGORY_HORIZONTAL,
-            description = "Tốc độ to, biển 80km/h tròn viền đỏ, mũi tên rẽ gọn gàng",
+            description = "Tốc độ + biển giới hạn + rẽ; cảnh báo Waze gọn bằng icon và khoảng cách",
             isRecommended = true
         ),
         HudStyle(
             id = 2,
             name = "#2 Bubble Ngang Đầy Đủ (Full Info)",
             category = CATEGORY_HORIZONTAL,
-            description = "Thêm tên đường, khoảng cách, ETA và biển phụ",
+            description = "Đầy đủ rẽ/ETA; cảnh báo Waze nằm gọn bên phải bằng icon + khoảng cách",
             isRecommended = false
         ),
         HudStyle(
             id = 3,
             name = "#3 Dọc Cột Trái (Left Dock)",
             category = CATEGORY_VERTICAL,
-            description = "Thanh dọc sát mép trái màn hình Android Auto",
+            description = "Thanh dọc trái; cảnh báo Waze hiển thị icon lớn và khoảng cách ngắn gọn",
             isRecommended = false
         ),
         HudStyle(
             id = 4,
             name = "#4 Dọc Cột Phải (Right Dock)",
             category = CATEGORY_VERTICAL,
-            description = "Thanh dọc sát mép phải màn hình Android Auto",
+            description = "Thanh dọc phải; cảnh báo Waze hiển thị icon lớn và khoảng cách ngắn gọn",
             isRecommended = false
         ),
         HudStyle(
             id = 5,
-            name = "#5 Siêu Tinh Gọn (Chỉ Tốc Độ & Khóa)",
+            name = "#5 Siêu Tinh Gọn + Cảnh Báo",
             category = CATEGORY_HORIZONTAL,
-            description = "Chỉ gồm vòng tròn giới hạn tốc độ, tốc độ hiện tại và nút khóa",
+            description = "Tốc độ, giới hạn, rẽ và một ô cảnh báo Waze cực gọn",
             isRecommended = true
         )
     )
