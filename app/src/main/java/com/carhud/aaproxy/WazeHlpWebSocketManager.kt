@@ -479,13 +479,20 @@ object WazeHlpWebSocketManager {
                     else -> normalizedWazeAction
                 }
                 else -> when (turnCode) {
-                    2, 9 -> "turn-left"
-                    3, 10 -> "turn-right"
-                    4, 12 -> "slight-left"
-                    5, 13 -> "slight-right"
-                    6, 7 -> "roundabout"
-                    8 -> "u-turn"
-                    11 -> "destination"
+                    1 -> "straight"
+                    2 -> "turn-left"
+                    3 -> "turn-right"
+                    4 -> "slight-left"
+                    5 -> "slight-right"
+                    6 -> "sharp-left"
+                    7 -> "sharp-right"
+                    8, 9 -> "u-turn"
+                    10, 11, 12, 19, 20 -> "roundabout"
+                    13 -> "keep-left"
+                    14 -> "keep-right"
+                    15 -> "exit-left"
+                    16 -> "exit-right"
+                    17 -> "destination"
                     else -> "straight"
                 }
             }
@@ -496,14 +503,20 @@ object WazeHlpWebSocketManager {
                 3 -> "Rẽ phải"
                 4 -> "Chếch sang trái"
                 5 -> "Chếch sang phải"
-                6 -> "Vào vòng xuyến bên phải"
-                7 -> "Vào vòng xuyến bên trái"
-                8 -> "Quay đầu"
-                9 -> "Rẽ gắt sang trái"
-                10 -> "Rẽ gắt sang phải"
-                11 -> "Đến nơi"
-                12 -> "Lối ra bên trái"
-                13 -> "Lối ra bên phải"
+                6 -> "Rẽ gắt sang trái"
+                7 -> "Rẽ gắt sang phải"
+                8, 9 -> "Quay đầu"
+                10 -> "Vào vòng xuyến"
+                11 -> "Vòng xuyến rẽ trái"
+                12 -> "Vòng xuyến rẽ phải"
+                13 -> "Giữ trái"
+                14 -> "Giữ phải"
+                15 -> "Lối ra bên trái"
+                16 -> "Lối ra bên phải"
+                17 -> "Đến nơi"
+                18 -> "Đi phà"
+                19 -> "Đi thẳng qua vòng xuyến"
+                20 -> "Vòng xuyến quay đầu"
                 else -> if (turnCode > 0) "Chỉ đường" else null
             }
             val turnDescription = firstString(json, "turnDescription", "turn_description", "instruction", "instructionText", "instr")
@@ -536,8 +549,11 @@ object WazeHlpWebSocketManager {
 
             // Alert / warning payload. The important distinction is whether an alert field
             // is ABSENT (preserve previous alert) or explicitly says NONE/0 (clear alert).
-            val alertCodePresent = hasAny(json, "alr", "alrV", "alertCode", "alert_code")
-            var alertCode = firstInt(json, "alr", "alrV", "alertCode", "alert_code") ?: 0
+            val alertCodePresent = hasAny(json, "alr", "alertCode", "alert_code")
+            var alertCode = firstInt(json, "alr", "alertCode", "alert_code") ?: 0
+            var alertValue = firstInt(json, "alrV", "alertValue", "alert_value")
+            var alertJamSeverity = firstInt(json, "alrS", "alertSeverity", "alert_severity")
+            var alertJamDelay = firstInt(json, "alrM", "alertDelayMinutes", "alert_delay_minutes")
 
             var rawAlertStr = firstString(json, "alert", "alert_type", "warning", "hazard", "warningType", "type")
             var rawCandidate = firstString(json, "alertDescription", "alert_description", "alert_title", "alertTitle", "warningText", "warning_text")
@@ -555,7 +571,7 @@ object WazeHlpWebSocketManager {
             ) ?: (json.opt("alert") as? JSONObject)
 
             if (alertObject != null) {
-                val objectCode = firstInt(alertObject, "code", "alr", "alertCode", "alert_code", "typeCode", "type_code") ?: 0
+                val objectCode = firstInt(alertObject, "k", "code", "alr", "alertCode", "alert_code", "typeCode", "type_code") ?: 0
                 val objectType = firstString(
                     alertObject,
                     "type", "kind", "category", "reportType", "report_type",
@@ -568,7 +584,7 @@ object WazeHlpWebSocketManager {
                 )
                 val objectDistance = firstDistanceMeters(
                     alertObject,
-                    "distance", "distanceMeters", "distance_meters", "dist", "dst",
+                    "d", "distance", "distanceMeters", "distance_meters", "dist", "dst",
                     "alertDistance", "alert_distance", "reportDistance", "report_distance",
                     "aheadDistance", "ahead_distance"
                 )?.takeIf { it >= 0 }
@@ -585,20 +601,14 @@ object WazeHlpWebSocketManager {
             // Do not blindly pick the first item: choose the closest/most important
             // warning so a nearby accident/camera is not hidden by a distant low
             // priority event.
-            val alertArray = firstArray(json, "alerts", "warnings", "alertList", "alert_list", "alrs", "reports", "hazards", "events", "upcomingAlerts", "upcoming_alerts")
+            var upcomingAlerts: List<WazeAlertItem>? = null
+            val alertArray = firstArray(json, "alrs", "alerts", "warnings", "alertList", "alert_list", "reports", "hazards", "events", "upcomingAlerts", "upcoming_alerts")
             if (alertArray != null) {
-                var bestScore = Int.MIN_VALUE
-                var bestCode = 0
-                var bestTitle: String? = null
-                var bestTypeText: String? = null
-                var bestDist: Int? = null
-                var bestRoad: String? = null
-
+                val parsed = mutableListOf<WazeAlertItem>()
                 for (i in 0 until alertArray.length()) {
                     val item = alertArray.optJSONObject(i) ?: continue
-                    val itemCode = firstInt(item, "code", "alr", "typeCode", "type_code") ?: 0
-                    val itemTitle = firstString(item, "title", "label", "description", "text", "message", "alert", "warning")
-                    val itemType = firstString(item, "type", "kind", "category", "reportType", "report_type")
+                    val itemCode = firstInt(item, "k", "code", "alr", "typeCode", "type_code") ?: 0
+                    val itemTypeText = firstString(item, "type", "kind", "category", "reportType", "report_type")
                     val itemSubtype = firstString(item, "subtype", "subType", "reportSubtype", "report_subtype", "hazardType", "hazard_type")
                     val itemIcon = firstString(item, "icon", "iconName", "icon_name")
                     val itemTitleRaw = firstString(item, "title", "label", "description", "text", "message", "alert", "warning")
