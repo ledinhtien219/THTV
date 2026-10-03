@@ -493,7 +493,8 @@ object WazeHlpWebSocketManager {
     fun alertCodeEmoji(code: Int): String = when (code) {
         1 -> "👮"
         2, in 40..46 -> "📷"
-        3, 61, 75 -> "🚦"
+        3 -> "📷🚦"
+        61, 75 -> "🚦"
         5 -> "💥"
         6 -> "🚗"
         7, in 26..39, in 65..74 -> "⛔"
