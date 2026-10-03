@@ -1438,8 +1438,8 @@ class VietmapHudOverlay @JvmOverloads constructor(
 
             alertContainer?.visibility = VISIBLE
         } else {
-            alertContainer?.visibility = GONE
             alertUpcomingText?.visibility = GONE
+            alertContainer?.visibility = GONE
         }
     }
 
