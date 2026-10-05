@@ -130,6 +130,7 @@ jobs:
           node tests/iptv-aspect.test.cjs
           node tests/page-input.test.cjs
           node tests/youtube-quality.test.cjs
+          node tests/youtube-search-routing.test.cjs
           ./gradlew testDebugUnitTest assembleDebug --stacktrace
 
       - name: Publish or verify immutable GitHub Release
