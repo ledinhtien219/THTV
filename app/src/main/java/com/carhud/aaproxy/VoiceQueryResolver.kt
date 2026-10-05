@@ -81,7 +81,8 @@ internal object VoiceQueryResolver {
                 if (active == "iptv") score += 12f
             }
 
-            val channelMatch = bestChannelMatch(text, channelNames)
+            val shouldScoreChannels = active == "iptv" || channelCue.containsMatchIn(text)
+            val channelMatch = if (shouldScoreChannels) bestChannelMatch(text, channelNames) else null
             if (channelMatch != null) {
                 score += 16f + channelMatch.second * 24f
                 if (active == "iptv" || channelCue.containsMatchIn(text)) score += 10f
