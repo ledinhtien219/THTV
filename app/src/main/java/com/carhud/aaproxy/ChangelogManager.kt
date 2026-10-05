@@ -27,8 +27,18 @@ object ChangelogManager {
 
     val RELEASE_NOTES = listOf(
         ReleaseNote(
-            versionName = "1.0.22",
+            versionName = "1.0.23",
             releaseDate = "Mới nhất",
+            features = listOf(
+                "📺 Screen Profile chi tiết: Ghi nhận độ phân giải thật, usable area, WebView viewport, DPI, density, x/y DPI, tỉ lệ, hướng, loại màn và refresh rate của Android Auto.",
+                "☁️ Tự đồng bộ Google Sheet theo mã máy đã kích hoạt: Chỉ Device ID APPROVED mới được ghi vào sheet ScreenProfiles.",
+                "🔁 Chống spam dữ liệu: Một mã máy dùng một dòng; app chỉ cập nhật khi profile thay đổi hoặc sau chu kỳ đồng bộ.",
+                "🧩 Cài đặt màn hình xe hiển thị thêm Screen ID, vùng dùng được, WebView, mã máy và trạng thái đồng bộ."
+            )
+        ),
+        ReleaseNote(
+            versionName = "1.0.22",
+            releaseDate = "Trước đó",
             features = listOf(
                 "🔔 Khôi phục mục Âm thanh cảnh báo & tiếng Ting Waze trong Cài đặt nâng cao.",
                 "🎵 Khôi phục lựa chọn 4 chế độ âm thanh và 5 kiểu tiếng Ting kèm nút nghe thử.",
