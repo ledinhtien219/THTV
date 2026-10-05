@@ -31,11 +31,11 @@ object ChangelogManager {
             versionName = BuildConfig.VERSION_NAME,
             releaseDate = "Hiện tại",
             features = listOf(
-                "📋 Thông báo phiên bản chỉ hiển thị nội dung của bản đang cài; bỏ danh sách phiên bản cũ.",
-                "✕ Thêm nút tắt bong bóng cảnh báo trên cả 5 kiểu HUD; có thể bật lại trong Cài đặt HUD.",
-                "↩️ Thanh điều khiển YouTube đổi nút Tự phát thành Quay lại, chỉ điều hướng lịch sử YouTube.",
-                "⚙️ Nút Cài đặt YouTube mở phần chọn chất lượng video.",
-                "⌨️ Nhập trên trang chỉ điền chữ vào đúng ô, không tự gửi Enter, tìm kiếm hay chuyển sang YouTube."
+                "🎙️ Voice Recognition v2: Giữ bộ nhận dạng luôn sẵn sàng để mở mic nhanh hơn trên Android Auto.",
+                "🇻🇳 Tối ưu tiếng Việt: Lấy nhiều kết quả Google + confidence thay vì luôn dùng câu đầu tiên.",
+                "📺 Ưu tiên đúng tên kênh VTV/HTV/VTC/THVL/K+ và cả tên kênh IPTV do người dùng tự nhập.",
+                "🧠 Thêm context bias theo ứng dụng đang dùng để tăng độ chính xác tên kênh và tên app.",
+                "▶️ Câu lệnh kiểu “phát/mở/nghe bài hát…” được làm sạch trước khi tìm YouTube để chạy thẳng đúng nội dung."
             )
         )
     )
