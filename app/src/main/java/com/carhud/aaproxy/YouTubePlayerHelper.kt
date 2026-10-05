@@ -2028,7 +2028,7 @@ object YouTubePlayerHelper {
         } catch (e: Exception) {}
     }
 
-    fun search(view: WebView?, query: String) {
+    fun search(view: WebView?, query: String, autoPlayFirst: Boolean = false) {
         if (view == null) return
         val cleanQuery = query.trim()
         if (cleanQuery.isEmpty()) return
@@ -2041,6 +2041,15 @@ object YouTubePlayerHelper {
 
                 val curUrl = view.url.orEmpty()
                 val isAlreadyOnYouTube = curUrl.contains("youtube.com") || curUrl.contains("youtu.be")
+
+                if (autoPlayFirst && isAlreadyOnYouTube) {
+                    try {
+                        view.evaluateJavascript(
+                            "try { sessionStorage.setItem('carhud_auto_play', 'true'); } catch(e) {}",
+                            null
+                        )
+                    } catch (_: Exception) {}
+                }
 
                 if (isAlreadyOnYouTube) {
                     val fastNavJs = """
@@ -2100,9 +2109,49 @@ object YouTubePlayerHelper {
                 } else {
                     view.loadUrl(targetUrl)
                 }
+
+                if (autoPlayFirst) {
+                    scheduleAutoPlayFirstSearchResult(view)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    private fun scheduleAutoPlayFirstSearchResult(view: WebView) {
+        val js = """
+            (function() {
+                try {
+                    if (!location || location.pathname.indexOf('/results') !== 0) return false;
+                    var first = document.querySelector(
+                        'ytm-video-with-context-renderer a[href*="/watch"], ' +
+                        'ytm-compact-video-renderer a[href*="/watch"], ' +
+                        'ytd-video-renderer a#thumbnail[href*="/watch"], ' +
+                        'a.media-item-thumbnail-container[href*="/watch"], ' +
+                        'a[href*="/watch"]'
+                    );
+                    if (!first) return false;
+                    try { sessionStorage.removeItem('carhud_auto_play'); } catch(e) {}
+                    if (typeof first.click === 'function') first.click();
+                    if (location.pathname.indexOf('/watch') === -1 && first.href) {
+                        setTimeout(function() {
+                            if (location.pathname.indexOf('/watch') === -1) location.href = first.href;
+                        }, 250);
+                    }
+                    return true;
+                } catch(e) {
+                    return false;
+                }
+            })();
+        """.trimIndent()
+
+        longArrayOf(650L, 1200L, 2100L, 3200L).forEach { delay ->
+            view.postDelayed({
+                try {
+                    view.evaluateJavascript(js, null)
+                } catch (_: Exception) {}
+            }, delay)
         }
     }
 
