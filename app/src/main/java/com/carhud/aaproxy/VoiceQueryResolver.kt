@@ -20,23 +20,21 @@ internal object VoiceQueryResolver {
     )
 
     private val mediaPrefix = Regex(
-        """^(?:(?:mở|bật|phát|nghe|tìm|tìm kiếm|cho nghe|cho tôi nghe|play|search for|listen to)s+)+(?:bài hát|bài|nhạc|video|clip|song|musics+)?""",
+        """^(?:(?:mở|bật|phát|nghe|tìm|tìm kiếm|cho nghe|cho tôi nghe|play|search for|listen to)\s+)+(?:bài hát|bài|nhạc|video|clip|song|music\s+)?""",
         RegexOption.IGNORE_CASE
     )
 
     private val channelCue = Regex(
-        """(kênh|truyền hình|tivi|ti vi|tv|vtv|htv|htvc|vtc|thvl|k+)""",
+        """\b(kênh|truyền hình|tivi|ti vi|tv|vtv|htv|htvc|vtc|thvl|k\+)\b""",
         RegexOption.IGNORE_CASE
     )
 
     private val spokenChannelReplacements = listOf(
-        Regex("""vês+tês+vê""", RegexOption.IGNORE_CASE) to "vtv",
-        Regex("""vs+ts+v""", RegexOption.IGNORE_CASE) to "vtv",
-        Regex("""háts+tês+vê""", RegexOption.IGNORE_CASE) to "htv",
-        Regex("""hs+ts+v""", RegexOption.IGNORE_CASE) to "htv",
-        Regex("""vês+tês+xê""", RegexOption.IGNORE_CASE) to "vtc",
-        Regex("""vs+ts+c""", RegexOption.IGNORE_CASE) to "vtc",
-        Regex("""truyềns+hìnhs+vĩnhs+long""", RegexOption.IGNORE_CASE) to "thvl"
+        Regex("""\b(?:vê\s+tê\s+vê|v\s+t\s+v)\b""", RegexOption.IGNORE_CASE) to "vtv",
+        Regex("""\b(?:hát\s+tê\s+vê|h\s+t\s+v)\b""", RegexOption.IGNORE_CASE) to "htv",
+        Regex("""\b(?:vê\s+tê\s+xê|v\s+t\s+c)\b""", RegexOption.IGNORE_CASE) to "vtc",
+        Regex("""\btruyền\s+hình\s+vĩnh\s+long\b""", RegexOption.IGNORE_CASE) to "thvl",
+        Regex("""\b(?:ca|k)\s+cộng\b""", RegexOption.IGNORE_CASE) to "k+"
     )
 
     private val numberWords = linkedMapOf(
@@ -62,7 +60,7 @@ internal object VoiceQueryResolver {
         channelNames: List<String>
     ): Resolved? {
         val clean = hypotheses.mapIndexedNotNull { index, raw ->
-            val text = raw.trim().replace(Regex("""s+"""), " ")
+            val text = raw.trim().replace(Regex("""\s+"""), " ")
             if (text.isBlank()) null else index to text
         }
         if (clean.isEmpty()) return null
@@ -105,7 +103,7 @@ internal object VoiceQueryResolver {
     }
 
     fun cleanForMediaSearch(raw: String): String {
-        val compact = raw.trim().replace(Regex("""s+"""), " ")
+        val compact = raw.trim().replace(Regex("""\s+"""), " ")
         val stripped = compact.replace(mediaPrefix, "").trim()
         return stripped.ifBlank { compact }
     }
@@ -117,10 +115,10 @@ internal object VoiceQueryResolver {
         }
         for ((word, digit) in numberWords) {
             text = text.replace(
-                Regex("""(vtv|htv|htvc|vtc|thvl|k+)s+$word""", RegexOption.IGNORE_CASE)
+                Regex("""\b(vtv|htv|htvc|vtc|thvl|k\+)\s+$word\b""", RegexOption.IGNORE_CASE)
             ) { m -> m.groupValues[1] + digit }
         }
-        return text.replace(Regex("""s+"""), " ").trim()
+        return text.replace(Regex("""\s+"""), " ").trim()
     }
 
     fun bestChannelName(raw: String, channelNames: List<String>, minScore: Float = 0.76f): String? {
@@ -178,10 +176,15 @@ internal object VoiceQueryResolver {
 
     private fun bestChannelMatch(raw: String, channelNames: List<String>): Pair<String, Float>? {
         if (channelNames.isEmpty()) return null
+
         var spoken = stripChannelCommand(canonicalizeSpokenChannel(raw))
         for ((word, digit) in numberWords) {
-            spoken = spoken.replace(Regex("""\b$word\b""", RegexOption.IGNORE_CASE), digit)
+            spoken = spoken.replace(
+                Regex("""\b${Regex.escape(word)}\b""", RegexOption.IGNORE_CASE),
+                digit
+            )
         }
+
         val query = channelKey(spoken)
         if (query.isBlank()) return null
 
@@ -203,18 +206,18 @@ internal object VoiceQueryResolver {
         return raw
             .replace(
                 Regex(
-                    """^(?:(?:mở|bật|xem|phát|chuyển(?:s+sang)?|chiếu)s+)?(?:(?:kênh|truyềns+hình)s+)?""",
+                    """^(?:(?:mở|bật|xem|phát|chuyển(?:\s+sang)?|chiếu)\s+)?(?:(?:kênh|truyền\s+hình)\s+)?""",
                     RegexOption.IGNORE_CASE
                 ),
                 ""
             )
-            .replace(Regex("""s+(?:hd|sd|fhd|4k)$""", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("""\s+(?:hd|sd|fhd|4k)$""", RegexOption.IGNORE_CASE), "")
             .trim()
     }
 
     private fun channelKey(raw: String): String {
         return fold(raw)
-            .replace(Regex("""s*(?:full hd|fhd|hd|sd|4k)$"""), "")
+            .replace(Regex("""\s*(?:full hd|fhd|hd|sd|4k)$"""), "")
             .replace(Regex("""[^a-z0-9+]"""), "")
     }
 
@@ -234,8 +237,10 @@ internal object VoiceQueryResolver {
         if (a == b) return 0
         if (a.isEmpty()) return b.length
         if (b.isEmpty()) return a.length
+
         var prev = IntArray(b.length + 1) { it }
         var cur = IntArray(b.length + 1)
+
         for (i in a.indices) {
             cur[0] = i + 1
             for (j in b.indices) {
@@ -250,14 +255,15 @@ internal object VoiceQueryResolver {
             prev = cur
             cur = swap
         }
+
         return prev[b.length]
     }
 
     private fun fold(text: String): String = Normalizer.normalize(text, Normalizer.Form.NFD)
-        .replace(Regex("""p{M}+"""), "")
+        .replace(Regex("""\p{M}+"""), "")
         .replace('đ', 'd')
         .replace('Đ', 'D')
         .lowercase()
-        .replace(Regex("""s+"""), " ")
+        .replace(Regex("""\s+"""), " ")
         .trim()
 }
