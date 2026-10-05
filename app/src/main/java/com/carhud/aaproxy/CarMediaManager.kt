@@ -308,19 +308,15 @@ object CarMediaManager {
                             ensureAudioFocus()
                             acquireWakeLock(appCtx)
                             view.postDelayed({
-                                if (!isPlaying) {
+                                if (!isPlaying && view.url?.contains("watch") == true) {
                                     YouTubePlayerHelper.resumePlayback(view)
                                 }
                             }, 500L)
                         }
-                    } else if (userWantsPlayback || autoResume) {
-                        ensureAudioFocus()
-                        view.postDelayed({
-                            if (!isPlaying) {
-                                YouTubePlayerHelper.playFirstAvailableVideo(view)
-                            }
-                        }, 500L)
                     }
+                    // Home/search results are browsing state. Auto-resume is only
+                    // allowed to resume an already selected /watch page; it must
+                    // never choose the first card from /results automatically.
                 }
 
                 override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
@@ -379,13 +375,16 @@ object CarMediaManager {
                 val autoResume = prefs.getBoolean(SettingsActivity.KEY_AUTO_RESUME_LAST_TRACK, true)
                 val lastUrl = prefs.getString(SettingsActivity.KEY_LAST_PLAYED_URL, null)
                 val cur = carWebView?.url
-                if (autoResume && !lastUrl.isNullOrBlank() && lastUrl.contains("watch")) {
+                if ((cur.isNullOrBlank() || cur == "about:blank") &&
+                    autoResume && !lastUrl.isNullOrBlank() && lastUrl.contains("watch")
+                ) {
+                    // Restore only an actually blank persistent WebView. Re-attaching
+                    // an existing home/results page after the native keyboard must
+                    // preserve that page instead of jumping back to the last video.
                     userWantsPlayback = true
-                    if (cur.isNullOrBlank() || cur == "about:blank" || !cur.contains("watch")) {
-                        if (currentLoadingUrl != lastUrl) {
-                            currentLoadingUrl = lastUrl
-                            carWebView?.loadUrl(lastUrl)
-                        }
+                    if (currentLoadingUrl != lastUrl) {
+                        currentLoadingUrl = lastUrl
+                        carWebView?.loadUrl(lastUrl)
                     }
                 }
             } catch (e: Exception) {}
