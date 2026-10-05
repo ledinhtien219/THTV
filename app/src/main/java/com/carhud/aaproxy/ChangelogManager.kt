@@ -27,8 +27,18 @@ object ChangelogManager {
 
     val RELEASE_NOTES = listOf(
         ReleaseNote(
-            versionName = "1.0.28",
+            versionName = "1.0.29",
             releaseDate = "Mới nhất",
+            features = listOf(
+                "🔔 Tự kiểm tra bản cập nhật mới khi mở app, hiển thị phiên bản và nội dung mới bằng tiếng Việt.",
+                "📋 Popup có nút Để sau và Cập nhật để tải APK; mỗi Build chỉ tự thông báo một lần.",
+                "🔎 Thêm Kiểm tra cập nhật trong Cài đặt để kiểm tra lại bất cứ lúc nào.",
+                "☁️ Dùng JSON trên GitHub, không cần redeploy Apps Script; giữ signing để cài đè."
+            )
+        ),
+        ReleaseNote(
+            versionName = "1.0.28",
+            releaseDate = "Trước đó",
             features = listOf(
                 "🔔 Tự kiểm tra phiên bản mới khi mở app qua Google Apps Script.",
                 "📋 Có bảng thông báo riêng hiển thị version mới và nội dung thay đổi trước khi cập nhật.",
@@ -38,7 +48,7 @@ object ChangelogManager {
         ),
         ReleaseNote(
             versionName = "1.0.27",
-            releaseDate = "Trước đó",
+            releaseDate = "Mới nhất",
             features = listOf(
                 "🚗 Tối ưu giao diện cho VF6 và màn hình Android Auto không chuẩn: dùng vùng viewport thực tế sau layout thay vì chỉ dựa vào kích thước panel vật lý.",
                 "📐 Dashboard tự co giãn theo chiều rộng/chiều cao khả dụng: thanh trên, ô tìm kiếm, app card, mini player và typography thích ứng tốt hơn.",
@@ -143,7 +153,7 @@ object ChangelogManager {
         )
     )
 
-    fun checkAndShowChangelog(activity: Activity, forceShow: Boolean = false) {
+    fun checkAndShowChangelog(activity: Activity, forceShow: Boolean = false, onDismiss: (() -> Unit)? = null) {
         if (activity.isFinishing || activity.isDestroyed) return
 
         val prefs = activity.getSharedPreferences(SettingsActivity.PREFS, Context.MODE_PRIVATE)
@@ -151,12 +161,14 @@ object ChangelogManager {
         val currentCode = BuildConfig.VERSION_CODE
 
         if (forceShow || lastSeenCode < currentCode) {
-            showChangelogDialog(activity)
+            showChangelogDialog(activity, onDismiss)
             prefs.edit().putInt(PREF_LAST_SEEN_VERSION, currentCode).apply()
+        } else {
+            onDismiss?.invoke()
         }
     }
 
-    fun showChangelogDialog(activity: Activity) {
+    fun showChangelogDialog(activity: Activity, onDismiss: (() -> Unit)? = null) {
         if (activity.isFinishing || activity.isDestroyed) return
 
         var dialog: AlertDialog? = null
@@ -279,6 +291,7 @@ object ChangelogManager {
             .create()
 
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.setOnDismissListener { onDismiss?.invoke() }
         dialog.show()
     }
 

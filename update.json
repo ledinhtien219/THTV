@@ -1,0 +1,11 @@
+{
+  "versionCode": 202,
+  "versionName": "1.0.29",
+  "downloadUrl": "https://github.com/ledinhtien219/THTV/releases/download/v1.0.29/THTV_v1.0.29_debug.apk",
+  "changelog": [
+    "Tự kiểm tra cập nhật khi mở app và hiển thị nội dung mới bằng tiếng Việt.",
+    "Popup có nút Để sau và Cập nhật; mỗi Build chỉ tự thông báo một lần.",
+    "Thêm mục Kiểm tra cập nhật thủ công trong Cài đặt.",
+    "Giữ chữ ký APK cố định để cài đè bản trước."
+  ]
+}

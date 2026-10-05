@@ -460,14 +460,7 @@ class MainActivity : AppCompatActivity() {
         startClockTicker()
 
         // Hiển thị nhật ký cập nhật phiên bản mới khi vừa cập nhật app
-        ChangelogManager.checkAndShowChangelog(this)
-
-        // Kiểm tra bản mới từ Google Apps Script. Chạy trễ nhẹ để không chồng
-        // lên popup changelog của phiên bản vừa cài.
-        window.decorView.postDelayed({
-            AppUpdateManager.checkForUpdate(this)
-        }, 1600L)
-
+        ChangelogManager.checkAndShowChangelog(this, onDismiss = { UpdateNotificationManager.check(this) })
         startMediaObserver()
         loadQuickChannels()
     }
@@ -1460,6 +1453,12 @@ class MainActivity : AppCompatActivity() {
         verTv?.setOnClickListener {
             ChangelogManager.showChangelogDialog(this)
         }
+        (verTv?.parent as? android.view.ViewGroup)?.addView(TextView(this).apply {
+            text = "🔎 Kiểm tra cập nhật"
+            setPadding(0, 16, 0, 16)
+            setTextColor(android.graphics.Color.parseColor("#38BDF8"))
+            setOnClickListener { UpdateNotificationManager.check(this@MainActivity, manual = true) }
+        })
         updateUserSettingsText()
         updateWallpaperSettingsText()
         updateIptvStatusText()

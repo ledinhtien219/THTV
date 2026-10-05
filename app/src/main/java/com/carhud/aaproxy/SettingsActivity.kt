@@ -2141,13 +2141,19 @@ class SettingsActivity : AppCompatActivity() {
                 content.addView(
                     settingCard(
                         title = "PHIÊN BẢN THTV PRO",
-                        subtitle = "Phiên bản: v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})\nChạm để xem nhật ký tính năng mới v1.0.16 ✨",
+                        subtitle = "Phiên bản: v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})\nChạm để xem nhật ký cập nhật ✨",
                         badgeText = "v${BuildConfig.VERSION_NAME}",
                         onClick = {
                             ChangelogManager.showChangelogDialog(this@SettingsActivity)
                         }
                     )
                 )
+
+                content.addView(settingCard(
+                    title = "KIỂM TRA CẬP NHẬT",
+                    subtitle = "Kiểm tra phiên bản mới và xem nội dung cập nhật",
+                    onClick = { UpdateNotificationManager.check(this@SettingsActivity, manual = true) }
+                ))
 
                 content.addView(createSeparator())
 
