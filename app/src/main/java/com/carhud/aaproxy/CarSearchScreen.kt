@@ -35,7 +35,7 @@ class CarSearchScreen(carContext: CarContext, private val input: CarInputSession
             .setShowKeyboardByDefault(true)
             // This also allows clearing a generic web field to an empty string.
             .setActionStrip(ActionStrip.Builder().addAction(
-                Action.Builder().setTitle("Nhập")
+                Action.Builder().setTitle(input.submitLabel)
                     .setOnClickListener { submit(input.text) }.build()
             ).build())
             .build()
