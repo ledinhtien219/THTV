@@ -804,6 +804,16 @@ class CarPresentation(
         } catch (e: Exception) {}
 
         setContentView(root)
+
+        // Capture the final Android Auto viewport after layout and sync it to the
+        // activated device's ScreenProfiles row in Google Sheets.
+        root.postDelayed({
+            try {
+                ScreenProfileReporter.captureAndSync(context, display, root, web)
+            } catch (_: Throwable) {
+            }
+        }, 1200L)
+
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             updateYouTubeHomeObstacles()
         }
