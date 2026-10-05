@@ -15,7 +15,8 @@ const TELEGRAM_BOT_TOKEN = "ĐIỀN_BOT_TOKEN_TỪ_BOTFATHER_VÀO_ĐÂY"; // Ví
 const TELEGRAM_ADMIN_CHAT_ID = "ĐIỀN_CHAT_ID_CỦA_BẠN_VÀO_ĐÂY"; // Ví dụ: "123456789"
 const SHEET_NAME = "Licenses";
 // ID của bảng tính Google Sheet của bạn (lấy từ link docs.google.com/spreadsheets/d/ID/edit)
-const SPREADSHEET_ID = "14vfUIJWl33kXI7ck6mlpt2Pnstp1FeR7Z9UIQ0ktpao";
+const SPREADSHEET_ID = "14vfUJwL33kXJ7ck6mJpT2Pnstp1FeR729UJQ0ktpaco";
+const LICENSE_SHEET_GID = 2114262915;
 
 /**
  * Khởi tạo hoặc lấy Sheet quản lý bản quyền
@@ -27,7 +28,20 @@ function getOrCreateSheet() {
   } catch (e) {
     ss = SpreadsheetApp.getActiveSpreadsheet();
   }
-  let sheet = ss.getSheetByName(SHEET_NAME);
+
+  // Ưu tiên đúng sheet tab đang chứa danh sách Device ID trong link quản trị.
+  // Dùng gid giúp không phụ thuộc tên tab có bị đổi hay không.
+  let sheet = null;
+  try {
+    sheet = ss.getSheets().find(function(s) {
+      return Number(s.getSheetId()) === Number(LICENSE_SHEET_GID);
+    }) || null;
+  } catch (e) {}
+
+  if (!sheet) {
+    sheet = ss.getSheetByName(SHEET_NAME);
+  }
+
   if (!sheet) {
     const firstSheet = ss.getSheets()[0];
     if (firstSheet && firstSheet.getLastRow() === 0) {
