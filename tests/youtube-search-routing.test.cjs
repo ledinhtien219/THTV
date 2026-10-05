@@ -9,6 +9,14 @@ const presentation = fs.readFileSync(
   'app/src/main/java/com/carhud/aaproxy/CarPresentation.kt',
   'utf8'
 );
+const inputSession = fs.readFileSync(
+  'app/src/main/java/com/carhud/aaproxy/CarInputSession.kt',
+  'utf8'
+);
+const searchScreen = fs.readFileSync(
+  'app/src/main/java/com/carhud/aaproxy/CarSearchScreen.kt',
+  'utf8'
+);
 
 // Manual search must be the default.
 assert.match(
@@ -51,3 +59,22 @@ assert.doesNotMatch(
 console.log(
   'PASS YouTube search routing: keyboard shows results, stale voice autoplay cancelled, voice can direct-play'
 );
+
+
+// Host/native keyboard submission is a final action, not a draft handoff.
+assert.match(
+  presentation,
+  /private fun executeSearch\(query: String, broadcast: Boolean = false\)/
+);
+assert.match(
+  presentation,
+  /current\.executeSearch\(value, broadcast = false\)/
+);
+assert.match(
+  presentation,
+  /executeSearch\(searchInput\.text\.toString\(\), broadcast = false\)/
+);
+
+// The host action uses the semantic label supplied by the active input mode.
+assert.match(inputSession, /val submitLabel: String = "Nhập"/);
+assert.match(searchScreen, /setTitle\(input\.submitLabel\)/);
