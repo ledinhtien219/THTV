@@ -48,6 +48,21 @@ assert.match(
 );
 assert.match(presentation, /YouTubePlayerHelper\.cancelSearchAutoPlay\(web\)/);
 
+
+// Manual search navigation must bypass YouTube's live form/SPA submit path.
+// Stale voice auto-play intervals must also be actively cancellable after they start.
+assert.match(helper, /view\.loadUrl\(targetUrl\)/);
+assert.doesNotMatch(helper, /form\.requestSubmit\(\)/);
+assert.match(helper, /window\.__carhudAutoPlayInterval/);
+assert.match(
+  helper,
+  /sessionStorage\.getItem\('carhud_auto_play'\) !== 'true'[\s\S]*?clearInterval\(window\.__carhudAutoPlayInterval\)/
+);
+assert.match(
+  helper,
+  /cancelSearchAutoPlay\(view: WebView\?\)[\s\S]*?clearInterval\(window\.__carhudAutoPlayInterval\)/
+);
+
 // Voice keeps the deliberate Google-Assistant-like direct play behavior.
 assert.match(
   presentation,
