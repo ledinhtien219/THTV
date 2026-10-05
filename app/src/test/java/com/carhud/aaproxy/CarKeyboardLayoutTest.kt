@@ -42,7 +42,7 @@ class CarKeyboardLayoutTest {
         val row = LinearLayout(activity)
         keyboard.addView(row, LinearLayout.LayoutParams(240, 50))
         fun key(letter: String) = TextView(activity).apply {
-            setOnClickListener { text.append(letter) }
+            setOnClickListener { this@CarKeyboardLayoutTest.text.append(letter) }
             layoutParams = LinearLayout.LayoutParams(100, 50).apply {
                 leftMargin = 4
                 rightMargin = 4
@@ -127,3 +127,4 @@ class CarKeyboardLayoutTest {
         assertEquals("", text.toString())
     }
 }
+
