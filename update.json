@@ -1,11 +1,11 @@
 {
-  "versionCode": 208,
-  "versionName": "1.0.35",
-  "downloadUrl": "https://github.com/ledinhtien219/THTV/releases/download/v1.0.35/THTV_v1.0.35_debug.apk",
+  "versionCode": 209,
+  "versionName": "1.0.36",
+  "downloadUrl": "https://github.com/ledinhtien219/THTV/releases/download/v1.0.36/THTV_v1.0.36_debug.apk",
   "changelog": [
-    "Voice Recognition v2: mở mic nhanh hơn nhờ giữ bộ nhận dạng luôn sẵn sàng.",
-    "Tối ưu tiếng Việt bằng nhiều candidate + confidence thay vì luôn lấy kết quả đầu tiên.",
-    "Ưu tiên đúng tên kênh VTV/HTV/VTC/THVL/K+ và kênh IPTV tùy chỉnh.",
-    "Tự bias theo ngữ cảnh ứng dụng; lệnh YouTube bằng giọng nói sẽ tự mở và phát kết quả đầu tiên phù hợp."
+    "Bàn phím dùng chung cho YouTube, IPTV, trình duyệt và app web: chỉ nhập vào đúng ô, giữ nguyên app và trang đang mở.",
+    "Nút Nhập/Enter trên bàn phím không tìm kiếm, mở trang hay phát video; dùng nút riêng của app để thực hiện.",
+    "Không khôi phục nhầm video YouTube cũ khi đóng bàn phím. Bàn phím điện thoại giữ đúng nơi nhận nội dung.",
+    "Giữ popup chỉ bản hiện tại, nút × tắt HUD, nút Quay lại và chọn chất lượng YouTube."
   ]
 }

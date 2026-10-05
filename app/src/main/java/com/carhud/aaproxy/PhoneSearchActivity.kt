@@ -28,6 +28,7 @@ import kotlin.math.roundToInt
 class PhoneSearchActivity : AppCompatActivity() {
 
     private lateinit var searchInput: EditText
+    private var boundInput: CarInputSession? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private val dismissListener: () -> Unit = {
@@ -72,7 +73,13 @@ class PhoneSearchActivity : AppCompatActivity() {
 
         CarMediaManager.registerSearchDismissListener(dismissListener)
 
-        val initialQuery = intent.getStringExtra("INITIAL_QUERY") ?: ""
+        val sessionId = intent.getStringExtra("INPUT_SESSION_ID")
+        boundInput = sessionId?.let { CarMediaManager.phoneInput(it) }
+        if (sessionId != null && (boundInput == null || boundInput?.closed == true)) {
+            Toast.makeText(this, "Ô nhập đã đóng. Chạm lại ô cần nhập trên xe.", Toast.LENGTH_LONG).show()
+            finish(); return
+        }
+        val initialQuery = boundInput?.text ?: intent.getStringExtra("INITIAL_QUERY").orEmpty()
 
         val rootLayout = FrameLayout(this).apply {
             setBackgroundColor(Color.parseColor("#B3000000"))
@@ -118,7 +125,7 @@ class PhoneSearchActivity : AppCompatActivity() {
                 addView(title)
 
                 val subtitle = TextView(this@PhoneSearchActivity).apply {
-                    text = "Gõ từ điện thoại để tìm bài hát trên màn hình xe"
+                    text = if (boundInput != null) "Nhập vào đúng ô đang chọn trên xe" else "Tìm YouTube bằng nút Tìm"
                     textSize = 11.5f
                     setTextColor(Color.parseColor("#80D8FF"))
                 }
@@ -149,14 +156,14 @@ class PhoneSearchActivity : AppCompatActivity() {
             }
 
             searchInput = EditText(this@PhoneSearchActivity).apply {
-                hint = "Nhập tên bài hát hoặc video YouTube..."
+                hint = boundInput?.hint ?: "Nhập tên bài hát hoặc video YouTube..."
                 setHintTextColor(Color.parseColor("#78909C"))
                 setTextColor(Color.WHITE)
                 textSize = 15.5f
                 typeface = Typeface.DEFAULT_BOLD
                 background = null
                 isSingleLine = true
-                imeOptions = EditorInfo.IME_ACTION_SEARCH
+                imeOptions = EditorInfo.IME_ACTION_DONE
                 inputType = android.text.InputType.TYPE_CLASS_TEXT
                 if (initialQuery.isNotEmpty()) {
                     setText(initialQuery)
@@ -166,21 +173,22 @@ class PhoneSearchActivity : AppCompatActivity() {
                 addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                        CarMediaManager.updateSearchText(s?.toString() ?: "")
+                        if (boundInput != null) boundInput?.update(s?.toString().orEmpty())
+                        else CarMediaManager.updateSearchText(s?.toString().orEmpty())
                     }
                     override fun afterTextChanged(s: Editable?) {}
                 })
 
                 setOnKeyListener { _, keyCode, event ->
                     if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
-                        executeSubmit()
+                        commitKeyboardText()
                         true
                     } else false
                 }
 
                 setOnEditorActionListener { _, actionId, _ ->
                     if (actionId == EditorInfo.IME_ACTION_SEARCH || actionId == EditorInfo.IME_ACTION_DONE) {
-                        executeSubmit()
+                        commitKeyboardText()
                         true
                     } else false
                 }
@@ -200,7 +208,7 @@ class PhoneSearchActivity : AppCompatActivity() {
             addView(clearBtn)
 
             val goBtn = TextView(this@PhoneSearchActivity).apply {
-                text = "🔍 Tìm"
+                text = if (boundInput != null) "↵ Nhập" else "🔍 Tìm"
                 textSize = 14.5f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(Color.WHITE)
@@ -242,7 +250,7 @@ class PhoneSearchActivity : AppCompatActivity() {
             }
             addView(chipRow)
         }
-        card.addView(chipScroll)
+        if (boundInput == null) card.addView(chipScroll)
 
         val cardParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             gravity = Gravity.CENTER
@@ -254,17 +262,30 @@ class PhoneSearchActivity : AppCompatActivity() {
         setContentView(rootLayout)
     }
 
+    private fun commitKeyboardText() {
+        if (boundInput != null) executeSubmit()
+        else (getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager)?.hideSoftInputFromWindow(searchInput.windowToken, 0)
+    }
+
     private fun executeSubmit() {
+        boundInput?.let { input ->
+            input.submit(searchInput.text.toString()) { accepted ->
+                if (accepted) finish()
+                else searchInput.error = "Ô nhập đã thay đổi. Chạm lại ô trên xe."
+            }
+            return
+        }
         val q = searchInput.text.toString().trim()
         if (q.isNotEmpty()) {
             CarMediaManager.submitSearchQuery(q)
-            Toast.makeText(this, "Đang phát trên xe: $q", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Đang tìm trên xe: $q", Toast.LENGTH_SHORT).show()
             finish()
         }
     }
 
     override fun onResume() {
         super.onResume()
+        if (isFinishing || !::searchInput.isInitialized) return
         searchInput.postDelayed({
             searchInput.requestFocus()
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
@@ -273,6 +294,7 @@ class PhoneSearchActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (!isChangingConfigurations) boundInput?.cancel()
         try { unregisterReceiver(exitReceiver) } catch (e: Exception) {}
         CarMediaManager.unregisterSearchDismissListener(dismissListener)
         CarMediaManager.cancelPhoneSearchNotification(this)

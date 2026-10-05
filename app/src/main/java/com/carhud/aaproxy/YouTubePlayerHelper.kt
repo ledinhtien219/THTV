@@ -58,8 +58,17 @@ object YouTubePlayerHelper {
             ]);
             var row = add(column, 'div', 'display:flex;align-items:center;gap:12px;margin:20px 0 36px');
             add(row, 'span', 'font-size:24px;width:40px', '⌕');
-            var keyboard = add(row, 'button', 'flex:1;min-width:0;height:48px;border:0;border-radius:28px;padding:0 18px;background:var(--carhud-home-chip,#272727);color:var(--carhud-home-muted,#aaa);font:inherit;font-size:17px;text-align:left', 'Tìm trên YouTube');
-            keyboard.id = 'carhud-home-keyboard'; keyboard.type = 'button';
+            var keyboard = add(row, 'input', 'flex:1;min-width:0;height:48px;border:0;border-radius:28px;padding:0 18px;background:var(--carhud-home-chip,#272727);color:var(--carhud-home-muted,#aaa);font:inherit;font-size:17px;text-align:left', 'Tìm trên YouTube');
+            keyboard.id = 'carhud-home-keyboard'; keyboard.type = 'search';
+            keyboard.placeholder = 'Tìm trên YouTube';
+            var searchGo = add(row, 'button', 'height:48px;padding:0 14px;border:0;border-radius:12px;background:#0284c7;color:white', 'Tìm');
+            searchGo.type = 'button';
+            searchGo.addEventListener('click', function() {
+                var query = keyboard.value.trim();
+                if (!query) return;
+                sessionStorage.removeItem('carhud_auto_play');
+                location.assign('/results?search_query=' + encodeURIComponent(query));
+            });
             var voice = add(row, 'button', 'width:48px;height:48px;flex-shrink:0;border:0;border-radius:50%;background:var(--carhud-home-chip,#272727);color:inherit');
             voice.id = 'carhud-home-voice'; voice.type = 'button'; voice.setAttribute('aria-label', 'Micro');
             svg(voice, 24, 24, '0 0 24 24', [{tag:'path',attrs:{d:'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3ZM5 11v1a7 7 0 0 0 14 0v-1M12 19v3M8 22h8',fill:'none',stroke:'currentColor','stroke-width':2,'stroke-linecap':'round'}}]);
@@ -70,10 +79,10 @@ object YouTubePlayerHelper {
             surface.addEventListener('click', function(e) {
                 var keyboard = e.target.closest('#carhud-home-keyboard');
                 var voice = e.target.closest('#carhud-home-voice');
-                if (!keyboard && !voice) return;
+                if (!voice) return;
                 e.preventDefault(); e.stopPropagation();
                 if (voice && window.AndroidVoice.startListening) window.AndroidVoice.startListening();
-                else if (keyboard && window.AndroidVoice.openSearchKeyboard) window.AndroidVoice.openSearchKeyboard();
+
             });
             function layoutHome() {
                 if (panel.style.display === 'none') return;
@@ -1206,25 +1215,7 @@ object YouTubePlayerHelper {
                 return;
             }
 
-            if (isSearchTarget(target)) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (target.tagName === 'INPUT' || typeof target.blur === 'function') target.blur();
-                if (window.AndroidVoice && window.AndroidVoice.openSearchKeyboard) {
-                    window.AndroidVoice.openSearchKeyboard();
-                }
-            }
-        }, true);
-
-        document.addEventListener('focusin', function(e) {
-            var target = e.target;
-            if (!target) return;
-            if (isSearchTarget(target)) {
-                if (typeof target.blur === 'function') target.blur();
-                if (window.AndroidVoice && window.AndroidVoice.openSearchKeyboard) {
-                    window.AndroidVoice.openSearchKeyboard();
-                }
-            }
+            // Editable fields are handled by the shared page_input bridge.
         }, true);
 
         function schedule() {
@@ -2058,6 +2049,7 @@ object YouTubePlayerHelper {
                                 var query = "${cleanQuery.replace("\\", "\\\\").replace("\"", "\\\"").replace("'", "\\'")}";
                                 var encoded = encodeURIComponent(query);
                                 var targetPath = '/results?search_query=' + encoded;
+                                if (!$autoPlayFirst) window.sessionStorage.removeItem('carhud_auto_play');
 
                                 // 1. Try filling the existing YouTube search input and submitting form (triggers ultra-fast AJAX search)
                                 var searchInput = document.querySelector('input.searchbox-input, input[name="search_query"], input#search, ytm-searchbox input');

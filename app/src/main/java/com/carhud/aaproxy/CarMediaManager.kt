@@ -90,6 +90,11 @@ object CarMediaManager {
     var isWebShowingFullscreen = false
     var isEmbeddedAppShowing = true
     var activeAppId: String = "youtube"
+    data class EditorDraft(val appId: String, val page: String?, val mode: String, val text: String)
+    var editorDraft: EditorDraft? = null
+    private var phoneEditor: Pair<String, CarInputSession>? = null
+    fun phoneInput(id: String): CarInputSession? = phoneEditor?.takeIf { it.first == id }?.second
+
     var lastEmbeddedApp: WebAppItem? = null
     var userWantsPlayback = false
     var activeAudioManager: CarAudioManager? = null
@@ -216,10 +221,7 @@ object CarMediaManager {
 
             @android.webkit.JavascriptInterface
             fun openSearchKeyboard() {
-                mainHandler.post {
-                    if (activeAppId != "youtube") return@post
-                    startGlobalVoiceSearch(appCtx)
-                }
+                CarPresentation.openCurrentKeyboard(web)
             }
 
             @android.webkit.JavascriptInterface
@@ -1042,21 +1044,24 @@ object CarMediaManager {
         return true
     }
 
-    fun launchPhoneSearchActivity(context: Context, query: String = "") {
+    fun launchPhoneSearchActivity(context: Context, query: String = "", input: CarInputSession? = null) {
+        val id = input?.let { java.util.UUID.randomUUID().toString() }
+        if (input != null) { phoneEditor?.second?.cancel(); phoneEditor = id!! to input }
         try {
             val intent = Intent(context, PhoneSearchActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 putExtra("INITIAL_QUERY", query)
+                putExtra("INPUT_SESSION_ID", id)
             }
             context.startActivity(intent)
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        showPhoneSearchNotification(context, query)
+        showPhoneSearchNotification(context, query, id)
     }
 
     @SuppressLint("MissingPermission")
-    fun showPhoneSearchNotification(context: Context, query: String = "") {
+    fun showPhoneSearchNotification(context: Context, query: String = "", inputId: String? = null) {
         try {
             val channelId = "carhud_search_input"
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
@@ -1073,8 +1078,9 @@ object CarMediaManager {
             }
 
             val intent = Intent(context, PhoneSearchActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 putExtra("INITIAL_QUERY", query)
+                putExtra("INPUT_SESSION_ID", inputId)
             }
             val pendingIntent = android.app.PendingIntent.getActivity(
                 context,

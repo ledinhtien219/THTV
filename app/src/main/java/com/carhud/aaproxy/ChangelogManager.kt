@@ -31,12 +31,10 @@ object ChangelogManager {
             versionName = BuildConfig.VERSION_NAME,
             releaseDate = "Hiện tại",
             features = listOf(
-                "🎙️ Voice Recognition v2: Giữ bộ nhận dạng luôn sẵn sàng để mở mic nhanh hơn trên Android Auto.",
-                "🇻🇳 Tối ưu tiếng Việt: Lấy nhiều kết quả Google + confidence thay vì luôn dùng câu đầu tiên.",
-                "📺 Ưu tiên đúng tên kênh VTV/HTV/VTC/THVL/K+ và cả tên kênh IPTV do người dùng tự nhập.",
-                "🧠 Thêm context bias theo ứng dụng đang dùng để tăng độ chính xác tên kênh và tên app.",
-                "▶️ Câu lệnh kiểu “phát/mở/nghe bài hát…” được làm sạch trước khi tìm YouTube.",
-                "⚡ Voice YouTube tự mở và phát kết quả đầu tiên phù hợp, không dừng lại ở trang kết quả tìm kiếm."
+                "Bàn phím dùng chung cho YouTube, IPTV, trình duyệt và app web: chỉ nhập vào đúng ô, giữ nguyên app và trang đang mở.",
+                "Nút Nhập/Enter trên bàn phím không tìm kiếm, mở trang hay phát video; dùng nút riêng của app để thực hiện.",
+                "Không khôi phục nhầm video YouTube cũ khi đóng bàn phím. Bàn phím điện thoại giữ đúng nơi nhận nội dung.",
+                "Giữ popup chỉ bản hiện tại, nút × tắt HUD, nút Quay lại và chọn chất lượng YouTube."
             )
         )
     )

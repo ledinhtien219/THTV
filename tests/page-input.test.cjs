@@ -13,15 +13,18 @@ function fixture() {
         set value(value) { this._value = value; }
         dispatchEvent(event) { this.events.push(event.type); }
         focus() { this.focuses++; }
+        getAttribute(name) { return name === 'placeholder' ? this.placeholder || '' : ''; }
+        closest() { return this; }
     }
     class Textarea extends Input {
         constructor() { super('textarea', 'TEXTAREA'); }
         get value() { return super.value; }
         set value(value) { super.value = value; }
     }
-    const context = {window: {}, location: {href: 'https://www.google.com/search?q=old'}, HTMLInputElement: Input, HTMLTextAreaElement: Textarea, Event: class {constructor(type) {this.type = type;}}};
+    const listeners = {};
+    const context = {window: {}, document: {addEventListener: (name, callback) => {listeners[name] = callback;}}, location: {href: 'https://www.google.com/search?q=old'}, HTMLInputElement: Input, HTMLTextAreaElement: Textarea, Event: class {constructor(type) {this.type = type;}}};
     vm.runInNewContext(code, context);
-    return {context, Input, Textarea, api: context.window.__thtvPageInput};
+    return {context, Input, Textarea, listeners, api: context.window.__thtvPageInput};
 }
 {
     const {api, Input, context} = fixture();
@@ -68,4 +71,17 @@ function fixture() {
     assert.equal(api.capture(new Input('password')), null);
     field.readOnly = true; assert.equal(api.capture(field), null);
 }
-console.log('PASS page input: 24h fills only; no Enter, submit, focus or navigation; stale targets rejected');
+for (const [page, hint] of [['https://m.youtube.com/', 'Tìm trên YouTube'], ['file:///android_asset/iptv_player.html', 'Tìm kênh TV'], ['https://www.google.com/', 'Tìm Google']]) {
+    const {api, Input, context, listeners} = fixture();
+    context.location.href = page;
+    const field = new Input(); field.placeholder = hint;
+    const requests = [];
+    context.window.CarHudInput = {openKeyboard: (...args) => requests.push(args)};
+    api.install();
+    listeners.click({target: {closest: () => null}, composedPath: () => [field], preventDefault() {}, stopImmediatePropagation() {}});
+    assert.equal(requests.length, 1); assert.equal(requests[0][2], hint);
+    assert.equal(api.fill(requests[0][0], '24h'), 'OK');
+    assert.equal(field.value, '24h'); assert.equal(field.submits, 0);
+    assert.equal(context.location.href, page);
+}
+console.log('PASS shared input: YouTube, IPTV, Google, shadow fields, Vietnamese, empty values and stale targets; no keyboard navigation or submit');

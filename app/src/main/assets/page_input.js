@@ -12,9 +12,24 @@
             if (!target || target.el !== el || target.page !== location.href) {
                 target = {el: el, page: location.href, token: documentId + '-' + (++sequence)};
             }
-            return {token: target.token, value: el.isContentEditable ? el.textContent || '' : el.value || ''};
+            return {token: target.token, value: el.isContentEditable ? el.textContent || '' : el.value || '',
+                hint: el.getAttribute('placeholder') || el.getAttribute('aria-label') || 'Nhập nội dung...'};
         },
         clear: function () { target = null; },
+        install: function () {
+            if (window.__thtvSharedKeyboardInstalled) return;
+            window.__thtvSharedKeyboardInstalled = true;
+            document.addEventListener('click', function (event) {
+                var path = event.composedPath ? event.composedPath() : [event.target];
+                var node = path[0];
+                var el = node && node.closest ? node.closest('input,textarea,[contenteditable="true"]') : null;
+                var input = window.__thtvPageInput.capture(el);
+                if (input && window.CarHudInput && window.CarHudInput.openKeyboard) {
+                    event.preventDefault(); event.stopImmediatePropagation();
+                    window.CarHudInput.openKeyboard(input.token, input.value, input.hint);
+                }
+            }, true);
+        },
         fill: function (token, value) {
             if (!target || target.token !== token || target.page !== location.href || !editable(target.el)) return 'NO_TARGET';
             var el = target.el;
