@@ -2850,6 +2850,10 @@ class CarPresentation(
                         isSingleLine = true
                         imeOptions = EditorInfo.IME_ACTION_SEARCH
                         inputType = InputType.TYPE_CLASS_TEXT
+                        isFocusableInTouchMode = true
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            showSoftInputOnFocus = false
+                        }
                         setOnKeyListener { _, keyCode, event ->
                             if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_ENTER) {
                                 executeSearch(text.toString())
@@ -2873,7 +2877,7 @@ class CarPresentation(
                         setPadding(dp(8), dp(6), dp(8), dp(6))
                         enableTouchBounce(0.9f)
                         setOnClickListener {
-                            searchInput.setText("")
+                            searchInput.text?.clear()
                         }
                     }
                     addView(clearIcon)
@@ -2973,48 +2977,73 @@ class CarPresentation(
             var telexBtnRef: TextView? = null
 
             fun addChar(ch: String) {
-                val cur = searchInput.text.toString()
-                val selStart = searchInput.selectionStart.coerceAtLeast(0)
-                val selEnd = searchInput.selectionEnd.coerceAtLeast(0)
-                val (updated, newPos) = VietnameseTelexEngine.processKey(cur, selStart, selEnd, ch, isTelexEnabled && searchOverlayMode != "address")
-                searchInput.setText(updated)
-                searchInput.setSelection(newPos.coerceAtMost(updated.length))
+                // Fast path: mutate the existing Editable in-place. setText() rebuilds
+                // the full text/layout and is noticeably slow on Android Auto DHU.
+                val editable = searchInput.text ?: return
+                val len = editable.length
+                val rawStart = searchInput.selectionStart.takeIf { it >= 0 } ?: len
+                val rawEnd = searchInput.selectionEnd.takeIf { it >= 0 } ?: rawStart
+                val start = minOf(rawStart, rawEnd).coerceIn(0, len)
+                val end = maxOf(rawStart, rawEnd).coerceIn(0, len)
+                val useTelex = isTelexEnabled && searchOverlayMode != "address" && ch.length == 1
+
+                if (!useTelex) {
+                    editable.replace(start, end, ch)
+                    searchInput.setSelection((start + ch.length).coerceAtMost(editable.length))
+                    return
+                }
+
+                var wordStart = start
+                while (wordStart > 0) {
+                    val prev = editable[wordStart - 1]
+                    if (prev.isWhitespace() || prev in ",.?!:;()[]{}\"'-/\\") break
+                    wordStart--
+                }
+
+                val currentWord = editable.subSequence(wordStart, start).toString()
+                val transformed = VietnameseTelexEngine.transformWord(currentWord, ch[0])
+                if (transformed != null) {
+                    editable.replace(wordStart, end, transformed)
+                    searchInput.setSelection((wordStart + transformed.length).coerceAtMost(editable.length))
+                } else {
+                    editable.replace(start, end, ch)
+                    searchInput.setSelection((start + ch.length).coerceAtMost(editable.length))
+                }
             }
 
             fun applyDirectTone(toneIdx: Int) {
-                val cur = searchInput.text.toString()
-                val selStart = searchInput.selectionStart.coerceAtLeast(0)
+                val editable = searchInput.text ?: return
+                val selStart = (searchInput.selectionStart.takeIf { it >= 0 } ?: editable.length)
+                    .coerceIn(0, editable.length)
                 var wordStart = selStart
-                while (wordStart > 0 && !cur[wordStart - 1].isWhitespace()) {
+                while (wordStart > 0 && !editable[wordStart - 1].isWhitespace()) {
                     wordStart--
                 }
-                val word = cur.substring(wordStart, selStart)
+                val word = editable.subSequence(wordStart, selStart).toString()
                 val transformed = VietnameseTelexEngine.applyToneToWord(word, toneIdx)
                 if (transformed != null) {
-                    val updated = cur.substring(0, wordStart) + transformed + cur.substring(selStart)
-                    searchInput.setText(updated)
-                    searchInput.setSelection((wordStart + transformed.length).coerceAtMost(updated.length))
+                    editable.replace(wordStart, selStart, transformed)
+                    searchInput.setSelection((wordStart + transformed.length).coerceAtMost(editable.length))
                 }
             }
 
             fun deleteChar() {
-                val cur = searchInput.text.toString()
-                if (cur.isEmpty()) return
-                val selStart = searchInput.selectionStart.coerceAtLeast(0)
-                val selEnd = searchInput.selectionEnd.coerceAtLeast(0)
-                if (selStart != selEnd) {
-                    val start = Math.min(selStart, selEnd)
-                    val end = Math.max(selStart, selEnd)
-                    val updated = cur.substring(0, start) + cur.substring(end)
-                    searchInput.setText(updated)
-                    searchInput.setSelection(start)
-                } else if (selStart > 0) {
-                    val updated = cur.substring(0, selStart - 1) + cur.substring(selStart)
-                    searchInput.setText(updated)
-                    searchInput.setSelection(selStart - 1)
-                } else {
-                    searchInput.setText(cur.dropLast(1))
-                    searchInput.setSelection(searchInput.text.length)
+                val editable = searchInput.text ?: return
+                if (editable.isEmpty()) return
+                val len = editable.length
+                val rawStart = searchInput.selectionStart.takeIf { it >= 0 } ?: len
+                val rawEnd = searchInput.selectionEnd.takeIf { it >= 0 } ?: rawStart
+                val start = minOf(rawStart, rawEnd).coerceIn(0, len)
+                val end = maxOf(rawStart, rawEnd).coerceIn(0, len)
+
+                if (start != end) {
+                    editable.delete(start, end)
+                    searchInput.setSelection(start.coerceAtMost(editable.length))
+                } else if (start > 0) {
+                    // Delete one Unicode code point, not just one UTF-16 code unit.
+                    val cpStart = Character.offsetByCodePoints(editable, start, -1)
+                    editable.delete(cpStart, start)
+                    searchInput.setSelection(cpStart.coerceAtMost(editable.length))
                 }
             }
 
@@ -3036,7 +3065,8 @@ class CarPresentation(
                     this.gravity = Gravity.CENTER
                     this.includeFontPadding = false
                     this.background = rounded(bg, 10f, stroke, 1)
-                    enableTouchBounce(0.92f)
+                    isClickable = true
+                    isFocusable = false
                     setOnClickListener { onClick() }
                     if (onLongClick != null) {
                         setOnLongClickListener {
@@ -3113,7 +3143,7 @@ class CarPresentation(
                             deleteChar()
                         }.apply {
                             setOnLongClickListener {
-                                searchInput.setText("")
+                                searchInput.text?.clear()
                                 true
                             }
                         }
@@ -3168,7 +3198,7 @@ class CarPresentation(
                             deleteChar()
                         }.apply {
                             setOnLongClickListener {
-                                searchInput.setText("")
+                                searchInput.text?.clear()
                                 true
                             }
                         }
@@ -3322,6 +3352,12 @@ class CarPresentation(
         topToolbarContainer?.visibility = View.GONE
 
         searchInput.requestFocus()
+        try {
+            val displayCtx = context.createDisplayContext(display)
+            val imm = displayCtx.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                ?: context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            imm?.hideSoftInputFromWindow(searchInput.windowToken, 0)
+        } catch (_: Throwable) {}
         if (searchOverlayMode == "youtube") {
             CarMediaManager.requestSearch(searchInput.text.toString())
         }
