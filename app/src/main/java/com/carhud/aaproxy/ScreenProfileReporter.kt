@@ -1,6 +1,7 @@
 package com.carhud.aaproxy
 
 import android.content.Context
+import com.carhud.app.BuildConfig
 import android.os.Build
 import android.view.Display
 import android.view.View
