@@ -17,6 +17,10 @@ const searchScreen = fs.readFileSync(
   'app/src/main/java/com/carhud/aaproxy/CarSearchScreen.kt',
   'utf8'
 );
+const mediaManager = fs.readFileSync(
+  'app/src/main/java/com/carhud/aaproxy/CarMediaManager.kt',
+  'utf8'
+);
 
 // Manual search must be the default.
 assert.match(
@@ -54,6 +58,36 @@ assert.match(
 assert.doesNotMatch(
   presentation,
   /YouTubePlayerHelper\.playFirstAvailableVideo\((?:web|view)\)/
+);
+
+
+// Typed search must also clear stale playback intent and pending system voice work.
+assert.match(
+  presentation,
+  /private fun prepareManualYouTubeSearch\(\)[\s\S]*?cancelSystemVoiceRequest\(\)[\s\S]*?CarMediaManager\.userWantsPlayback = false[\s\S]*?CarMediaManager\.setPlaybackState\(false\)/
+);
+
+// The persistent/background WebView must never auto-pick a result merely because
+// "auto resume last track" is enabled. Only a /watch page may auto-resume.
+const persistentClient = mediaManager.match(
+  /web\.webViewClient = object : android\.webkit\.WebViewClient\(\) \{[\s\S]*?override fun onRenderProcessGone/
+)?.[0] || '';
+assert.notEqual(persistentClient, '');
+assert.doesNotMatch(persistentClient, /playFirstAvailableVideo/);
+assert.match(
+  persistentClient,
+  /if \(!isPlaying && view\.url\?\.contains\("watch"\) == true\)/
+);
+
+// Re-acquiring the persistent WebView after the native keyboard must preserve
+// /results or home. Last-track restore is allowed only when the WebView is blank.
+assert.match(
+  mediaManager,
+  /if \(\(cur\.isNullOrBlank\(\) \|\| cur == "about:blank"\) &&[\s\S]*?autoResume && !lastUrl\.isNullOrBlank\(\) && lastUrl\.contains\("watch"\)/
+);
+assert.doesNotMatch(
+  mediaManager,
+  /cur\.isNullOrBlank\(\) \|\| cur == "about:blank" \|\| !cur\.contains\("watch"\)/
 );
 
 // Host/native keyboard submission is a final action, not a draft handoff.
