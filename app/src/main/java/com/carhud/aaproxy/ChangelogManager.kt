@@ -27,8 +27,18 @@ object ChangelogManager {
 
     val RELEASE_NOTES = listOf(
         ReleaseNote(
-            versionName = "1.0.26",
+            versionName = "1.0.27",
             releaseDate = "Mới nhất",
+            features = listOf(
+                "🚗 Tối ưu giao diện cho VF6 và màn hình Android Auto không chuẩn: dùng vùng viewport thực tế sau layout thay vì chỉ dựa vào kích thước panel vật lý.",
+                "📐 Dashboard tự co giãn theo chiều rộng/chiều cao khả dụng: thanh trên, ô tìm kiếm, app card, mini player và typography thích ứng tốt hơn.",
+                "🧭 HUD, WebView và toolbar được tính lại khi vùng Android Auto thực tế thay đổi.",
+                "☁️ Google Sheet bổ sung Layout Dùng + Layout Class để theo dõi đúng cấu hình giao diện từng mã máy và phục vụ fix theo từng screen profile."
+            )
+        ),
+        ReleaseNote(
+            versionName = "1.0.26",
+            releaseDate = "Trước đó",
             features = listOf(
                 "⌨️ Tăng tốc bàn phím trình duyệt Android Auto: Gõ trực tiếp trên Editable thay vì setText lại toàn bộ chuỗi.",
                 "⚡ Giảm độ trễ phím: Bỏ animation bounce trên từng phím và không gọi IME hệ thống khi dùng bàn phím riêng.",
