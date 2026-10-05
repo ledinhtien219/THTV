@@ -1754,6 +1754,37 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 content.addView(hudSectionHeader)
 
+                val floatingHudCard = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(12), dp(10), dp(12), dp(10))
+                    background = rounded(colorItemBg, 12f, colorItemBorder, 1)
+                    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        topMargin = dp(4); bottomMargin = dp(8)
+                    }
+                    val labels = LinearLayout(this@SettingsActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(TextView(this@SettingsActivity).apply {
+                            text = "Bong bóng cảnh báo trên xe"
+                            textSize = 13f; typeface = Typeface.DEFAULT_BOLD
+                            setTextColor(colorTextPrimary)
+                        })
+                        addView(TextView(this@SettingsActivity).apply {
+                            text = "Hiện HUD trên Android Auto; bật lại sau khi bấm ×."
+                            textSize = 11f; setTextColor(colorTextSecondary)
+                            setPadding(0, dp(2), 0, 0)
+                        })
+                    }
+                    addView(labels, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    addView(Switch(this@SettingsActivity).apply {
+                        isChecked = WazeHudManager.isFloatingOverlayEnabled(this@SettingsActivity)
+                        setOnCheckedChangeListener { _, enabled ->
+                            WazeHudManager.setFloatingOverlayEnabled(this@SettingsActivity, enabled)
+                        }
+                    })
+                }
+                content.addView(floatingHudCard)
+
                 // 1. Tùy chọn hiện HUD nổi trực tiếp trong ứng dụng
                 val inAppHudCard = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL

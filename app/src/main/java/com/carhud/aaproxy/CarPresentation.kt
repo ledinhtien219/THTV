@@ -47,6 +47,7 @@ class CarPresentation(
     }
     private lateinit var root: FrameLayout
     private var sidebarContainer: View? = null
+    private var videoQualityOverlay: FrameLayout? = null
     private var sidebarView: LinearLayout? = null
     private lateinit var statusBanner: TextView
     private var micBtn: ImageView? = null
@@ -62,6 +63,10 @@ class CarPresentation(
     private var carKeyboard: CarKeyboardLayout? = null
     private var webKeyboardTargetPending: Boolean = false
     private var webInputSubmissionPending = false
+    private var webKeyboardToken = ""
+    private var webKeyboardPage: String? = null
+    private var activeCarInput: CarInputSession? = null
+    private val pageInputScript by lazy { context.assets.open("page_input.js").bufferedReader().use { it.readText() } }
     private var topToolbarContainer: View? = null
     private var browserAddressView: TextView? = null
     private var browserBackButton: TextView? = null
@@ -308,8 +313,8 @@ class CarPresentation(
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (existingWebView != null && !web.url.isNullOrBlank() && CarMediaManager.activeAppId == "web") {
-            currentActiveAppId = "web"
+        if (existingWebView != null && !web.url.isNullOrBlank()) {
+            currentActiveAppId = CarMediaManager.activeAppId
         }
         CarMediaManager.activeVoiceManager = voiceManager
         voiceManager.prewarm()
@@ -323,10 +328,10 @@ class CarPresentation(
         try {
             web.addJavascriptInterface(object : Any() {
                 @android.webkit.JavascriptInterface
-                fun openKeyboard(initialValue: String?) {
+                fun openKeyboard(token: String?, initialValue: String?) {
                     mainHandler.post {
-                        if (isBrowserApp() && (!::searchOverlay.isInitialized || searchOverlay.visibility != View.VISIBLE)) {
-                            showWebKeyboardOverlay(initialValue.orEmpty())
+                        if (isBrowserApp() && activeCarInput?.closed != false && (!::searchOverlay.isInitialized || searchOverlay.visibility != View.VISIBLE)) {
+                            showWebKeyboardOverlay(initialValue.orEmpty(), token.orEmpty())
                         }
                     }
                 }
@@ -442,6 +447,7 @@ class CarPresentation(
             @JavascriptInterface
             fun openSearchKeyboard() {
                 mainHandler.post {
+                    if (currentActiveAppId != "youtube") return@post
                     showSearchOverlay()
                 }
             }
@@ -600,6 +606,7 @@ class CarPresentation(
                     updateYouTubeHomeObstacles()
                 }
                 if (isBrowserApp()) {
+                    view.evaluateJavascript(pageInputScript, null)
                     view.evaluateJavascript("""
                         (function() {
                             if (window.__carhudWebKeyboardInjected) return;
@@ -615,15 +622,11 @@ class CarPresentation(
                             document.addEventListener('click', function(e) {
                                 var el = resolveInput(e.target);
                                 if (!el) return;
-                                document.querySelectorAll('[data-carhud-input-target="1"]').forEach(function(x){
-                                    if (x !== el) x.removeAttribute('data-carhud-input-target');
-                                });
-                                el.setAttribute('data-carhud-input-target', '1');
-                                var value = (el.value !== undefined) ? String(el.value || '') : String(el.textContent || '');
-                                if (window.CarHudInput && window.CarHudInput.openKeyboard) {
+                                var input = window.__thtvPageInput.capture(el);
+                                if (input && window.CarHudInput && window.CarHudInput.openKeyboard) {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    window.CarHudInput.openKeyboard(value);
+                                    window.CarHudInput.openKeyboard(input.token, input.value);
                                 }
                             }, true);
                         })();
@@ -746,7 +749,7 @@ class CarPresentation(
             }
         }
 
-        if (currentActiveAppId == "web") {
+        if (currentActiveAppId != "youtube") {
             // A recreated car surface must preserve the browser page and its history.
             web.onResume()
         } else {
@@ -963,6 +966,10 @@ class CarPresentation(
             // bringToFront alone cannot draw over the browser toolbar's 150dp Z.
             // Keep warnings above browser chrome, below launcher/input dialogs.
             elevation = dp(170).toFloat()
+            onCloseRequested = {
+                WazeHudManager.setFloatingOverlayEnabled(context, false)
+                visibility = View.GONE
+            }
         }
         hudOverlay = overlay
         root.addView(overlay)
@@ -1337,8 +1344,6 @@ class CarPresentation(
         resetAutoHideTimer()
     }
 
-    private var youtubeAutoplayButton: LinearLayout? = null
-
     private fun updateYouTubeHomeObstacles() {
         root.post {
             if (web.width <= 0 || web.height <= 0 || currentActiveAppId != "youtube") return@post
@@ -1419,31 +1424,15 @@ class CarPresentation(
 
             addView(toolButton(R.drawable.ic_bar_home, "Trang chủ") { showDashboard() })
 
-            val auto = toolButton(R.drawable.ic_player_shuffle, "Tự phát") { btn ->
-                YouTubePlayerHelper.toggleAutoplay(web) { enabled ->
-                    mainHandler.post {
-                        btn.background = rounded(
-                            if (enabled) Color.parseColor(if (isDay) "#DBEAFE" else "#243D5A") else if (isDay) Color.parseColor("#F1F5F9") else Color.parseColor("#EC111827"),
-                            12f,
-                            if (enabled) Color.parseColor(if (isDay) "#2563EB" else "#22D3EE") else if (isDay) Color.parseColor("#CBD5E1") else Color.parseColor("#334155"),
-                            if (enabled) 2 else 1
-                        )
-                        (btn.getChildAt(0) as? ImageView)?.apply {
-                            if (isDay) setColorFilter(Color.parseColor(if (enabled) "#1D4ED8" else "#1E293B"))
-                            else clearColorFilter()
-                        }
-                        (btn.getChildAt(1) as? TextView)?.setTextColor(
-                            Color.parseColor(if (isDay) { if (enabled) "#1E40AF" else "#334155" } else "#E5E7EB")
-                        )
-                    }
-                }
-            }
-            youtubeAutoplayButton = auto
-            addView(auto)
+            addView(toolButton(R.drawable.ic_bar_back, "Quay lại") {
+                if (currentActiveAppId == "youtube") YouTubePlayerHelper.goBackInYouTube(web)
+            })
 
             addView(toolButton(R.drawable.ic_bar_play_pause, "Phát / Dừng") { togglePlayPause() })
             addView(toolButton(R.drawable.ic_bar_next, "Tiếp theo") { YouTubePlayerHelper.playNext(web) })
-            addView(toolButton(R.drawable.ic_bar_setting, "Cài đặt") { YouTubePlayerHelper.openQuickSettings(web) })
+            addView(toolButton(R.drawable.ic_bar_setting, "Chất lượng") {
+                showVideoQualityMenu()
+            })
         }
 
         sidebarView = panel
@@ -1841,6 +1830,7 @@ class CarPresentation(
     private fun isBrowserApp(): Boolean = currentActiveAppId != "youtube" && currentActiveAppId != "iptv"
 
     fun switchWebApp(app: WebAppItem, embedded: Boolean = false, startUrl: String? = null) {
+        hideVideoQualityMenu()
         cancelSystemVoiceRequest()
         if (currentActiveAppId != app.id) CarMediaManager.cancelPendingSteeringNext()
         if (currentActiveAppId != app.id) browserNeedsHistoryReset = app.id == "web"
@@ -2800,11 +2790,11 @@ class CarPresentation(
     }
 
     private fun executeSearch(query: String, broadcast: Boolean = true) {
-        if (searchOverlayMode == "address" && isBrowserApp()) {
-            navigateBrowser(query)
+        if (searchOverlayMode == "address") {
+            if (isBrowserApp()) navigateBrowser(query)
             return
         }
-        if (searchOverlayMode == "web" && isBrowserApp()) {
+        if (searchOverlayMode == "web") {
             submitWebKeyboardText(query)
             return
         }
@@ -2823,54 +2813,21 @@ class CarPresentation(
         hideSearchOverlay()
     }
 
-    private fun submitWebKeyboardText(value: String, onComplete: ((Boolean) -> Unit)? = null) {
-        if (webInputSubmissionPending) { onComplete?.invoke(false); return }
+    private fun submitWebKeyboardText(
+        value: String, onComplete: ((Boolean) -> Unit)? = null,
+        token: String = webKeyboardToken, page: String? = webKeyboardPage
+    ) {
+        if (webInputSubmissionPending || page == null || web.url != page || !isBrowserApp()) {
+            onComplete?.invoke(false)
+            return
+        }
         webInputSubmissionPending = true
         val quoted = org.json.JSONObject.quote(value)
-        val js = """
-            (function() {
-                var el = document.querySelector('[data-carhud-input-target="1"]');
-                if (!el) return 'NO_TARGET';
-                try {
-                    if (el.isContentEditable) {
-                        el.textContent = $quoted;
-                    } else {
-                        var proto = Object.getPrototypeOf(el);
-                        var desc = proto ? Object.getOwnPropertyDescriptor(proto, 'value') : null;
-                        if (desc && desc.set) desc.set.call(el, $quoted); else el.value = $quoted;
-                    }
-                    el.dispatchEvent(new Event('input', {bubbles:true}));
-                    el.dispatchEvent(new Event('change', {bubbles:true}));
-                    el.focus();
-                    var form = el.form || (el.closest ? el.closest('form') : null);
-                    // Google uses textarea[name=q]; many sites use a plain text field.
-                    // Only submit search fields, leaving login and other forms editable.
-                    var searchName = /^(q|query|search|search_query|keyword|s)$/i.test(el.name || '');
-                    var searchForm = form && (form.getAttribute('role') === 'search' || /\/(search|tim-kiem)(\/|\?|$)/i.test(form.getAttribute('action') || ''));
-                    var isSearch = el.type === 'search' || el.getAttribute('role') === 'searchbox' ||
-                        ((!el.type || /^(text|textarea)$/.test(el.type)) && (searchName || searchForm));
-                    if (isSearch) {
-                        var ev = new KeyboardEvent('keydown', {key:'Enter', code:'Enter', keyCode:13, which:13, bubbles:true, cancelable:true});
-                        el.dispatchEvent(ev);
-                        if (form && !ev.defaultPrevented) {
-                            var submitter = form.querySelector('button[type="submit"]:not(:disabled), input[type="submit"]:not(:disabled), button:not([type]):not(:disabled)');
-                            if (typeof form.requestSubmit === 'function') form.requestSubmit(submitter || undefined);
-                            else if (submitter) submitter.click();
-                            else HTMLFormElement.prototype.submit.call(form);
-                        }
-                        el.dispatchEvent(new KeyboardEvent('keyup', {key:'Enter', code:'Enter', keyCode:13, which:13, bubbles:true}));
-                    }
-                    el.removeAttribute('data-carhud-input-target');
-                    return 'OK';
-                } catch (e) { return 'ERROR'; }
-            })();
-        """.trimIndent()
-
-        web.evaluateJavascript(js) { result ->
+        val target = org.json.JSONObject.quote(token)
+        web.evaluateJavascript("window.__thtvPageInput ? window.__thtvPageInput.fill($target, $quoted) : 'NO_TARGET';") { result ->
             mainHandler.post {
                 webInputSubmissionPending = false
-                val noTarget = result == null || result.contains("NO_TARGET") || result.contains("ERROR")
-                if (noTarget) {
+                if (result != "\"OK\"") {
                     searchInput.error = "Ô nhập đã thay đổi. Chạm lại ô trên trang để nhập tiếp."
                     onComplete?.invoke(false)
                     return@post
@@ -3309,7 +3266,7 @@ class CarPresentation(
 
                     // Search Action Button
                     val actionText = when (searchOverlayMode) {
-                        "web" -> "↵ NHẬP / MỞ"
+                        "web" -> "↵ NHẬP"
                         "address" -> "TÌM KIẾM / ĐI →"
                         else -> "🔍 TÌM KIẾM"
                     }
@@ -3342,7 +3299,9 @@ class CarPresentation(
         showKeyboardOverlayInternal()
     }
 
-    private fun showWebKeyboardOverlay(initialValue: String) {
+    private fun showWebKeyboardOverlay(initialValue: String, token: String) {
+        webKeyboardToken = token
+        webKeyboardPage = web.url
         searchOverlayMode = "web"
         searchInput.error = null
         searchInput.imeOptions = EditorInfo.IME_ACTION_DONE
@@ -3353,7 +3312,7 @@ class CarPresentation(
         searchOverlayVoiceButton?.visibility = View.GONE
         searchOverlaySubmitButton?.apply { visibility = View.VISIBLE; text = "↵ Nhập" }
         searchSuggestionStrip?.visibility = View.GONE
-        keyboardActionKey?.text = "↵ NHẬP / MỞ"
+        keyboardActionKey?.text = "↵ NHẬP"
         showKeyboardOverlayInternal()
     }
 
@@ -3361,7 +3320,7 @@ class CarPresentation(
         searchOverlayMode = "address"
         webKeyboardTargetPending = false
         // Address navigation must never reuse a marked input from the previous page.
-        web.evaluateJavascript("document.querySelectorAll('[data-carhud-input-target]').forEach(function(n){n.removeAttribute('data-carhud-input-target');});", null)
+        web.evaluateJavascript("if(window.__thtvPageInput) window.__thtvPageInput.clear();", null)
         searchInput.error = null
         searchInput.imeOptions = EditorInfo.IME_ACTION_GO
         searchInput.hint = "Tìm kiếm Google hoặc nhập địa chỉ web"
@@ -3379,7 +3338,7 @@ class CarPresentation(
         val xRatio = touchX / web.width.coerceAtLeast(1)
         val yRatio = touchY / web.height.coerceAtLeast(1)
         web.postDelayed({
-            if (!isBrowserApp() || searchOverlay.visibility == View.VISIBLE) return@postDelayed
+            if (!isBrowserApp() || activeCarInput?.closed == false || searchOverlay.visibility == View.VISIBLE) return@postDelayed
             // Focus can move after Google's click handler replaces its search field.
             // This native fallback also works on an already-loaded persistent WebView
             // whose newly registered JavascriptInterface is not exposed until reload.
@@ -3391,15 +3350,13 @@ class CarPresentation(
                     if (hitInput) el = hitInput;
                     if (!el || !el.matches('input,textarea,[contenteditable="true"]') || el.disabled || el.readOnly) return null;
                     if (el.tagName === 'INPUT' && !/^(text|search|email|url|tel|number)${'$'}/.test(el.type)) return null;
-                    document.querySelectorAll('[data-carhud-input-target]').forEach(function(n){n.removeAttribute('data-carhud-input-target');});
-                    el.setAttribute('data-carhud-input-target','1');
-                    return el.value !== undefined ? String(el.value) : String(el.textContent || '');
+                    return window.__thtvPageInput.capture(el);
                 })();
             """.trimIndent()
-            web.evaluateJavascript(js) { result ->
-                if (result != null && result != "null" && searchOverlay.visibility != View.VISIBLE) {
-                    val value = try { org.json.JSONTokener(result).nextValue() as? String } catch (_: Exception) { null }
-                    if (value != null) showWebKeyboardOverlay(value)
+            web.evaluateJavascript(pageInputScript + "\n" + js) { result ->
+                if (result != null && result != "null" && activeCarInput?.closed != false && searchOverlay.visibility != View.VISIBLE) {
+                    val input = try { org.json.JSONObject(result) } catch (_: Exception) { null }
+                    if (input != null) showWebKeyboardOverlay(input.optString("value"), input.optString("token"))
                 }
             }
         }, 100)
@@ -3409,6 +3366,7 @@ class CarPresentation(
         if (prefs.getString("car_keyboard_input_mode", "native") != "thtv") {
             val mode = searchOverlayMode
             val page = web.url
+            val targetToken = webKeyboardToken
             val input = CarInputSession(
                 initialText = searchInput.text.toString(),
                 hint = searchInput.hint.toString(),
@@ -3419,7 +3377,7 @@ class CarPresentation(
                     when (mode) {
                         "web" -> {
                             if (web.url != page) complete(false)
-                            else submitWebKeyboardText(value, complete)
+                            else submitWebKeyboardText(value, complete, targetToken, page)
                         }
                         "address" -> {
                             val target = BrowserNavigation.targetFor(value)
@@ -3437,7 +3395,9 @@ class CarPresentation(
                     searchInput.setSelection(value.length)
                 }
             )
+            activeCarInput = input
             if (CarMediaManager.requestCarNativeSearch(input)) return
+            activeCarInput = null
         }
         autoHideHandler.removeCallbacks(hideBarsRunnable)
         sidebarContainer?.animate()?.cancel()
@@ -3581,7 +3541,71 @@ class CarPresentation(
 
     fun getWebView(): WebView = web
 
+    private fun showVideoQualityMenu() {
+        if (currentActiveAppId != "youtube" || videoQualityOverlay != null) return
+        val page = web.url
+        YouTubePlayerHelper.videoQualityOptions(web) { options ->
+            if (currentActiveAppId != "youtube" || web.url != page || videoQualityOverlay != null) return@videoQualityOptions
+            val names = mapOf("highres" to "4K+", "hd2160" to "2160p (4K)", "hd1440" to "1440p", "hd1080" to "1080p", "hd720" to "720p", "large" to "480p", "medium" to "360p", "small" to "240p", "tiny" to "144p", "auto" to "Tự động")
+            val levels = options?.optJSONArray("levels")
+            val ids = if (levels != null) (0 until levels.length()).map { levels.optString(it) }.filter { names.containsKey(it) }.distinct() else emptyList()
+            if (ids.isEmpty()) {
+                Toast.makeText(context, "Chưa lấy được chất lượng. Hãy mở một video YouTube rồi thử lại.", Toast.LENGTH_LONG).show()
+                return@videoQualityOptions
+            }
+            val overlay = FrameLayout(context).apply {
+                setBackgroundColor(Color.parseColor("#CC080E17"))
+                elevation = dp(210).toFloat()
+                isClickable = true
+                setOnClickListener { hideVideoQualityMenu() }
+            }
+            val card = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(18), dp(12), dp(18), dp(12))
+                background = rounded(Color.parseColor("#142030"), 14f, Color.parseColor("#38BDF8"), 1)
+                isClickable = true
+                addView(TextView(context).apply {
+                    text = "Chất lượng video"
+                    textSize = 20f; setTextColor(Color.WHITE); typeface = Typeface.DEFAULT_BOLD
+                    setPadding(0, 0, 0, dp(8))
+                })
+            }
+            fun button(title: String, click: () -> Unit) = TextView(context).apply {
+                text = title; textSize = 16f; setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER; minimumHeight = dp(46)
+                background = rounded(Color.parseColor("#24384B"), 8f)
+                setOnClickListener { click() }
+            }
+            ids.chunked(2).forEach { pair ->
+                val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+                pair.forEach { id ->
+                    row.addView(button((if (options?.optString("current") == id) "✓ " else "") + names.getValue(id)) {
+                        YouTubePlayerHelper.selectVideoQuality(web, id, options!!.getString("page")) { accepted ->
+                            hideVideoQualityMenu()
+                            if (!accepted) Toast.makeText(context, "Video đã thay đổi. Mở lại bảng chất lượng.", Toast.LENGTH_LONG).show()
+                        }
+                    }, LinearLayout.LayoutParams(0, dp(46), 1f).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) })
+                }
+                card.addView(row)
+            }
+            card.addView(button("Đóng") { hideVideoQualityMenu() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(46)).apply { topMargin = dp(8) })
+            val scroll = ScrollView(context).apply { id = android.R.id.content; addView(card) }
+            overlay.addView(scroll, FrameLayout.LayoutParams(dp(380).coerceAtMost(root.width - dp(24)), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER).apply {
+                topMargin = dp(12); bottomMargin = dp(12)
+            })
+            videoQualityOverlay = overlay
+            root.addView(overlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            overlay.bringToFront()
+        }
+    }
+
+    private fun hideVideoQualityMenu() {
+        videoQualityOverlay?.let { root.removeView(it) }
+        videoQualityOverlay = null
+    }
+
     fun dispatchTouch(x: Float, y: Float) {
+        videoQualityOverlay?.let { dispatchOverlayClick(it, x, y); return }
         if (::searchOverlay.isInitialized && searchOverlay.visibility == View.VISIBLE) {
             carKeyboard?.let { keyboard ->
                 val point = android.graphics.Rect(x.toInt(), y.toInt(), x.toInt() + 1, y.toInt() + 1)
@@ -3601,6 +3625,11 @@ class CarPresentation(
         // 1. Check HUD interactions if HUD overlay is present
         val hud = hudOverlay
         if (hud != null && hud.visibility == View.VISIBLE) {
+            // Close has priority over the lock's expanded touch region.
+            if (hud.hitTestClose(x, y)) {
+                hud.closeHud()
+                return
+            }
             // Priority 1: Direct hit on lock button toggles lock state (locked <-> unlocked)
             if (hud.hitTestLock(x, y)) {
                 hud.toggleLock()
@@ -3657,6 +3686,7 @@ class CarPresentation(
     }
 
     fun dispatchScroll(dx: Float, dy: Float) {
+        if (videoQualityOverlay != null) { videoQualityOverlay?.findViewById<ScrollView>(android.R.id.content)?.scrollBy(0, dy.toInt()); return }
         if (::searchOverlay.isInitialized && searchOverlay.visibility == View.VISIBLE) return
         onUserInteraction()
         val hud = hudOverlay
@@ -3682,6 +3712,7 @@ class CarPresentation(
     }
 
     fun dispatchFling(vx: Float, vy: Float) {
+        if (videoQualityOverlay != null) return
         if (::searchOverlay.isInitialized && searchOverlay.visibility == View.VISIBLE) return
         onUserInteraction()
         val hud = hudOverlay
@@ -3712,6 +3743,7 @@ class CarPresentation(
 
     fun goBack() {
         cancelSystemVoiceRequest()
+        if (videoQualityOverlay != null) { hideVideoQualityMenu(); return }
         if (addAppOverlay?.visibility == View.VISIBLE) {
             hideAddAppDialog()
             return

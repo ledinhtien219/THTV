@@ -217,6 +217,7 @@ object CarMediaManager {
             @android.webkit.JavascriptInterface
             fun openSearchKeyboard() {
                 mainHandler.post {
+                    if (activeAppId != "youtube") return@post
                     startGlobalVoiceSearch(appCtx)
                 }
             }

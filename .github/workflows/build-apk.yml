@@ -48,20 +48,25 @@ jobs:
       - name: Test IPTV aspect retention
         run: node tests/iptv-aspect.test.cjs
 
+      - name: Test page input and YouTube quality
+        run: |
+          node tests/page-input.test.cjs
+          node tests/youtube-quality.test.cjs
+
       - name: Build Debug APK
         run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --stacktrace
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: THTV-v1.0.33-debug-apk
+          name: THTV-v1.0.34-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14
 
       - name: Upload keyboard device test APK
         uses: actions/upload-artifact@v4
         with:
-          name: THTV-v1.0.33-keyboard-tests
+          name: THTV-v1.0.34-keyboard-tests
           path: app/build/outputs/apk/androidTest/debug/*.apk
           retention-days: 14
 

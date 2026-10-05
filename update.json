@@ -1,11 +1,11 @@
 {
-  "versionCode": 206,
-  "versionName": "1.0.33",
-  "downloadUrl": "https://github.com/ledinhtien219/THTV/releases/download/v1.0.33/THTV_v1.0.33_debug.apk",
+  "versionCode": 207,
+  "versionName": "1.0.34",
+  "downloadUrl": "https://github.com/ledinhtien219/THTV/releases/download/v1.0.34/THTV_v1.0.34_debug.apk",
   "changelog": [
-    "Nút Trình duyệt trên màn hình chính mở cùng app Trình duyệt Web trong Trung tâm ứng dụng, có thanh địa chỉ và lịch sử duyệt web.",
-    "Đồng bộ biểu tượng xanh và tên Trình duyệt Web trên màn hình chính.",
-    "HUD tốc độ và cảnh báo hiển thị phía trên thanh trình duyệt; chạm HUD không đi xuyên xuống ô địa chỉ.",
-    "Thông báo trạng thái giọng nói hiển thị trên trình duyệt."
+    "Thông báo phiên bản chỉ hiển thị nội dung bản đang cài; bỏ phiên bản cũ.",
+    "Thêm nút × tắt bong bóng cảnh báo trên cả 5 kiểu HUD; bật lại trong Cài đặt HUD.",
+    "Thanh YouTube có nút Quay lại riêng và nút Chất lượng để chọn độ phân giải.",
+    "Nhập trên trang chỉ điền vào đúng ô; không tự gửi Enter, tìm kiếm hay chuyển sang YouTube."
   ]
 }

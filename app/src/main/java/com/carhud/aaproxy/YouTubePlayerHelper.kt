@@ -1864,6 +1864,32 @@ object YouTubePlayerHelper {
         } ?: callback?.invoke(false)
     }
 
+    fun goBackInYouTube(view: WebView?) {
+        view ?: return
+        fun isYouTube(url: String?): Boolean {
+            val host = url?.let { android.net.Uri.parse(it).host }.orEmpty().lowercase(java.util.Locale.ROOT)
+            return host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtu.be"
+        }
+        if (!isYouTube(view.url)) return
+        val history = view.copyBackForwardList()
+        val previous = history.currentIndex - 1
+        if (previous >= 0 && isYouTube(history.getItemAtIndex(previous)?.url)) view.goBack()
+        else view.loadUrl(if (view.url?.startsWith("https://www.youtube.com") == true) "https://www.youtube.com" else "https://m.youtube.com")
+    }
+
+    fun videoQualityOptions(view: WebView, callback: (org.json.JSONObject?) -> Unit) {
+        val script = view.context.assets.open("youtube_quality.js").bufferedReader().use { it.readText() }
+        view.evaluateJavascript(script + "\nwindow.__thtvVideoQuality.options();") { result ->
+            callback(try { org.json.JSONObject(result ?: "null") } catch (_: Exception) { null })
+        }
+    }
+
+    fun selectVideoQuality(view: WebView, level: String, page: String, callback: (Boolean) -> Unit) {
+        val id = org.json.JSONObject.quote(level)
+        val url = org.json.JSONObject.quote(page)
+        view.evaluateJavascript("Boolean(window.__thtvVideoQuality && window.__thtvVideoQuality.select($id, $url));") { callback(it == "true") }
+    }
+
     fun openQuickSettings(view: WebView?) {
         view?.evaluateJavascript("""
             (function(){
