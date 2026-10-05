@@ -31,11 +31,11 @@ object ChangelogManager {
             versionName = BuildConfig.VERSION_NAME,
             releaseDate = "Hiện tại",
             features = listOf(
-                "🌐 Sửa lỗi nhập ô tìm kiếm trong trình duyệt: chữ được trả đúng vào ô Google/trang web đang chọn.",
-                "🔍 Ô có chức năng tìm kiếm sẽ dùng nút TÌM/ĐI và submit ngay trên chính trang hiện tại; ô nhập thường chỉ điền nội dung.",
-                "🚫 Chặn hoàn toàn trường hợp truy vấn của trình duyệt bị rơi nhầm sang YouTube khi trạng thái bàn phím/Presentation thay đổi.",
-                "🧭 Nếu app-id bị cũ sau khi Android Auto dựng lại màn hình, THTV dùng URL WebView thật để xác định đúng Browser hay YouTube.",
-                "🧪 Thêm regression test cho Google/search field, input thường, target cũ và bàn phím dùng chung."
+                "🧪 Đây là bản TEST NỘI BỘ — chưa tự phát hành cho người dùng.",
+                "✅ Thêm cơ chế duyệt Stable: chỉ build đã được chủ app duyệt mới xuất hiện trong thông báo cập nhật.",
+                "🔒 Build thường trên GitHub chỉ tạo APK test, không tự sửa update.json và không tự tạo Release công khai.",
+                "🚀 Workflow Approve Stable Update build lại đúng commit đã test, chạy lại test, tạo Release rồi mới mở update cho người dùng.",
+                "🛡️ App chỉ chấp nhận manifest có channel=stable và approved=true."
             )
         )
     )
