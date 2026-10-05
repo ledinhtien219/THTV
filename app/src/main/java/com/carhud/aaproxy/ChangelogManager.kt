@@ -27,8 +27,17 @@ object ChangelogManager {
 
     val RELEASE_NOTES = listOf(
         ReleaseNote(
-            versionName = "1.0.24",
+            versionName = "1.0.25",
             releaseDate = "Mới nhất",
+            features = listOf(
+                "🖥️ Sửa hình nền động không phủ kín Android Auto: GIF và video luôn ép MATCH_PARENT toàn dashboard.",
+                "🎞️ Sửa center-crop video: Scale theo chênh lệch tỉ lệ khung hình, không còn bị thu nhỏ về góc trái.",
+                "🖼️ GIF luôn CENTER_CROP và tự requestLayout sau khi decode để phủ kín màn hình."
+            )
+        ),
+        ReleaseNote(
+            versionName = "1.0.24",
+            releaseDate = "Trước đó",
             features = listOf(
                 "🎞️ Hình nền động: Cho phép chọn GIF hoặc video ngắn làm hình nền buồng lái Android Auto.",
                 "🔁 Video tự lặp (loop), tắt tiếng và center-crop để không tranh âm thanh với YouTube/IPTV.",
