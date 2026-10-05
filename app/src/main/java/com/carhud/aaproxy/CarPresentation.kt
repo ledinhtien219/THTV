@@ -3573,7 +3573,7 @@ class CarPresentation(
             fun button(title: String, click: () -> Unit) = TextView(context).apply {
                 text = title; textSize = 16f; setTextColor(Color.WHITE)
                 gravity = Gravity.CENTER; minimumHeight = dp(46)
-                background = rounded(Color.parseColor("#24384B"), 8f)
+                background = rounded(Color.parseColor("#24384B"), 8f, Color.parseColor("#334155"), 1)
                 setOnClickListener { click() }
             }
             ids.chunked(2).forEach { pair ->
