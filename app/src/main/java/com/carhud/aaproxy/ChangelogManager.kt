@@ -27,8 +27,17 @@ object ChangelogManager {
 
     val RELEASE_NOTES = listOf(
         ReleaseNote(
-            versionName = "1.0.25",
+            versionName = "1.0.26",
             releaseDate = "Mới nhất",
+            features = listOf(
+                "⌨️ Tăng tốc bàn phím trình duyệt Android Auto: Gõ trực tiếp trên Editable thay vì setText lại toàn bộ chuỗi.",
+                "⚡ Giảm độ trễ phím: Bỏ animation bounce trên từng phím và không gọi IME hệ thống khi dùng bàn phím riêng.",
+                "🇻🇳 Telex vẫn giữ nguyên nhưng chỉ xử lý từ hiện tại, xóa ký tự theo Unicode code point để phản hồi nhanh hơn."
+            )
+        ),
+        ReleaseNote(
+            versionName = "1.0.25",
+            releaseDate = "Trước đó",
             features = listOf(
                 "🖥️ Sửa hình nền động không phủ kín Android Auto: GIF và video luôn ép MATCH_PARENT toàn dashboard.",
                 "🎞️ Sửa center-crop video: Scale theo chênh lệch tỉ lệ khung hình, không còn bị thu nhỏ về góc trái.",
