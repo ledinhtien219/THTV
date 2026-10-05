@@ -1,11 +1,11 @@
 {
-  "versionCode": 205,
-  "versionName": "1.0.32",
-  "downloadUrl": "https://github.com/ledinhtien219/THTV/releases/download/v1.0.32/THTV_v1.0.32_debug.apk",
+  "versionCode": 206,
+  "versionName": "1.0.33",
+  "downloadUrl": "https://github.com/ledinhtien219/THTV/releases/download/v1.0.33/THTV_v1.0.33_debug.apk",
   "changelog": [
-    "Dùng bàn phím Android Auto làm mặc định để nhận chữ trực tiếp, tránh hụt phím do host nhận chạm nhanh thành cử chỉ Surface.",
-    "Hỗ trợ tìm YouTube, tìm/nhập địa chỉ web và ô nhập trên trang; chuyển đúng chuỗi cuối đến đúng nơi nhận.",
-    "Chặn gửi trùng khi bấm Enter và nút Nhập; hỗ trợ xóa trống ô nhập web.",
-    "Thêm chọn bàn phím Android Auto hoặc THTV trong Cài đặt; dọn listener màn hình cũ khi tạo lại giao diện."
+    "Nút Trình duyệt trên màn hình chính mở cùng app Trình duyệt Web trong Trung tâm ứng dụng, có thanh địa chỉ và lịch sử duyệt web.",
+    "Đồng bộ biểu tượng xanh và tên Trình duyệt Web trên màn hình chính.",
+    "HUD tốc độ và cảnh báo hiển thị phía trên thanh trình duyệt; chạm HUD không đi xuyên xuống ô địa chỉ.",
+    "Thông báo trạng thái giọng nói hiển thị trên trình duyệt."
   ]
 }

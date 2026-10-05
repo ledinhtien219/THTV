@@ -861,7 +861,7 @@ class CarPresentation(
             gravity = Gravity.CENTER
             setPadding(dp(28), dp(16), dp(28), dp(16))
             background = rounded(Color.parseColor("#EE102032"), 16f, Color.parseColor("#00E5FF"), 2)
-            elevation = 40f
+            elevation = dp(220).toFloat()
             visibility = View.GONE
         }
         val bannerParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
@@ -960,7 +960,9 @@ class CarPresentation(
             return
         }
         val overlay = VietmapHudOverlay(context).apply {
-            elevation = 120f
+            // bringToFront alone cannot draw over the browser toolbar's 150dp Z.
+            // Keep warnings above browser chrome, below launcher/input dialogs.
+            elevation = dp(170).toFloat()
         }
         hudOverlay = overlay
         root.addView(overlay)
@@ -3594,8 +3596,6 @@ class CarPresentation(
         val overlay = listOfNotNull(addAppOverlay, appGridOverlay, if (::searchOverlay.isInitialized) searchOverlay else null)
             .firstOrNull { it.visibility == View.VISIBLE }
         if (overlay != null && dispatchOverlayClick(overlay, x, y)) return
-        if (currentActiveAppId == "web" && !isDashboardShowing &&
-            topToolbarContainer?.let { dispatchOverlayClick(it, x, y) } == true) return
         onUserInteraction()
 
         // 1. Check HUD interactions if HUD overlay is present
@@ -3607,14 +3607,20 @@ class CarPresentation(
                 return
             }
 
+            // Match the visible Z order: touching a warning must not activate
+            // the browser address bar or page underneath it.
+            if (hud.isTouchOnOverlay(x, y)) {
+                if (!hud.isHudLocked()) hud.toggleLock()
+                return
+            }
+        }
+        if (currentActiveAppId == "web" && !isDashboardShowing &&
+            topToolbarContainer?.let { dispatchOverlayClick(it, x, y) } == true) return
+
+        if (hud != null && hud.visibility == View.VISIBLE) {
+
             // Priority 2: If HUD is unlocked:
             if (!hud.isHudLocked()) {
-                // Tapping anywhere on the HUD overlay immediately locks it into place
-                if (hud.isTouchOnOverlay(x, y)) {
-                    hud.toggleLock()
-                    return
-                }
-
                 // Tapping outside HUD moves HUD to that new position
                 hud.moveTo(x, y, root.width, root.height)
                 return

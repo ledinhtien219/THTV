@@ -27,8 +27,18 @@ object ChangelogManager {
 
     val RELEASE_NOTES = listOf(
         ReleaseNote(
-            versionName = "1.0.32",
+            versionName = "1.0.33",
             releaseDate = "Mới nhất",
+            features = listOf(
+                "🌐 Nút Trình duyệt trên màn hình chính mở cùng app Trình duyệt Web trong Trung tâm ứng dụng, có thanh địa chỉ và lịch sử duyệt web.",
+                "🟢 Đồng bộ biểu tượng xanh và tên Trình duyệt Web trên màn hình chính.",
+                "🚦 HUD tốc độ và cảnh báo hiển thị phía trên thanh trình duyệt; chạm HUD không đi xuyên xuống ô địa chỉ.",
+                "🎙️ Thông báo trạng thái giọng nói hiển thị trên trình duyệt."
+            )
+        ),
+        ReleaseNote(
+            versionName = "1.0.32",
+            releaseDate = "Trước đó",
             features = listOf(
                 "⌨️ Nhập trên xe mặc định dùng bàn phím Android Auto, nhận chuỗi chữ trực tiếp để tránh hụt phím do cử chỉ Surface khi gõ nhanh.",
                 "🌐 Áp dụng cho tìm YouTube, tìm/nhập địa chỉ web và ô nhập trên trang; giữ đúng nơi nhận nội dung.",

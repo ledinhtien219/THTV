@@ -457,7 +457,7 @@
                     android:textSize="9.5sp" />
             </LinearLayout>
 
-            <!-- App 3: Trình duyệt -->
+            <!-- App 3: Same Web browser as the application center -->
             <LinearLayout
                 android:id="@+id/cardBrowser"
                 android:layout_width="92dp"
@@ -473,7 +473,9 @@
                 <ImageView
                     android:layout_width="34dp"
                     android:layout_height="34dp"
-                    android:src="@drawable/ic_tab_globe" />
+                    android:background="@drawable/bg_browser_icon"
+                    android:padding="6dp"
+                    android:src="@drawable/ic_app_web" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -481,16 +483,18 @@
                     android:layout_marginTop="4dp"
                     android:fontFamily="sans-serif-bold"
                     android:includeFontPadding="false"
-                    android:text="Trình duyệt"
+                    android:text="Trình duyệt Web"
+                    android:maxLines="1"
+                    android:ellipsize="end"
                     android:textColor="#FFFFFF"
-                    android:textSize="12sp" />
+                    android:textSize="10sp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif"
                     android:includeFontPadding="false"
-                    android:text="Internet"
+                    android:text="Tra cứu mạng"
                     android:textColor="#94A3B8"
                     android:textSize="9.5sp" />
             </LinearLayout>

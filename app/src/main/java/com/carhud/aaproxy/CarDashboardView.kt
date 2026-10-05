@@ -520,13 +520,12 @@ class CarDashboardView(
             onFullscreenRequested?.invoke(ytApp)
         }
 
-        // App 3: Trình duyệt
+        // Use the same browser as the application center, including its toolbar/history.
         cardBrowser.setOnClickListener {
             val appList = WebAppManager.getAllApps(context)
-            val browserApp = appList.find { it.id == "chrome" || it.id == "browser" }
-                ?: WebAppItem("chrome", "Trình duyệt", "https://google.com", R.drawable.ic_tab_globe)
+            val browserApp = appList.find { it.id == "web" }
+                ?: WebAppManager.DEFAULT_APPS.first { it.id == "web" }
             onAppClick(browserApp)
-            onFullscreenRequested?.invoke(browserApp)
         }
 
         // App 4: Dấu trang (Bookmarks / Quick links)
