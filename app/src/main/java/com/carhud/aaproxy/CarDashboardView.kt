@@ -5,13 +5,20 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.ImageDecoder
+import android.graphics.Matrix
+import android.graphics.SurfaceTexture
 import android.graphics.Typeface
+import android.graphics.drawable.AnimatedImageDrawable
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.Surface
+import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
@@ -81,6 +88,10 @@ class CarDashboardView(
         const val WALLPAPER_SCENIC = "scenic"
         const val WALLPAPER_CUSTOM = "custom"
         const val PREF_CUSTOM_WALLPAPER_PATH = "pref_custom_wallpaper_path"
+        const val PREF_CUSTOM_WALLPAPER_KIND = "pref_custom_wallpaper_kind"
+        const val WALLPAPER_KIND_IMAGE = "image"
+        const val WALLPAPER_KIND_GIF = "gif"
+        const val WALLPAPER_KIND_VIDEO = "video"
     }
 
     private val prefs: SharedPreferences by lazy {
@@ -88,7 +99,7 @@ class CarDashboardView(
     }
 
     private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == PREF_WALLPAPER_TYPE || key == PREF_CUSTOM_WALLPAPER_PATH || key == PREF_USER_NAME) {
+        if (key == PREF_WALLPAPER_TYPE || key == PREF_CUSTOM_WALLPAPER_PATH || key == PREF_CUSTOM_WALLPAPER_KIND || key == PREF_USER_NAME) {
             post {
                 updateWallpaper()
             }
@@ -108,8 +119,11 @@ class CarDashboardView(
     private var isFavorite = false
 
     // Views
+    private lateinit var dashboardVideoBackground: TextureView
     private lateinit var dashboardBackground: ImageView
     private lateinit var dashboardScrim: View
+    private var wallpaperPlayer: MediaPlayer? = null
+    private var animatedWallpaper: AnimatedImageDrawable? = null
     private lateinit var topLeftContainer: View
     private lateinit var greetingText: TextView
     private lateinit var clockText: TextView
@@ -182,6 +196,7 @@ class CarDashboardView(
     }
 
     private fun initViews() {
+        dashboardVideoBackground = findViewById(R.id.dashboardVideoBackground)
         dashboardBackground = findViewById(R.id.dashboardBackground)
         dashboardScrim = findViewById(R.id.dashboardScrim)
         topLeftContainer = findViewById(R.id.topLeftContainer)
@@ -482,82 +497,185 @@ class CarDashboardView(
     }
 
     fun updateWallpaper() {
+        stopDynamicWallpaper()
+
         val rawType = prefs.getString(PREF_WALLPAPER_TYPE, WALLPAPER_BUGATTI) ?: WALLPAPER_BUGATTI
         val type = if (rawType == "homer") WALLPAPER_BUGATTI else rawType
         when (type) {
-            WALLPAPER_BUGATTI -> {
-                dashboardBackground.setImageResource(R.drawable.bg_wallpaper_bugatti)
-                dashboardBackground.visibility = View.VISIBLE
-                dashboardScrim.visibility = View.VISIBLE
-                dashboardScrim.setBackgroundColor(Color.parseColor("#35000000"))
-            }
-            WALLPAPER_SILVER -> {
-                dashboardBackground.setImageResource(R.drawable.bg_wallpaper_silver)
-                dashboardBackground.visibility = View.VISIBLE
-                dashboardScrim.visibility = View.VISIBLE
-                dashboardScrim.setBackgroundColor(Color.parseColor("#35000000"))
-            }
-            WALLPAPER_BLUE -> {
-                dashboardBackground.setImageResource(R.drawable.bg_wallpaper_blue)
-                dashboardBackground.visibility = View.VISIBLE
-                dashboardScrim.visibility = View.VISIBLE
-                dashboardScrim.setBackgroundColor(Color.parseColor("#35000000"))
-            }
-            WALLPAPER_CYBER -> {
-                dashboardBackground.setImageResource(R.drawable.bg_wallpaper_cyber)
-                dashboardBackground.visibility = View.VISIBLE
-                dashboardScrim.visibility = View.VISIBLE
-                dashboardScrim.setBackgroundColor(Color.parseColor("#35000000"))
-            }
-            WALLPAPER_SUNSET -> {
-                dashboardBackground.setImageResource(R.drawable.bg_wallpaper_sunset)
-                dashboardBackground.visibility = View.VISIBLE
-                dashboardScrim.visibility = View.VISIBLE
-                dashboardScrim.setBackgroundColor(Color.parseColor("#35000000"))
-            }
+            WALLPAPER_BUGATTI -> showStaticWallpaper(R.drawable.bg_wallpaper_bugatti)
+            WALLPAPER_SILVER -> showStaticWallpaper(R.drawable.bg_wallpaper_silver)
+            WALLPAPER_BLUE -> showStaticWallpaper(R.drawable.bg_wallpaper_blue)
+            WALLPAPER_CYBER -> showStaticWallpaper(R.drawable.bg_wallpaper_cyber)
+            WALLPAPER_SUNSET -> showStaticWallpaper(R.drawable.bg_wallpaper_sunset)
+            WALLPAPER_SCENIC -> showStaticWallpaper(R.drawable.bg_wallpaper_scenic, "#40000000")
             WALLPAPER_DARK -> {
+                dashboardVideoBackground.visibility = View.GONE
                 dashboardBackground.setImageDrawable(null)
                 dashboardBackground.visibility = View.GONE
                 dashboardScrim.visibility = View.GONE
                 setBackgroundResource(R.drawable.bg_cockpit_charcoal)
             }
-            WALLPAPER_SCENIC -> {
-                dashboardBackground.setImageResource(R.drawable.bg_wallpaper_scenic)
-                dashboardBackground.visibility = View.VISIBLE
-                dashboardScrim.visibility = View.VISIBLE
-                dashboardScrim.setBackgroundColor(Color.parseColor("#40000000"))
-            }
             WALLPAPER_CUSTOM -> {
                 val path = prefs.getString(PREF_CUSTOM_WALLPAPER_PATH, null)
+                val kind = prefs.getString(PREF_CUSTOM_WALLPAPER_KIND, WALLPAPER_KIND_IMAGE)
+                    ?: WALLPAPER_KIND_IMAGE
                 if (!path.isNullOrBlank() && File(path).exists()) {
-                    try {
-                        val bmp = BitmapFactory.decodeFile(path)
-                        if (bmp != null) {
-                            dashboardBackground.setImageBitmap(bmp)
-                            dashboardBackground.visibility = View.VISIBLE
-                            dashboardScrim.visibility = View.VISIBLE
-                            dashboardScrim.setBackgroundColor(Color.parseColor("#35000000"))
-                        } else {
-                            applyBugattiDefault()
-                        }
-                    } catch (e: Exception) {
-                        applyBugattiDefault()
+                    when (kind) {
+                        WALLPAPER_KIND_VIDEO -> playVideoWallpaper(path)
+                        WALLPAPER_KIND_GIF -> playGifWallpaper(path)
+                        else -> showCustomImage(path)
                     }
                 } else {
                     applyBugattiDefault()
                 }
             }
-            else -> {
+            else -> applyBugattiDefault()
+        }
+    }
+
+    private fun showStaticWallpaper(resId: Int, scrimColor: String = "#35000000") {
+        setBackgroundResource(R.drawable.bg_cockpit_charcoal)
+        dashboardVideoBackground.visibility = View.GONE
+        dashboardBackground.setImageResource(resId)
+        dashboardBackground.visibility = View.VISIBLE
+        dashboardScrim.visibility = View.VISIBLE
+        dashboardScrim.setBackgroundColor(Color.parseColor(scrimColor))
+    }
+
+    private fun showCustomImage(path: String) {
+        try {
+            val bmp = BitmapFactory.decodeFile(path)
+            if (bmp != null) {
+                dashboardVideoBackground.visibility = View.GONE
+                dashboardBackground.setImageBitmap(bmp)
+                dashboardBackground.visibility = View.VISIBLE
+                dashboardScrim.visibility = View.VISIBLE
+                dashboardScrim.setBackgroundColor(Color.parseColor("#35000000"))
+            } else {
                 applyBugattiDefault()
+            }
+        } catch (_: Throwable) {
+            applyBugattiDefault()
+        }
+    }
+
+    private fun playGifWallpaper(path: String) {
+        try {
+            val drawable = ImageDecoder.decodeDrawable(ImageDecoder.createSource(File(path)))
+            dashboardVideoBackground.visibility = View.GONE
+            dashboardBackground.setImageDrawable(drawable)
+            dashboardBackground.visibility = View.VISIBLE
+            dashboardScrim.visibility = View.VISIBLE
+            dashboardScrim.setBackgroundColor(Color.parseColor("#35000000"))
+            if (drawable is AnimatedImageDrawable) {
+                drawable.repeatCount = AnimatedImageDrawable.REPEAT_INFINITE
+                animatedWallpaper = drawable
+                drawable.start()
+            }
+        } catch (_: Throwable) {
+            applyBugattiDefault()
+        }
+    }
+
+    private fun playVideoWallpaper(path: String) {
+        dashboardBackground.setImageDrawable(null)
+        dashboardBackground.visibility = View.GONE
+        dashboardVideoBackground.visibility = View.VISIBLE
+        dashboardScrim.visibility = View.VISIBLE
+        dashboardScrim.setBackgroundColor(Color.parseColor("#42000000"))
+
+        val startPlayer: (SurfaceTexture) -> Unit = { surfaceTexture ->
+            releaseWallpaperPlayer()
+            try {
+                val surface = Surface(surfaceTexture)
+                val player = MediaPlayer()
+                wallpaperPlayer = player
+                player.setSurface(surface)
+                surface.release()
+                player.setDataSource(path)
+                player.isLooping = true
+                player.setVolume(0f, 0f)
+                player.setOnVideoSizeChangedListener { _, videoW, videoH ->
+                    applyVideoCenterCrop(videoW, videoH)
+                }
+                player.setOnPreparedListener {
+                    applyVideoCenterCrop(it.videoWidth, it.videoHeight)
+                    it.start()
+                }
+                player.setOnErrorListener { _, _, _ ->
+                    post { applyBugattiDefault() }
+                    true
+                }
+                player.prepareAsync()
+            } catch (_: Throwable) {
+                post { applyBugattiDefault() }
+            }
+        }
+
+        if (dashboardVideoBackground.isAvailable) {
+            dashboardVideoBackground.surfaceTexture?.let(startPlayer)
+        } else {
+            dashboardVideoBackground.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+                    startPlayer(surface)
+                }
+
+                override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
+                    val p = wallpaperPlayer
+                    if (p != null) applyVideoCenterCrop(p.videoWidth, p.videoHeight)
+                }
+
+                override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+                    releaseWallpaperPlayer()
+                    return true
+                }
+
+                override fun onSurfaceTextureUpdated(surface: SurfaceTexture) = Unit
             }
         }
     }
 
+    private fun applyVideoCenterCrop(videoW: Int, videoH: Int) {
+        if (videoW <= 0 || videoH <= 0) return
+        val viewW = dashboardVideoBackground.width.toFloat().takeIf { it > 0f } ?: return
+        val viewH = dashboardVideoBackground.height.toFloat().takeIf { it > 0f } ?: return
+        val scale = maxOf(viewW / videoW.toFloat(), viewH / videoH.toFloat())
+        val dx = (viewW - videoW * scale) / 2f
+        val dy = (viewH - videoH * scale) / 2f
+        val matrix = Matrix().apply {
+            setScale(scale, scale)
+            postTranslate(dx, dy)
+        }
+        dashboardVideoBackground.setTransform(matrix)
+    }
+
+    private fun stopDynamicWallpaper() {
+        try {
+            animatedWallpaper?.stop()
+        } catch (_: Throwable) {
+        }
+        animatedWallpaper = null
+        releaseWallpaperPlayer()
+        if (::dashboardVideoBackground.isInitialized) {
+            dashboardVideoBackground.surfaceTextureListener = null
+            dashboardVideoBackground.visibility = View.GONE
+            dashboardVideoBackground.setTransform(null)
+        }
+    }
+
+    private fun releaseWallpaperPlayer() {
+        val p = wallpaperPlayer
+        wallpaperPlayer = null
+        if (p != null) {
+            try { p.stop() } catch (_: Throwable) {}
+            try { p.reset() } catch (_: Throwable) {}
+            try { p.release() } catch (_: Throwable) {}
+        }
+    }
+
     private fun applyBugattiDefault() {
-        dashboardBackground.setImageResource(R.drawable.bg_wallpaper_bugatti)
-        dashboardBackground.visibility = View.VISIBLE
-        dashboardScrim.visibility = View.VISIBLE
-        dashboardScrim.setBackgroundColor(Color.parseColor("#35000000"))
+        stopDynamicWallpaper()
+        showStaticWallpaper(R.drawable.bg_wallpaper_bugatti)
     }
 
     private fun startLiveStreams() {
@@ -722,6 +840,7 @@ class CarDashboardView(
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         prefs.unregisterOnSharedPreferenceChangeListener(prefListener)
+        stopDynamicWallpaper()
         timeHandler.removeCallbacksAndMessages(null)
         coroutineScope.cancel()
     }
