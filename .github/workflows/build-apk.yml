@@ -60,10 +60,11 @@ jobs:
       - name: Test IPTV aspect retention
         run: node tests/iptv-aspect.test.cjs
 
-      - name: Test page input and YouTube quality
+      - name: Test page input and YouTube behavior
         run: |
           node tests/page-input.test.cjs
           node tests/youtube-quality.test.cjs
+          node tests/youtube-search-routing.test.cjs
 
       - name: Build Debug APK
         run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --stacktrace
