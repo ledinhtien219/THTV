@@ -18,6 +18,22 @@ const SHEET_NAME = "Licenses";
 const SPREADSHEET_ID = "14vfUJwL33kXJ7ck6mJpT2Pnstp1FeR729UJQ0ktpaco";
 const LICENSE_SHEET_GID = 2114262915;
 
+// ==========================================
+// 2. CẤU HÌNH THÔNG BÁO CẬP NHẬT ỨNG DỤNG
+// Chỉ cần sửa các giá trị này và Deploy "New version" khi phát hành bản mới.
+// ==========================================
+const LATEST_APP_VERSION_NAME = "1.0.28";
+const LATEST_APP_VERSION_CODE = 201;
+const LATEST_APP_UPDATE_TITLE = "THTV v1.0.28 đã có";
+const LATEST_APP_UPDATE_URL = "https://github.com/ledinhtien219/THTV/releases/latest";
+const LATEST_APP_UPDATE_MANDATORY = false;
+const LATEST_APP_UPDATE_NOTES = [
+  "🔔 Tự kiểm tra bản cập nhật mới khi mở ứng dụng.",
+  "📋 Hiện bảng mô tả đầy đủ nội dung mới trước khi người dùng cập nhật.",
+  "⏳ Có nút Để sau; ứng dụng sẽ nhắc lại sau 24 giờ nếu chưa cập nhật.",
+  "⬆️ Nút Cập nhật mở trang tải bản mới được cấu hình từ Google Apps Script."
+];
+
 /**
  * Khởi tạo hoặc lấy Sheet quản lý bản quyền
  */
@@ -85,6 +101,40 @@ function getOrCreateSheet() {
     sheet.setFrozenRows(1);
   }
   return sheet;
+}
+
+/**
+ * API GET cho app kiểm tra phiên bản mới.
+ * Ví dụ: /exec?action=update_info&versionCode=200&versionName=1.0.27
+ */
+function doGet(e) {
+  try {
+    const action = e && e.parameter ? String(e.parameter.action || "") : "";
+
+    if (action === "update_info") {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        latestVersionName: LATEST_APP_VERSION_NAME,
+        latestVersionCode: LATEST_APP_VERSION_CODE,
+        title: LATEST_APP_UPDATE_TITLE,
+        notes: LATEST_APP_UPDATE_NOTES,
+        updateUrl: LATEST_APP_UPDATE_URL,
+        mandatory: LATEST_APP_UPDATE_MANDATORY
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      status: "THTV_API_OK",
+      latestVersionName: LATEST_APP_VERSION_NAME,
+      latestVersionCode: LATEST_APP_VERSION_CODE
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 /**
