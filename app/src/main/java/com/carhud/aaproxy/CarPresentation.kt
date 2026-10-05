@@ -1824,9 +1824,9 @@ class CarPresentation(
             showWebFullscreen()
         }
 
-        YouTubePlayerHelper.search(web, mediaQuery)
-        CarMediaManager.notifyVoiceState(VoiceSearchManager.State.SUCCESS, "Đang tìm: $mediaQuery")
-        updateVoiceState(VoiceSearchManager.State.SUCCESS, "Đang tìm: $mediaQuery")
+        YouTubePlayerHelper.search(web, mediaQuery, autoPlayFirst = true)
+        CarMediaManager.notifyVoiceState(VoiceSearchManager.State.SUCCESS, "Đang phát: $mediaQuery")
+        updateVoiceState(VoiceSearchManager.State.SUCCESS, "Đang phát: $mediaQuery")
         hideSearchOverlay()
     }
 
