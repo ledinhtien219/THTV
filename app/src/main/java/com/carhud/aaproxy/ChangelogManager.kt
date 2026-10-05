@@ -31,11 +31,11 @@ object ChangelogManager {
             versionName = BuildConfig.VERSION_NAME,
             releaseDate = "Hiện tại",
             features = listOf(
-                "🧪 Đây là bản TEST NỘI BỘ — chưa tự phát hành cho người dùng.",
-                "✅ Thêm cơ chế duyệt Stable: chỉ build đã được chủ app duyệt mới xuất hiện trong thông báo cập nhật.",
-                "🔒 Build thường trên GitHub chỉ tạo APK test, không tự sửa update.json và không tự tạo Release công khai.",
-                "🚀 Workflow Approve Stable Update build lại đúng commit đã test, chạy lại test, tạo Release rồi mới mở update cho người dùng.",
-                "🛡️ App chỉ chấp nhận manifest có channel=stable và approved=true."
+                "🧪 Bản TEST NỘI BỘ — stable công khai vẫn giữ ở v1.0.37.",
+                "⌨️ Sửa bàn phím Android Auto: gõ YouTube rồi bấm Tìm chỉ mở danh sách kết quả, không tự chạy video đầu tiên.",
+                "🧹 Mọi thao tác tìm bằng bàn phím sẽ hủy cờ/timer auto-play còn sót từ lệnh giọng nói trước đó.",
+                "🛑 Khi Android Auto dựng lại Presentation sau bàn phím native, trang /results được giữ nguyên, không tự chọn video.",
+                "🎙️ Chỉ lệnh giọng nói hiện tại mới được phép auto-play kết quả đầu tiên."
             )
         )
     )
