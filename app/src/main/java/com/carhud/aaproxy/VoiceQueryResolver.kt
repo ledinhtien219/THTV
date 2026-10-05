@@ -178,7 +178,11 @@ internal object VoiceQueryResolver {
 
     private fun bestChannelMatch(raw: String, channelNames: List<String>): Pair<String, Float>? {
         if (channelNames.isEmpty()) return null
-        val query = channelKey(stripChannelCommand(canonicalizeSpokenChannel(raw)))
+        var spoken = stripChannelCommand(canonicalizeSpokenChannel(raw))
+        for ((word, digit) in numberWords) {
+            spoken = spoken.replace(Regex("""\b$word\b""", RegexOption.IGNORE_CASE), digit)
+        }
+        val query = channelKey(spoken)
         if (query.isBlank()) return null
 
         var bestName: String? = null
