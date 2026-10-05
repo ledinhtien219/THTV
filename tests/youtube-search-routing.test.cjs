@@ -56,11 +56,6 @@ assert.doesNotMatch(
   /YouTubePlayerHelper\.playFirstAvailableVideo\((?:web|view)\)/
 );
 
-console.log(
-  'PASS YouTube search routing: keyboard shows results, stale voice autoplay cancelled, voice can direct-play'
-);
-
-
 // Host/native keyboard submission is a final action, not a draft handoff.
 assert.match(
   presentation,
@@ -78,3 +73,8 @@ assert.match(
 // The host action uses the semantic label supplied by the active input mode.
 assert.match(inputSession, /val submitLabel: String = "Nhập"/);
 assert.match(searchScreen, /setTitle\(input\.submitLabel\)/);
+
+
+console.log(
+  'PASS YouTube keyboard routing: native/THTV submit once, shows results, voice-only autoplay preserved'
+);
