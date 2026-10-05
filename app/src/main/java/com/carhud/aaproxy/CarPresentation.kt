@@ -107,6 +107,83 @@ class CarPresentation(
         )
     }
 
+    private fun applyEffectiveViewportFromRoot(force: Boolean = false) {
+        if (!::root.isInitialized || root.width <= 0 || root.height <= 0) return
+
+        val insets = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) root.rootWindowInsets else null
+        val insetLeft = insets?.systemWindowInsetLeft ?: 0
+        val insetTop = insets?.systemWindowInsetTop ?: 0
+        val insetRight = insets?.systemWindowInsetRight ?: 0
+        val insetBottom = insets?.systemWindowInsetBottom ?: 0
+
+        val effectiveWidth = (root.width - insetLeft - insetRight).coerceAtLeast(1)
+        val effectiveHeight = (root.height - insetTop - insetBottom).coerceAtLeast(1)
+        val key = "$effectiveWidth|$effectiveHeight|$carDpi"
+        if (!force && key == lastEffectiveViewportKey) return
+        lastEffectiveViewportKey = key
+
+        val oldW = carWidth
+        val oldH = carHeight
+        val oldUltra = isUltrawide
+        val oldPortrait = isPortrait
+
+        carWidth = effectiveWidth
+        carHeight = effectiveHeight
+        aspectRatio = carWidth.toFloat() / carHeight.toFloat()
+        isUltrawide = aspectRatio >= 1.85f
+        isPortrait = aspectRatio < 0.95f
+
+        // Feed the actual AA viewport into every responsive subsystem.
+        dashboardView?.applyAdaptiveScreen(carWidth, carHeight)
+
+        lastAppliedScale = -1
+        applyWebScaleForUrl(web.url)
+        try {
+            YouTubePlayerHelper.inject(
+                web,
+                isUltrawide,
+                isPortrait,
+                carWidth,
+                carHeight,
+                carDpi,
+                phoneDpi.toInt(),
+                aspectRatio
+            )
+        } catch (_: Throwable) {}
+
+        updateHudLayoutParams()
+
+        // Only rebuild floating chrome when the effective viewport or layout
+        // class actually changed, avoiding loops from minor layout callbacks.
+        if (force ||
+            kotlin.math.abs(oldW - carWidth) > 8 ||
+            kotlin.math.abs(oldH - carHeight) > 8 ||
+            oldUltra != isUltrawide ||
+            oldPortrait != isPortrait
+        ) {
+            rebuildSidebar()
+            rebuildTopToolbar()
+        }
+
+        // Persist the effective viewport so the phone settings/debug UI can
+        // show exactly what layout dimensions were used.
+        prefs.edit()
+            .putInt("car_layout_width", carWidth)
+            .putInt("car_layout_height", carHeight)
+            .putFloat("car_layout_aspect", aspectRatio)
+            .putString(
+                "car_layout_class",
+                when {
+                    isPortrait -> "PORTRAIT"
+                    aspectRatio >= 2.40f -> "SUPER_ULTRAWIDE"
+                    isUltrawide -> "ULTRAWIDE"
+                    aspectRatio >= 1.55f -> "WIDE"
+                    else -> "COMPACT"
+                }
+            )
+            .apply()
+    }
+
     private fun scheduleSafeResume(target: WebView, delayMs: Long = 500L) {
         if (autoResumePending) return
         if (!CarMediaManager.userWantsPlayback || CarMediaManager.isPlaying) return
@@ -140,6 +217,7 @@ class CarPresentation(
     private var carDpi = 160
     private var phoneDpi = 160f
     private var aspectRatio = 1.777f
+    private var lastEffectiveViewportKey = ""
     private val prefs: SharedPreferences by lazy {
         context.getSharedPreferences(SettingsActivity.PREFS, Context.MODE_PRIVATE)
     }
@@ -805,17 +883,28 @@ class CarPresentation(
 
         setContentView(root)
 
+        // Re-measure using the ACTUAL laid-out Android Auto content region.
+        // Factory head units such as VF6 can project AA inside a viewport that
+        // differs from the physical display metrics.
+        root.post {
+            applyEffectiveViewportFromRoot(force = true)
+        }
+
         // Capture the final Android Auto viewport after layout and sync it to the
-        // activated device's ScreenProfiles row in Google Sheets.
+        // activated device's row in Google Sheets.
         root.postDelayed({
             try {
+                applyEffectiveViewportFromRoot()
                 ScreenProfileReporter.captureAndSync(context, display, root, web)
             } catch (_: Throwable) {
             }
         }, 1200L)
 
-        root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+        root.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
             updateYouTubeHomeObstacles()
+            if ((right - left) != (oldRight - oldLeft) || (bottom - top) != (oldBottom - oldTop)) {
+                root.post { applyEffectiveViewportFromRoot() }
+            }
         }
 
         // Tạm thời bỏ kích hoạt bản quyền trên màn hình xe theo yêu cầu
