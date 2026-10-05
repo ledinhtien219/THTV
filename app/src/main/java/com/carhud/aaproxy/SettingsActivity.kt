@@ -1136,8 +1136,168 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 content.addView(hlpInfoBox)
 
-                // Các mục quyền đọc thông báo, âm thanh/TTS và nút thử cảnh báo
-                // đã được bỏ khỏi giao diện. HUD hiện lấy dữ liệu trực tiếp từ HLP WebSocket.
+                // ----------------------------------------------------
+                // PHẦN: CÀI ĐẶT ÂM THANH CẢNH BÁO & TIẾNG TING WAZE
+                // Khôi phục theo yêu cầu: chỉ phần chế độ âm thanh + 5 kiểu Ting.
+                // Không khôi phục quyền đọc thông báo và lưới TTS thử nghiệm cũ.
+                // ----------------------------------------------------
+                content.addView(createSeparator())
+
+                val audioConfigHeader = TextView(this).apply {
+                    text = "🔔 ÂM THANH CẢNH BÁO & TIẾNG TING WAZE"
+                    textSize = 12f
+                    typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(colorAccent)
+                    setPadding(0, dp(4), 0, dp(6))
+                }
+                content.addView(audioConfigHeader)
+
+                // 1. Chế độ âm thanh cảnh báo
+                lateinit var audioModeCard: LinearLayout
+                fun refreshAudioModeCard() {
+                    val mode = WazeHudManager.getAlertAudioMode(this@SettingsActivity)
+                    val modeText = when (mode) {
+                        WazeHudManager.ALERT_AUDIO_BOTH -> "Ting + Giọng nói tiếng Việt (Khuyên dùng)"
+                        WazeHudManager.ALERT_AUDIO_TONE -> "Chỉ phát tiếng Ting ngắn"
+                        WazeHudManager.ALERT_AUDIO_VOICE -> "Chỉ phát giọng nói tiếng Việt"
+                        WazeHudManager.ALERT_AUDIO_OFF -> "Tắt hoàn toàn âm thanh cảnh báo"
+                        else -> "Ting + Giọng nói"
+                    }
+                    val badge = when (mode) {
+                        WazeHudManager.ALERT_AUDIO_BOTH -> "Ting + Giọng"
+                        WazeHudManager.ALERT_AUDIO_TONE -> "Ting"
+                        WazeHudManager.ALERT_AUDIO_VOICE -> "Giọng nói"
+                        else -> "Tắt"
+                    }
+                    val textLayout = audioModeCard.getChildAt(0) as? LinearLayout
+                    val subTv = textLayout?.getChildAt(1) as? TextView
+                    subTv?.text = modeText
+                    val badgeTv = audioModeCard.getChildAt(1) as? TextView
+                    badgeTv?.text = badge
+                }
+
+                val curMode = WazeHudManager.getAlertAudioMode(this)
+                val curModeText = when (curMode) {
+                    WazeHudManager.ALERT_AUDIO_BOTH -> "Ting + Giọng nói tiếng Việt (Khuyên dùng)"
+                    WazeHudManager.ALERT_AUDIO_TONE -> "Chỉ phát tiếng Ting ngắn"
+                    WazeHudManager.ALERT_AUDIO_VOICE -> "Chỉ phát giọng nói tiếng Việt"
+                    WazeHudManager.ALERT_AUDIO_OFF -> "Tắt hoàn toàn âm thanh cảnh báo"
+                    else -> "Ting + Giọng nói"
+                }
+                val curBadge = when (curMode) {
+                    WazeHudManager.ALERT_AUDIO_BOTH -> "Ting + Giọng"
+                    WazeHudManager.ALERT_AUDIO_TONE -> "Ting"
+                    WazeHudManager.ALERT_AUDIO_VOICE -> "Giọng nói"
+                    else -> "Tắt"
+                }
+
+                audioModeCard = settingCard(
+                    title = "CHẾ ĐỘ ÂM THANH CẢNH BÁO",
+                    subtitle = curModeText,
+                    badgeText = curBadge,
+                    onClick = {
+                        val modes = arrayOf(
+                            WazeHudManager.ALERT_AUDIO_BOTH to "Ting + Giọng nói tiếng Việt (Khuyên dùng)",
+                            WazeHudManager.ALERT_AUDIO_TONE to "Chỉ tiếng Ting ngắn",
+                            WazeHudManager.ALERT_AUDIO_VOICE to "Chỉ giọng nói tiếng Việt",
+                            WazeHudManager.ALERT_AUDIO_OFF to "Tắt âm thanh cảnh báo"
+                        )
+                        val labels = modes.map { it.second }.toTypedArray()
+                        val selectedIdx = modes.indexOfFirst {
+                            it.first == WazeHudManager.getAlertAudioMode(this@SettingsActivity)
+                        }.coerceAtLeast(0)
+
+                        AlertDialog.Builder(this@SettingsActivity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                            .setTitle("🔔 Chọn chế độ âm thanh cảnh báo")
+                            .setSingleChoiceItems(labels, selectedIdx) { dialog, which ->
+                                val (chosenKey, chosenName) = modes[which]
+                                WazeHudManager.setAlertAudioMode(this@SettingsActivity, chosenKey)
+                                refreshAudioModeCard()
+                                Toast.makeText(this@SettingsActivity, "Đã chọn: $chosenName", Toast.LENGTH_SHORT).show()
+
+                                when (chosenKey) {
+                                    WazeHudManager.ALERT_AUDIO_TONE,
+                                    WazeHudManager.ALERT_AUDIO_BOTH ->
+                                        CarTtsManager.playAlertTone(isPriority = true)
+                                    WazeHudManager.ALERT_AUDIO_VOICE ->
+                                        CarTtsManager.speakAlert(
+                                            "Đã bật chế độ cảnh báo bằng giọng nói tiếng Việt",
+                                            isPriority = true
+                                        )
+                                }
+                                dialog.dismiss()
+                            }
+                            .setNegativeButton("Đóng", null)
+                            .show()
+                    }
+                )
+                content.addView(audioModeCard)
+
+                // 2. Kiểu tiếng Ting cảnh báo (5 kiểu)
+                lateinit var toneStyleCard: LinearLayout
+                fun refreshToneStyleCard() {
+                    val style = WazeHudManager.getAlertToneStyle(this@SettingsActivity)
+                    val styleText = when (style) {
+                        WazeHudManager.ALERT_TONE_BEEP -> "1. Ting ngắn tiêu chuẩn (960Hz)"
+                        WazeHudManager.ALERT_TONE_DOUBLE_BEEP -> "2. Ting đôi cao độ (740Hz - 1120Hz)"
+                        WazeHudManager.ALERT_TONE_ACK -> "3. Bíp xác nhận 3 nhịp (1280Hz - 960Hz)"
+                        WazeHudManager.ALERT_TONE_PROMPT -> "4. Chuông báo nhắc nhở (620Hz - 1080Hz)"
+                        WazeHudManager.ALERT_TONE_STRONG -> "5. Cảnh báo khẩn cấp 3 nốt (520Hz - 760Hz - 980Hz)"
+                        else -> "1. Ting ngắn tiêu chuẩn (960Hz)"
+                    }
+                    val textLayout = toneStyleCard.getChildAt(0) as? LinearLayout
+                    val subTv = textLayout?.getChildAt(1) as? TextView
+                    subTv?.text = styleText
+                }
+
+                val curStyle = WazeHudManager.getAlertToneStyle(this)
+                val curStyleText = when (curStyle) {
+                    WazeHudManager.ALERT_TONE_BEEP -> "1. Ting ngắn tiêu chuẩn (960Hz)"
+                    WazeHudManager.ALERT_TONE_DOUBLE_BEEP -> "2. Ting đôi cao độ (740Hz - 1120Hz)"
+                    WazeHudManager.ALERT_TONE_ACK -> "3. Bíp xác nhận 3 nhịp (1280Hz - 960Hz)"
+                    WazeHudManager.ALERT_TONE_PROMPT -> "4. Chuông báo nhắc nhở (620Hz - 1080Hz)"
+                    WazeHudManager.ALERT_TONE_STRONG -> "5. Cảnh báo khẩn cấp 3 nốt (520Hz - 760Hz - 980Hz)"
+                    else -> "1. Ting ngắn tiêu chuẩn (960Hz)"
+                }
+
+                toneStyleCard = settingCard(
+                    title = "KIỂU TIẾNG TING CẢNH BÁO (5 KIỂU)",
+                    subtitle = curStyleText,
+                    badgeText = "▶ Nghe thử",
+                    onClick = {
+                        val tones = arrayOf(
+                            WazeHudManager.ALERT_TONE_BEEP to "1. Ting ngắn tiêu chuẩn (960Hz)",
+                            WazeHudManager.ALERT_TONE_DOUBLE_BEEP to "2. Ting đôi cao độ (740Hz - 1120Hz)",
+                            WazeHudManager.ALERT_TONE_ACK to "3. Bíp xác nhận 3 nhịp (1280Hz - 960Hz)",
+                            WazeHudManager.ALERT_TONE_PROMPT to "4. Chuông báo nhắc nhở (620Hz - 1080Hz)",
+                            WazeHudManager.ALERT_TONE_STRONG to "5. Cảnh báo khẩn cấp 3 nốt (520Hz - 760Hz - 980Hz)"
+                        )
+                        val labels = tones.map { it.second }.toTypedArray()
+                        val selectedIdx = tones.indexOfFirst {
+                            it.first == WazeHudManager.getAlertToneStyle(this@SettingsActivity)
+                        }.coerceAtLeast(0)
+
+                        AlertDialog.Builder(this@SettingsActivity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                            .setTitle("🎵 Chọn & Nghe thử tiếng Ting")
+                            .setSingleChoiceItems(labels, selectedIdx) { dialog, which ->
+                                val (chosenKey, chosenName) = tones[which]
+                                WazeHudManager.setAlertToneStyle(this@SettingsActivity, chosenKey)
+                                refreshToneStyleCard()
+                                CarTtsManager.playAlertTone(
+                                    overrideToneStyle = chosenKey,
+                                    isPriority = true
+                                )
+                                Toast.makeText(this@SettingsActivity, "Đang phát: $chosenName", Toast.LENGTH_SHORT).show()
+                                dialog.dismiss()
+                            }
+                            .setNeutralButton("▶ Phát tiếng hiện tại") { _, _ ->
+                                CarTtsManager.playAlertTone(isPriority = true)
+                            }
+                            .setNegativeButton("Đóng", null)
+                            .show()
+                    }
+                )
+                content.addView(toneStyleCard)
 
                 content.addView(createSeparator())
 
