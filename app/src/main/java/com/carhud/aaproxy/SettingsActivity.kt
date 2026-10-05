@@ -2359,6 +2359,19 @@ class SettingsActivity : AppCompatActivity() {
         val h = prefs.getInt("car_screen_height", if (CarMediaManager.carScreenHeight > 0) CarMediaManager.carScreenHeight else 600)
         val dpi = prefs.getInt("car_screen_dpi", if (CarMediaManager.carScreenDpi > 0) CarMediaManager.carScreenDpi else 160)
         val isConnected = prefs.getBoolean("car_screen_connected", CarMediaManager.isCarConnected)
+        val usableW = prefs.getInt("car_screen_usable_width", w)
+        val usableH = prefs.getInt("car_screen_usable_height", h)
+        val webW = prefs.getInt("car_screen_web_width", usableW)
+        val webH = prefs.getInt("car_screen_web_height", usableH)
+        val refreshHz = prefs.getFloat("car_screen_refresh_rate", 0f)
+        val screenSignature = prefs.getString("car_screen_signature", "") ?: ""
+        val deviceId = LicenseManager.getDeviceId(this)
+        val lastSyncMs = ScreenProfileReporter.getLastSyncTime(this)
+        val lastSyncText = if (lastSyncMs > 0L) {
+            java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale.getDefault()).format(java.util.Date(lastSyncMs))
+        } else {
+            "Chưa có"
+        }
 
         val ratioVal = if (h > 0) w.toFloat() / h.toFloat() else 1.71f
         val screenTypeName = when {
@@ -2456,6 +2469,78 @@ class SettingsActivity : AppCompatActivity() {
             }
             grid.addView(col2)
             addView(grid)
+
+            addView(TextView(this@SettingsActivity).apply {
+                text = "• Vùng dùng được: ${usableW} × ${usableH} px  •  WebView: ${webW} × ${webH} px"
+                textSize = 11f
+                setTextColor(colorTextSecondary)
+                setPadding(0, dp(8), 0, 0)
+            })
+
+            addView(TextView(this@SettingsActivity).apply {
+                val hz = if (refreshHz > 0f) String.format(java.util.Locale.US, "%.1f Hz", refreshHz) else "chưa rõ"
+                text = "• Refresh: $hz  •  Mã máy: $deviceId"
+                textSize = 11f
+                setTextColor(colorTextSecondary)
+                setPadding(0, dp(3), 0, 0)
+            })
+
+            if (screenSignature.isNotBlank()) {
+                addView(TextView(this@SettingsActivity).apply {
+                    text = "• Screen ID: $screenSignature"
+                    textSize = 10.5f
+                    typeface = Typeface.MONOSPACE
+                    setTextColor(Color.parseColor("#64748B"))
+                    setPadding(0, dp(3), 0, 0)
+                })
+            }
+
+            val syncRow = LinearLayout(this@SettingsActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(9), 0, 0)
+            }
+
+            val syncStatusTv = TextView(this@SettingsActivity).apply {
+                val status = ScreenProfileReporter.getLastStatus(this@SettingsActivity)
+                text = "☁️ $status • Lần cuối: $lastSyncText"
+                textSize = 10.8f
+                setTextColor(
+                    if (status.startsWith("Đã đồng bộ")) Color.parseColor("#4ADE80")
+                    else Color.parseColor("#94A3B8")
+                )
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            syncRow.addView(syncStatusTv)
+
+            val syncBtn = TextView(this@SettingsActivity).apply {
+                text = "↻ Đồng bộ"
+                textSize = 10.5f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                setTextColor(Color.parseColor("#38BDF8"))
+                background = rounded(colorPillBg, 8f, Color.parseColor("#0284C7"), 1)
+                setPadding(dp(8), dp(5), dp(8), dp(5))
+                setOnClickListener {
+                    syncStatusTv.text = "☁️ Đang đồng bộ Google Sheet…"
+                    syncStatusTv.setTextColor(Color.parseColor("#38BDF8"))
+                    ScreenProfileReporter.syncLastProfileIfAvailable(this@SettingsActivity, force = true)
+                    postDelayed({
+                        val status = ScreenProfileReporter.getLastStatus(this@SettingsActivity)
+                        val syncedAt = ScreenProfileReporter.getLastSyncTime(this@SettingsActivity)
+                        val whenText = if (syncedAt > 0L) {
+                            java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale.getDefault()).format(java.util.Date(syncedAt))
+                        } else "Chưa có"
+                        syncStatusTv.text = "☁️ $status • Lần cuối: $whenText"
+                        syncStatusTv.setTextColor(
+                            if (status.startsWith("Đã đồng bộ")) Color.parseColor("#4ADE80")
+                            else Color.parseColor("#94A3B8")
+                        )
+                    }, 1800L)
+                }
+            }
+            syncRow.addView(syncBtn)
+            addView(syncRow)
         }
     }
 
