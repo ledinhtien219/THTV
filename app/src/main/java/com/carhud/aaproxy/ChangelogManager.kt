@@ -31,10 +31,11 @@ object ChangelogManager {
             versionName = BuildConfig.VERSION_NAME,
             releaseDate = "Hiện tại",
             features = listOf(
-                "Bàn phím dùng chung cho YouTube, IPTV, trình duyệt và app web: chỉ nhập vào đúng ô, giữ nguyên app và trang đang mở.",
-                "Nút Nhập/Enter trên bàn phím không tìm kiếm, mở trang hay phát video; dùng nút riêng của app để thực hiện.",
-                "Không khôi phục nhầm video YouTube cũ khi đóng bàn phím. Bàn phím điện thoại giữ đúng nơi nhận nội dung.",
-                "Giữ popup chỉ bản hiện tại, nút × tắt HUD, nút Quay lại và chọn chất lượng YouTube."
+                "🌐 Sửa lỗi nhập ô tìm kiếm trong trình duyệt: chữ được trả đúng vào ô Google/trang web đang chọn.",
+                "🔍 Ô có chức năng tìm kiếm sẽ dùng nút TÌM/ĐI và submit ngay trên chính trang hiện tại; ô nhập thường chỉ điền nội dung.",
+                "🚫 Chặn hoàn toàn trường hợp truy vấn của trình duyệt bị rơi nhầm sang YouTube khi trạng thái bàn phím/Presentation thay đổi.",
+                "🧭 Nếu app-id bị cũ sau khi Android Auto dựng lại màn hình, THTV dùng URL WebView thật để xác định đúng Browser hay YouTube.",
+                "🧪 Thêm regression test cho Google/search field, input thường, target cũ và bàn phím dùng chung."
             )
         )
     )
