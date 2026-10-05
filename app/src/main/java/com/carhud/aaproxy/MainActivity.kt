@@ -11,13 +11,17 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.ImageDecoder
 import android.graphics.Typeface
+import android.graphics.drawable.AnimatedImageDrawable
 import android.graphics.drawable.GradientDrawable
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.OpenableColumns
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -118,6 +122,7 @@ class MainActivity : AppCompatActivity() {
     private var wpBadgeScenic: ImageView? = null
     private var wpBadgeDark: ImageView? = null
     private var wpBadgeCustom: ImageView? = null
+    private var phoneAnimatedWallpaper: AnimatedImageDrawable? = null
 
     // Settings elements
     private lateinit var settingUserSubtext: TextView
@@ -272,23 +277,114 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            try {
-                val file = File(filesDir, "custom_wallpaper.png")
-                contentResolver.openInputStream(uri)?.use { input ->
-                    file.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
+            handlePickedWallpaper(uri)
+        }
+    }
+
+    private fun handlePickedWallpaper(uri: Uri) {
+        try {
+            val mime = contentResolver.getType(uri)?.lowercase(java.util.Locale.US).orEmpty()
+            val displayName = queryDisplayName(uri).lowercase(java.util.Locale.US)
+            val kind = when {
+                mime.startsWith("video/") ||
+                    displayName.endsWith(".mp4") ||
+                    displayName.endsWith(".webm") ||
+                    displayName.endsWith(".mkv") ->
+                    CarDashboardView.WALLPAPER_KIND_VIDEO
+
+                mime == "image/gif" || displayName.endsWith(".gif") ->
+                    CarDashboardView.WALLPAPER_KIND_GIF
+
+                mime.startsWith("image/") ||
+                    displayName.endsWith(".jpg") ||
+                    displayName.endsWith(".jpeg") ||
+                    displayName.endsWith(".png") ||
+                    displayName.endsWith(".webp") ->
+                    CarDashboardView.WALLPAPER_KIND_IMAGE
+
+                else -> {
+                    Toast.makeText(this, "Chỉ hỗ trợ JPG/PNG/WEBP, GIF hoặc video MP4/WebM.", Toast.LENGTH_LONG).show()
+                    return
                 }
-                prefs.edit()
-                    .putString(CarDashboardView.PREF_WALLPAPER_TYPE, CarDashboardView.WALLPAPER_CUSTOM)
-                    .putString(CarDashboardView.PREF_CUSTOM_WALLPAPER_PATH, file.absolutePath)
-                    .apply()
-                updateWallpaperDisplay()
-                updateWallpaperSettingsText()
-                Toast.makeText(this, "Đã cập nhật hình nền buồng lái mới!", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(this, "Lỗi khi chọn ảnh: ${e.message}", Toast.LENGTH_SHORT).show()
             }
+
+            val sizeBytes = queryContentSize(uri)
+            val maxBytes = if (kind == CarDashboardView.WALLPAPER_KIND_VIDEO) 80L * 1024L * 1024L else 30L * 1024L * 1024L
+            if (sizeBytes > maxBytes) {
+                val limitMb = maxBytes / (1024L * 1024L)
+                Toast.makeText(this, "File quá lớn. Giới hạn $limitMb MB để chạy ổn định trên Android Auto.", Toast.LENGTH_LONG).show()
+                return
+            }
+
+            if (kind == CarDashboardView.WALLPAPER_KIND_VIDEO) {
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(this, uri)
+                    val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+                    if (durationMs > 60_000L) {
+                        Toast.makeText(this, "Video hình nền tối đa 60 giây. Hãy chọn clip ngắn hơn.", Toast.LENGTH_LONG).show()
+                        return
+                    }
+                } finally {
+                    try { retriever.release() } catch (_: Throwable) {}
+                }
+            }
+
+            filesDir.listFiles()?.filter { it.name.startsWith("custom_wallpaper.") }?.forEach {
+                try { it.delete() } catch (_: Throwable) {}
+            }
+
+            val ext = when (kind) {
+                CarDashboardView.WALLPAPER_KIND_VIDEO -> if (displayName.endsWith(".webm")) "webm" else "mp4"
+                CarDashboardView.WALLPAPER_KIND_GIF -> "gif"
+                else -> when {
+                    displayName.endsWith(".webp") -> "webp"
+                    displayName.endsWith(".jpg") || displayName.endsWith(".jpeg") -> "jpg"
+                    else -> "png"
+                }
+            }
+            val file = File(filesDir, "custom_wallpaper.$ext")
+            contentResolver.openInputStream(uri)?.use { input ->
+                file.outputStream().use { output -> input.copyTo(output) }
+            } ?: throw IllegalStateException("Không đọc được file đã chọn")
+
+            prefs.edit()
+                .putString(CarDashboardView.PREF_WALLPAPER_TYPE, CarDashboardView.WALLPAPER_CUSTOM)
+                .putString(CarDashboardView.PREF_CUSTOM_WALLPAPER_PATH, file.absolutePath)
+                .putString(CarDashboardView.PREF_CUSTOM_WALLPAPER_KIND, kind)
+                .apply()
+
+            updateWallpaperDisplay()
+            updateWallpaperSettingsText()
+
+            val label = when (kind) {
+                CarDashboardView.WALLPAPER_KIND_VIDEO -> "video động (loop, tắt tiếng)"
+                CarDashboardView.WALLPAPER_KIND_GIF -> "GIF động"
+                else -> "ảnh"
+            }
+            Toast.makeText(this, "✅ Đã chọn $label làm hình nền buồng lái.", Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Lỗi khi chọn hình nền: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun queryDisplayName(uri: Uri): String {
+        return try {
+            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0).orEmpty() else ""
+            }.orEmpty()
+        } catch (_: Throwable) {
+            ""
+        }
+    }
+
+    private fun queryContentSize(uri: Uri): Long {
+        return try {
+            contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getLong(0) else 0L
+            } ?: 0L
+        } catch (_: Throwable) {
+            0L
         }
     }
 
@@ -657,7 +753,7 @@ class MainActivity : AppCompatActivity() {
         }
         btnCustom.setOnClickListener {
             highlightPill(btnCustom)
-            pickWallpaperLauncher.launch("image/*")
+            pickWallpaperLauncher.launch("*/*")
         }
 
         // Grid Cards
@@ -683,7 +779,7 @@ class MainActivity : AppCompatActivity() {
             selectWallpaper(CarDashboardView.WALLPAPER_DARK, "Nền Ghi Đen Tối Giản")
         }
         findViewById<FrameLayout>(R.id.wpCardCustom)?.setOnClickListener {
-            pickWallpaperLauncher.launch("image/*")
+            pickWallpaperLauncher.launch("*/*")
         }
     }
 
@@ -706,6 +802,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateWallpaperDisplay() {
+        try { phoneAnimatedWallpaper?.stop() } catch (_: Throwable) {}
+        phoneAnimatedWallpaper = null
+
         val rawType = prefs.getString(CarDashboardView.PREF_WALLPAPER_TYPE, CarDashboardView.WALLPAPER_BUGATTI) ?: CarDashboardView.WALLPAPER_BUGATTI
         val type = if (rawType == "homer") CarDashboardView.WALLPAPER_BUGATTI else rawType
         when (type) {
@@ -740,17 +839,52 @@ class MainActivity : AppCompatActivity() {
             }
             CarDashboardView.WALLPAPER_CUSTOM -> {
                 val path = prefs.getString(CarDashboardView.PREF_CUSTOM_WALLPAPER_PATH, null)
+                val kind = prefs.getString(
+                    CarDashboardView.PREF_CUSTOM_WALLPAPER_KIND,
+                    CarDashboardView.WALLPAPER_KIND_IMAGE
+                ) ?: CarDashboardView.WALLPAPER_KIND_IMAGE
+
                 if (!path.isNullOrBlank() && File(path).exists()) {
                     try {
-                        val bmp = BitmapFactory.decodeFile(path)
-                        if (bmp != null) {
-                            phoneWallpaperView.setImageBitmap(bmp)
-                            phoneWallpaperView.visibility = View.VISIBLE
-                        } else {
-                            phoneWallpaperView.setImageResource(R.drawable.bg_wallpaper_bugatti)
-                            phoneWallpaperView.visibility = View.VISIBLE
+                        when (kind) {
+                            CarDashboardView.WALLPAPER_KIND_GIF -> {
+                                val drawable = ImageDecoder.decodeDrawable(ImageDecoder.createSource(File(path)))
+                                phoneWallpaperView.setImageDrawable(drawable)
+                                phoneWallpaperView.visibility = View.VISIBLE
+                                if (drawable is AnimatedImageDrawable) {
+                                    drawable.repeatCount = AnimatedImageDrawable.REPEAT_INFINITE
+                                    phoneAnimatedWallpaper = drawable
+                                    drawable.start()
+                                }
+                            }
+                            CarDashboardView.WALLPAPER_KIND_VIDEO -> {
+                                val retriever = MediaMetadataRetriever()
+                                try {
+                                    retriever.setDataSource(path)
+                                    val frame = retriever.getFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                                    if (frame != null) {
+                                        phoneWallpaperView.setImageBitmap(frame)
+                                        phoneWallpaperView.visibility = View.VISIBLE
+                                    } else {
+                                        phoneWallpaperView.setImageResource(R.drawable.bg_wallpaper_bugatti)
+                                        phoneWallpaperView.visibility = View.VISIBLE
+                                    }
+                                } finally {
+                                    try { retriever.release() } catch (_: Throwable) {}
+                                }
+                            }
+                            else -> {
+                                val bmp = BitmapFactory.decodeFile(path)
+                                if (bmp != null) {
+                                    phoneWallpaperView.setImageBitmap(bmp)
+                                    phoneWallpaperView.visibility = View.VISIBLE
+                                } else {
+                                    phoneWallpaperView.setImageResource(R.drawable.bg_wallpaper_bugatti)
+                                    phoneWallpaperView.visibility = View.VISIBLE
+                                }
+                            }
                         }
-                    } catch (e: Exception) {
+                    } catch (_: Throwable) {
                         phoneWallpaperView.setImageResource(R.drawable.bg_wallpaper_bugatti)
                         phoneWallpaperView.visibility = View.VISIBLE
                     }
@@ -1427,10 +1561,16 @@ class MainActivity : AppCompatActivity() {
             CarDashboardView.WALLPAPER_SUNSET -> "Hoàng hôn Sunset Supercar"
             CarDashboardView.WALLPAPER_SCENIC -> "Đồng cỏ Anime Scenic"
             CarDashboardView.WALLPAPER_DARK -> "Nền Ghi Đen Tối Giản"
-            CarDashboardView.WALLPAPER_CUSTOM -> "Ảnh tùy chỉnh từ máy"
+            CarDashboardView.WALLPAPER_CUSTOM -> {
+                when (prefs.getString(CarDashboardView.PREF_CUSTOM_WALLPAPER_KIND, CarDashboardView.WALLPAPER_KIND_IMAGE)) {
+                    CarDashboardView.WALLPAPER_KIND_VIDEO -> "Video động tùy chỉnh (loop, tắt tiếng)"
+                    CarDashboardView.WALLPAPER_KIND_GIF -> "GIF động tùy chỉnh"
+                    else -> "Ảnh tùy chỉnh từ máy"
+                }
+            }
             else -> "Siêu xe Bugatti Red"
         }
-        settingWallpaperSubtext.text = "Đang dùng: $name (Chạm để đổi ảnh)"
+        settingWallpaperSubtext.text = "Đang dùng: $name (Chạm để đổi ảnh / GIF / video)"
     }
 
     private fun updateIptvStatusText() {
