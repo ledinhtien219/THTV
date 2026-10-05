@@ -313,7 +313,7 @@ class CarPresentation(
                     navigateBrowser(query)
                 }
                 currentActiveAppId == "youtube" -> {
-                    YouTubePlayerHelper.cancelSearchAutoPlay(web)
+                    prepareManualYouTubeSearch()
                     if (isDashboardShowing) showWebFullscreen()
                     YouTubePlayerHelper.search(web, query, autoPlayFirst = false)
                     hideSearchOverlay(notifyPhone = false)
@@ -2817,6 +2817,16 @@ class CarPresentation(
         }
     }
 
+    private fun prepareManualYouTubeSearch() {
+        // A typed search is navigation, not a playback request. Clear every
+        // pending voice/auto-resume path before moving to /results so returning
+        // from the Android Auto keyboard cannot jump back into a video.
+        cancelSystemVoiceRequest()
+        YouTubePlayerHelper.cancelSearchAutoPlay(web)
+        CarMediaManager.userWantsPlayback = false
+        CarMediaManager.setPlaybackState(false)
+    }
+
     private fun executeSearch(query: String, broadcast: Boolean = false) {
         if (searchOverlayMode == "address") {
             if (isBrowserApp()) navigateBrowser(query)
@@ -2830,7 +2840,7 @@ class CarPresentation(
         if (q.isEmpty()) return
 
         if (currentActiveAppId != "youtube") return
-        YouTubePlayerHelper.cancelSearchAutoPlay(web)
+        prepareManualYouTubeSearch()
         if (isDashboardShowing) {
             showWebFullscreen()
         }
@@ -2855,7 +2865,8 @@ class CarPresentation(
 
         val pageUrl = web.url.orEmpty()
         if (pageUrl.contains("youtube.com", true) || pageUrl.contains("youtu.be", true)) {
-            YouTubePlayerHelper.cancelSearchAutoPlay(web)
+            if (performAction) prepareManualYouTubeSearch()
+            else YouTubePlayerHelper.cancelSearchAutoPlay(web)
         }
 
         // Google changes/replaces its search field dynamically. For a captured
