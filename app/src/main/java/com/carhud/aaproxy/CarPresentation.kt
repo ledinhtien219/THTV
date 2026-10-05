@@ -1767,11 +1767,15 @@ class CarPresentation(
 
     private fun handleVoiceQuery(query: String) {
         cancelSystemVoiceRequest()
+
+        // Browser voice input stays literal: a spoken URL/search phrase should not
+        // be rewritten as a music command.
         if (isBrowserApp() && !isDashboardShowing) {
             YouTubePlayerHelper.setDuckingVolume(web, 1.0f)
             navigateBrowser(query)
             return
         }
+
         val tvCmd = TvVoiceHelper.parse(query)
         if (tvCmd != null) {
             playTvChannel(tvCmd.channelTarget)
@@ -1779,21 +1783,50 @@ class CarPresentation(
             return
         }
 
-        searchInput.setText(query)
-        searchInput.setSelection(query.length)
+        // User-imported IPTV names are not covered by the fixed VTV/HTV grammar.
+        // Fuzzy-match only when IPTV is active or the phrase explicitly looks like
+        // a channel request, then play the exact cached channel name.
+        val channelNames = try {
+            IptvManager.getCachedChannelsList(context).map { it.name }
+        } catch (_: Throwable) {
+            emptyList()
+        }
+        val looksLikeChannelRequest =
+            currentActiveAppId == "iptv" ||
+            Regex("""\b(kênh|truyền hình|tivi|ti vi|tv|vtv|htv|htvc|vtc|thvl|k\+)\b""", RegexOption.IGNORE_CASE)
+                .containsMatchIn(query)
+        if (looksLikeChannelRequest) {
+            val matchedChannel = VoiceQueryResolver.bestChannelName(
+                raw = query,
+                channelNames = channelNames,
+                minScore = if (currentActiveAppId == "iptv") 0.72f else 0.80f
+            )
+            if (!matchedChannel.isNullOrBlank()) {
+                playTvChannel(matchedChannel)
+                hideSearchOverlay()
+                return
+            }
+        }
+
+        // Strip conversational media verbs ("phát", "mở bài hát", "nghe"...)
+        // before YouTube search so the result behaves more like Google Assistant.
+        val mediaQuery = VoiceQueryResolver.cleanForMediaSearch(query)
+
+        searchInput.setText(mediaQuery)
+        searchInput.setSelection(mediaQuery.length)
         YouTubePlayerHelper.setDuckingVolume(web, 1.0f)
 
-        // Ensure active app is YouTube when doing a video search
         if (currentActiveAppId != "youtube") {
-            val ytApp = WebAppManager.getAllApps(context).find { it.id == "youtube" } ?: WebAppManager.DEFAULT_APPS.first()
+            val ytApp = WebAppManager.getAllApps(context).find { it.id == "youtube" }
+                ?: WebAppManager.DEFAULT_APPS.first()
             switchWebApp(ytApp, embedded = isDashboardShowing)
         } else if (isDashboardShowing && (dashboardView?.isEmbeddedAppShowing() != true)) {
             showWebFullscreen()
         }
 
-        YouTubePlayerHelper.search(web, query)
-        CarMediaManager.notifyVoiceState(VoiceSearchManager.State.SUCCESS, "Đang tìm: $query")
-        updateVoiceState(VoiceSearchManager.State.SUCCESS, "Đang tìm: $query")
+        YouTubePlayerHelper.search(web, mediaQuery)
+        CarMediaManager.notifyVoiceState(VoiceSearchManager.State.SUCCESS, "Đang tìm: $mediaQuery")
+        updateVoiceState(VoiceSearchManager.State.SUCCESS, "Đang tìm: $mediaQuery")
         hideSearchOverlay()
     }
 
@@ -3531,7 +3564,14 @@ class CarPresentation(
         CarMediaManager.cancelPendingSteeringNext()
         hideSearchOverlay()
         YouTubePlayerHelper.setDuckingVolume(web, 0.0f)
-        updateVoiceState(VoiceSearchManager.State.LISTENING, if (isBrowserApp() && !isDashboardShowing) "Đang lắng nghe... Nói từ khóa hoặc địa chỉ web" else "Đang lắng nghe... Hãy nói tên bài hát")
+        updateVoiceState(
+            VoiceSearchManager.State.LISTENING,
+            when {
+                isBrowserApp() && !isDashboardShowing -> "Đang lắng nghe... Nói từ khóa hoặc địa chỉ web"
+                currentActiveAppId == "iptv" -> "Đang lắng nghe... Nói tên kênh"
+                else -> "Đang lắng nghe... Nói tên bài hát, ca sĩ hoặc kênh"
+            }
+        )
         voiceManager.startListening()
     }
 
