@@ -96,7 +96,7 @@ class VoiceSearchManager(
                     onStateChanged(State.RECOGNIZING, "Đang nhận diện...")
                     handler.postDelayed({
                         if (current()) fail(token, "Nhận diện quá lâu. Kiểm tra mạng và thử lại.")
-                    }, 10_000L)
+                    }, 12_000L)
                 }
 
                 override fun onPartialResults(partialResults: Bundle?) {
