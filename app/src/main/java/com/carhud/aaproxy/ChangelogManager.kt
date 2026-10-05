@@ -27,8 +27,18 @@ object ChangelogManager {
 
     val RELEASE_NOTES = listOf(
         ReleaseNote(
-            versionName = "1.0.27",
+            versionName = "1.0.28",
             releaseDate = "Mới nhất",
+            features = listOf(
+                "🔔 Tự kiểm tra phiên bản mới khi mở app qua Google Apps Script.",
+                "📋 Có bảng thông báo riêng hiển thị version mới và nội dung thay đổi trước khi cập nhật.",
+                "⏳ Nút Để sau sẽ hoãn nhắc trong 24 giờ; nút Cập nhật mở trang tải bản mới.",
+                "🛠 Nội dung update được điều khiển từ Apps Script nên có thể đổi từ xa mà không sửa giao diện app."
+            )
+        ),
+        ReleaseNote(
+            versionName = "1.0.27",
+            releaseDate = "Trước đó",
             features = listOf(
                 "🚗 Tối ưu giao diện cho VF6 và màn hình Android Auto không chuẩn: dùng vùng viewport thực tế sau layout thay vì chỉ dựa vào kích thước panel vật lý.",
                 "📐 Dashboard tự co giãn theo chiều rộng/chiều cao khả dụng: thanh trên, ô tìm kiếm, app card, mini player và typography thích ứng tốt hơn.",
