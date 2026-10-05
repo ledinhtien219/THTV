@@ -35,7 +35,8 @@ object ChangelogManager {
                 "🇻🇳 Tối ưu tiếng Việt: Lấy nhiều kết quả Google + confidence thay vì luôn dùng câu đầu tiên.",
                 "📺 Ưu tiên đúng tên kênh VTV/HTV/VTC/THVL/K+ và cả tên kênh IPTV do người dùng tự nhập.",
                 "🧠 Thêm context bias theo ứng dụng đang dùng để tăng độ chính xác tên kênh và tên app.",
-                "▶️ Câu lệnh kiểu “phát/mở/nghe bài hát…” được làm sạch trước khi tìm YouTube để chạy thẳng đúng nội dung."
+                "▶️ Câu lệnh kiểu “phát/mở/nghe bài hát…” được làm sạch trước khi tìm YouTube.",
+                "⚡ Voice YouTube tự mở và phát kết quả đầu tiên phù hợp, không dừng lại ở trang kết quả tìm kiếm."
             )
         )
     )
