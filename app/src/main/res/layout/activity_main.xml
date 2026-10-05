@@ -858,7 +858,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_gravity="center"
-                                    android:text="📁 Tự Chọn Ảnh"
+                                    android:text="📁 Ảnh / GIF / Video"
                                     android:textColor="#38BDF8"
                                     android:textSize="13sp"
                                     android:fontFamily="sans-serif-bold" />
@@ -1767,7 +1767,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:fontFamily="sans-serif"
-                            android:text="Đang dùng: Siêu xe Bugatti Red &amp; Black (Chạm để đổi ảnh)"
+                            android:text="Đang dùng: Siêu xe Bugatti Red &amp; Black (Chạm để đổi ảnh / GIF / video)"
                             android:textColor="#E2E8F0"
                             android:textSize="12sp" />
                     </LinearLayout>
