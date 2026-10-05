@@ -192,7 +192,7 @@ object AppUpdateManager {
             } else {
                 info.notes.forEach { note ->
                     addView(TextView(activity).apply {
-                        text = if (note.startsWith("•") || note.firstOrNull()?.code in 0x1F000..0x1FAFF) note else "• $note"
+                        text = if (note.startsWith("•")) note else "• $note"
                         textSize = 13f
                         setTextColor(Color.parseColor("#E2E8F0"))
                         setLineSpacing(0f, 1.12f)
