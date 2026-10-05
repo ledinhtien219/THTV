@@ -14,6 +14,7 @@
 const TELEGRAM_BOT_TOKEN = "ĐIỀN_BOT_TOKEN_TỪ_BOTFATHER_VÀO_ĐÂY"; // Ví dụ: "7123456789:AAHxxxxxx..."
 const TELEGRAM_ADMIN_CHAT_ID = "ĐIỀN_CHAT_ID_CỦA_BẠN_VÀO_ĐÂY"; // Ví dụ: "123456789"
 const SHEET_NAME = "Licenses";
+const SCREEN_PROFILE_SHEET_NAME = "ScreenProfiles";
 // ID của bảng tính Google Sheet của bạn (lấy từ link docs.google.com/spreadsheets/d/ID/edit)
 const SPREADSHEET_ID = "14vfUIJWl33kXI7ck6mlpt2Pnstp1FeR7Z9UIQ0ktpao";
 
@@ -83,11 +84,196 @@ function doPost(e) {
       return handleAppRegistration(data);
     }
 
+    // ==========================================
+    // TRƯỜNG HỢP C: THTV APP GỬI HỒ SƠ MÀN HÌNH XE
+    // Chỉ nhận khi Device ID đã APPROVED trong sheet Licenses.
+    // ==========================================
+    if (data.action === "screen_profile") {
+      return handleScreenProfile(data);
+    }
+
     return ContentService.createTextOutput(JSON.stringify({ status: "UNKNOWN_ACTION" })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({ error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
   }
 }
+
+/**
+ * Khởi tạo/lấy sheet hồ sơ màn hình xe.
+ * Mỗi Device ID chỉ có một dòng; app cập nhật lại dòng cũ khi profile thay đổi.
+ */
+function getOrCreateScreenProfileSheet() {
+  let ss;
+  try {
+    ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  } catch (e) {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  }
+
+  let sheet = ss.getSheetByName(SCREEN_PROFILE_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SCREEN_PROFILE_SHEET_NAME);
+    const headers = [
+      "Device ID",
+      "Email",
+      "Thiết Bị",
+      "Android",
+      "App Version",
+      "Build",
+      "Car Resolution",
+      "Usable Area",
+      "WebView",
+      "Aspect Ratio",
+      "DPI",
+      "Density",
+      "xDPI",
+      "yDPI",
+      "Orientation",
+      "Form Factor",
+      "Refresh Hz",
+      "Rotation",
+      "Insets L/T/R/B",
+      "Phone Resolution",
+      "Phone DPI",
+      "HUD Style",
+      "HUD Scale",
+      "HUD Opacity",
+      "Screen Signature",
+      "First Seen",
+      "Last Seen",
+      "Sync Count",
+      "Ghi Chú"
+    ];
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length)
+      .setFontWeight("bold")
+      .setBackground("#0F766E")
+      .setFontColor("#FFFFFF");
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * Nhận profile màn hình từ THTV.
+ * Bảo vệ dữ liệu bằng cách chỉ cho phép mã máy đã APPROVED trong Licenses.
+ */
+function handleScreenProfile(data) {
+  const deviceId = String(data.deviceId || "").trim().toUpperCase();
+  if (!deviceId) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      status: "SCREEN_PROFILE_REJECTED",
+      error: "Missing deviceId"
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Xác nhận mã máy đang được kích hoạt.
+  const licenseSheet = getOrCreateSheet();
+  const licenseRows = licenseSheet.getDataRange().getValues();
+  let approvedEmail = "";
+  let approved = false;
+
+  for (let i = 1; i < licenseRows.length; i++) {
+    if (String(licenseRows[i][0]).trim().toUpperCase() === deviceId) {
+      const status = String(licenseRows[i][4] || "").trim().toUpperCase();
+      approvedEmail = String(licenseRows[i][1] || "").trim();
+      approved = (status === "APPROVED");
+      break;
+    }
+  }
+
+  if (!approved) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      status: "SCREEN_PROFILE_NOT_LICENSED",
+      error: "Device is not APPROVED"
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const sheet = getOrCreateScreenProfileSheet();
+  const rows = sheet.getDataRange().getValues();
+  let rowIndex = -1;
+  let firstSeen = "";
+  let syncCount = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]).trim().toUpperCase() === deviceId) {
+      rowIndex = i + 1;
+      firstSeen = rows[i][25] || "";
+      syncCount = Number(rows[i][27] || 0);
+      break;
+    }
+  }
+
+  const nowStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy HH:mm:ss");
+  if (!firstSeen) firstSeen = nowStr;
+  syncCount += 1;
+
+  const carW = Number(data.carWidth || 0);
+  const carH = Number(data.carHeight || 0);
+  const usableW = Number(data.usableWidth || 0);
+  const usableH = Number(data.usableHeight || 0);
+  const webW = Number(data.webWidth || 0);
+  const webH = Number(data.webHeight || 0);
+  const phoneW = Number(data.phoneWidth || 0);
+  const phoneH = Number(data.phoneHeight || 0);
+
+  const row = [
+    deviceId,
+    approvedEmail,
+    String(data.deviceModel || ""),
+    String(data.androidVer || "") + " / SDK " + String(data.sdkInt || ""),
+    String(data.appVersion || ""),
+    Number(data.buildNumber || 0),
+    carW + " × " + carH,
+    usableW + " × " + usableH,
+    webW + " × " + webH,
+    Number(data.aspectRatio || 0),
+    Number(data.carDpi || 0),
+    Number(data.carDensity || 0),
+    Number(data.xdpi || 0),
+    Number(data.ydpi || 0),
+    String(data.orientation || ""),
+    String(data.formFactor || ""),
+    Number(data.refreshRate || 0),
+    Number(data.rotation || 0),
+    [
+      Number(data.insetLeft || 0),
+      Number(data.insetTop || 0),
+      Number(data.insetRight || 0),
+      Number(data.insetBottom || 0)
+    ].join("/"),
+    phoneW + " × " + phoneH,
+    Number(data.phoneDpi || 0),
+    Number(data.hudStyleId || 0),
+    Number(data.hudScale || 0),
+    Number(data.hudOpacity || 0),
+    String(data.screenSignature || ""),
+    firstSeen,
+    nowStr,
+    syncCount,
+    "Tự động từ THTV"
+  ];
+
+  let status;
+  if (rowIndex > 0) {
+    sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
+    status = "SCREEN_PROFILE_UPDATED";
+  } else {
+    sheet.appendRow(row);
+    status = "SCREEN_PROFILE_SAVED";
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({
+    success: true,
+    status: status,
+    deviceId: deviceId,
+    screenSignature: String(data.screenSignature || ""),
+    syncCount: syncCount
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
 
 /**
  * Xử lý khi App T-Car gửi yêu cầu kích hoạt mới
