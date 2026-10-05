@@ -122,6 +122,9 @@ class CarDashboardView(
     private lateinit var dashboardVideoBackground: TextureView
     private lateinit var dashboardBackground: ImageView
     private lateinit var dashboardScrim: View
+    private lateinit var dashboardMainContent: View
+    private lateinit var topRightContainer: LinearLayout
+    private lateinit var bottomDock: LinearLayout
     private var wallpaperPlayer: MediaPlayer? = null
     private var animatedWallpaper: AnimatedImageDrawable? = null
     private lateinit var topLeftContainer: View
@@ -199,6 +202,9 @@ class CarDashboardView(
         dashboardVideoBackground = findViewById(R.id.dashboardVideoBackground)
         dashboardBackground = findViewById(R.id.dashboardBackground)
         dashboardScrim = findViewById(R.id.dashboardScrim)
+        dashboardMainContent = findViewById(R.id.dashboardMainContent)
+        topRightContainer = findViewById(R.id.topRightContainer)
+        bottomDock = findViewById(R.id.bottomDock)
         forceWallpaperLayersFullscreen()
         topLeftContainer = findViewById(R.id.topLeftContainer)
         greetingText = findViewById(R.id.greetingText)
@@ -245,6 +251,107 @@ class CarDashboardView(
         applyDayNightMode(SettingsActivity.resolveIsDay(context))
         populateFavChannels()
         applyComponentVisibility()
+    }
+
+    /**
+     * Adapt the cockpit to the ACTUAL Android Auto content viewport.
+     * This is intentionally based on the laid-out view rather than the physical
+     * panel size so cars with AA margins/cropped projection (for example VF6)
+     * do not inherit the wrong desktop-sized layout.
+     */
+    fun applyAdaptiveScreen(widthPx: Int, heightPx: Int) {
+        if (widthPx <= 0 || heightPx <= 0) return
+        val density = context.resources.displayMetrics.density.coerceAtLeast(0.75f)
+        val widthDp = widthPx / density
+        val heightDp = heightPx / density
+
+        val compactWidth = widthDp < 820f
+        val veryCompactWidth = widthDp < 700f
+        val compactHeight = heightDp < 430f
+
+        val padH = when {
+            veryCompactWidth -> 10
+            compactWidth -> 14
+            else -> 22
+        }
+        val padV = if (compactHeight) 8 else 14
+        dashboardMainContent.setPadding(dp(padH), dp(padV), dp(padH), dp(if (compactHeight) 8 else 14))
+
+        // The old fixed 95dp end margin was tuned for one DHU size and pushes
+        // controls out of the usable region on some factory head units.
+        (topRightContainer.layoutParams as? android.widget.RelativeLayout.LayoutParams)?.let { lp ->
+            lp.marginEnd = dp(
+                when {
+                    veryCompactWidth -> 6
+                    compactWidth -> 18
+                    widthDp < 1000f -> 42
+                    else -> 95
+                }
+            )
+            topRightContainer.layoutParams = lp
+        }
+
+        searchBarPill.layoutParams = searchBarPill.layoutParams.apply {
+            width = dp(
+                when {
+                    veryCompactWidth -> 130
+                    compactWidth -> 160
+                    widthDp < 1000f -> 190
+                    else -> 220
+                }
+            )
+            height = dp(if (compactHeight) 36 else 40)
+        }
+
+        val cardWidth = when {
+            veryCompactWidth -> 68
+            compactWidth -> 78
+            else -> 92
+        }
+        val cardHeight = if (compactHeight) 68 else if (compactWidth) 74 else 82
+        val cardGap = if (compactWidth) 6 else 10
+
+        listOfNotNull(cardVtv, cardM3u, cardYoutube, cardBrowser, cardBookmark).forEachIndexed { index, card ->
+            val lp = card.layoutParams as? LinearLayout.LayoutParams ?: return@forEachIndexed
+            lp.width = dp(cardWidth)
+            lp.height = dp(cardHeight)
+            lp.marginEnd = dp(if (index == 4) cardGap + 2 else cardGap)
+            card.layoutParams = lp
+            card.setPadding(dp(if (compactWidth) 4 else 6), dp(4), dp(if (compactWidth) 4 else 6), dp(4))
+        }
+
+        (miniPlayerCard.layoutParams as? LinearLayout.LayoutParams)?.let { lp ->
+            lp.height = dp(cardHeight)
+            miniPlayerCard.layoutParams = lp
+        }
+
+        val artSize = when {
+            veryCompactWidth -> 48
+            compactWidth -> 54
+            else -> 66
+        }
+        playerArtHolder.layoutParams = playerArtHolder.layoutParams.apply {
+            width = dp(artSize)
+            height = dp(artSize)
+        }
+
+        clockText.textSize = when {
+            compactHeight -> 38f
+            compactWidth -> 42f
+            else -> 48f
+        }
+        greetingText.textSize = if (compactWidth) 13f else 15f
+        dateText.textSize = if (compactWidth) 12.5f else 14.5f
+        lunarDateText.textSize = if (compactWidth) 11.5f else 13f
+
+        weatherCard.layoutParams = weatherCard.layoutParams.apply {
+            width = dp(if (compactWidth) 132 else 150)
+            height = dp(if (compactHeight) 64 else 76)
+        }
+
+        bottomDock.requestLayout()
+        topRightContainer.requestLayout()
+        dashboardMainContent.requestLayout()
     }
 
     fun applyComponentVisibility() {
