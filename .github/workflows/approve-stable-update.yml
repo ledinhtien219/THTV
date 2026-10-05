@@ -1,0 +1,212 @@
+name: Approve Stable Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref_to_promote:
+        description: "Commit SHA/tag/branch của đúng bản đã test"
+        required: true
+        type: string
+      expected_version:
+        description: "Version dự kiến, ví dụ 1.0.38 (chống duyệt nhầm commit)"
+        required: true
+        type: string
+      release_notes:
+        description: "Nội dung cập nhật, mỗi dòng là một mục"
+        required: true
+        type: string
+      approval:
+        description: "Gõ chính xác: DUYET STABLE"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    name: Promote tested build to Stable
+    if: ${{ inputs.approval == 'DUYET STABLE' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout tested ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref_to_promote }}
+          fetch-depth: 0
+
+      - name: Read and verify tested version
+        id: version
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        shell: bash
+        run: |
+          VERSION_NAME=$(grep -E 'versionName = "' app/build.gradle.kts | head -1 | sed -E 's/.*versionName = "([^"]+)".*/\1/')
+          VERSION_CODE=$(grep -E 'versionCode = [0-9]+' app/build.gradle.kts | head -1 | sed -E 's/.*versionCode = ([0-9]+).*/\1/')
+          TARGET_SHA=$(git rev-parse HEAD)
+
+          test -n "$VERSION_NAME"
+          test -n "$VERSION_CODE"
+          if [ "$VERSION_NAME" != "$EXPECTED_VERSION" ]; then
+            echo "Version mismatch: commit=$VERSION_NAME, expected=$EXPECTED_VERSION"
+            exit 1
+          fi
+
+          git fetch origin main --quiet
+          git show origin/main:update.json > /tmp/current-stable.json
+          CURRENT_CODE=$(jq -r '.versionCode' /tmp/current-stable.json)
+          CURRENT_NAME=$(jq -r '.versionName' /tmp/current-stable.json)
+          CURRENT_CHANNEL=$(jq -r '.channel // ""' /tmp/current-stable.json)
+          CURRENT_APPROVED=$(jq -r '.approved // false' /tmp/current-stable.json)
+
+          if [ "$CURRENT_CHANNEL" != "stable" ] || [ "$CURRENT_APPROVED" != "true" ]; then
+            echo "Current update.json is not a valid approved stable manifest."
+            exit 1
+          fi
+
+          if [ "$VERSION_CODE" -le "$CURRENT_CODE" ]; then
+            echo "Refusing downgrade/re-publish: tested $VERSION_NAME ($VERSION_CODE), stable $CURRENT_NAME ($CURRENT_CODE)"
+            exit 1
+          fi
+
+          echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "Promoting tested commit $TARGET_SHA -> v$VERSION_NAME ($VERSION_CODE)"
+
+      - name: Prepare approved release notes
+        env:
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          raw = os.environ.get("RELEASE_NOTES", "")
+          notes = []
+          for line in raw.splitlines():
+              line = line.strip()
+              if line.startswith("-"):
+                  line = line[1:].strip()
+              if line:
+                  notes.append(line)
+          if not notes:
+              raise SystemExit("Release notes are empty")
+          if len(notes) > 30:
+              raise SystemExit("Too many release-note lines")
+          with open("/tmp/stable-notes.json", "w", encoding="utf-8") as f:
+              json.dump(notes, f, ensure_ascii=False, indent=2)
+          with open("/tmp/stable-notes.txt", "w", encoding="utf-8") as f:
+              for note in notes:
+                  f.write("- " + note + "\n")
+          PY
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Restore stable debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: thtv-stable-debug-keystore-v1
+
+      - name: Ensure stable signing key
+        run: |
+          test -f ~/.android/debug.keystore || {
+            echo "Stable signing key missing; stable publication aborted."
+            exit 1
+          }
+
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      - name: Re-run release tests
+        run: |
+          node tests/iptv-aspect.test.cjs
+          node tests/page-input.test.cjs
+          node tests/youtube-quality.test.cjs
+          ./gradlew testDebugUnitTest assembleDebug --stacktrace
+
+      - name: Publish or verify immutable GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          TARGET_SHA: ${{ steps.version.outputs.sha }}
+        shell: bash
+        run: |
+          git fetch --tags origin --quiet
+          if gh release view "v$VERSION_NAME" > /dev/null 2>&1; then
+            TAG_SHA=$(git rev-list -n 1 "v$VERSION_NAME" 2>/dev/null || true)
+            if [ -z "$TAG_SHA" ] || [ "$TAG_SHA" != "$TARGET_SHA" ]; then
+              echo "Release v$VERSION_NAME already exists but does not point to tested commit $TARGET_SHA"
+              exit 1
+            fi
+            echo "Verified existing release v$VERSION_NAME at tested commit."
+          else
+            gh release create "v$VERSION_NAME" app/build/outputs/apk/debug/*.apk \
+              --target "$TARGET_SHA" \
+              --title "THTV v$VERSION_NAME (STABLE)" \
+              --notes-file /tmp/stable-notes.txt
+          fi
+
+      - name: Promote approved build in update.json
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+          TARGET_SHA: ${{ steps.version.outputs.sha }}
+        shell: bash
+        run: |
+          git fetch origin main --quiet
+          git checkout -B stable-manifest origin/main
+
+          python3 - <<'PY'
+          import datetime, json, os
+          name = os.environ["VERSION_NAME"]
+          code = int(os.environ["VERSION_CODE"])
+          sha = os.environ["TARGET_SHA"]
+          with open("/tmp/stable-notes.json", "r", encoding="utf-8") as f:
+              notes = json.load(f)
+          manifest = {
+              "channel": "stable",
+              "approved": True,
+              "versionCode": code,
+              "versionName": name,
+              "downloadUrl": f"https://github.com/ledinhtien219/THTV/releases/download/v{name}/THTV_v{name}_debug.apk",
+              "approvedCommit": sha,
+              "approvedAt": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat(),
+              "changelog": notes,
+          }
+          with open("update.json", "w", encoding="utf-8") as f:
+              json.dump(manifest, f, ensure_ascii=False, indent=2)
+              f.write("\n")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add update.json
+          if git diff --cached --quiet; then
+            echo "Stable manifest already points to this approved build."
+          else
+            git commit -m "Approve v$VERSION_NAME as stable update"
+            git push origin HEAD:main
+          fi
+
+      - name: Stable publication summary
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+          TARGET_SHA: ${{ steps.version.outputs.sha }}
+        run: |
+          {
+            echo "## ✅ Stable update approved"
+            echo ""
+            echo "- Version: v$VERSION_NAME (Build $VERSION_CODE)"
+            echo "- Tested commit: `$TARGET_SHA`"
+            echo "- Public update feed: `update.json`"
+            echo "- Users will only see this version after the manifest commit above."
+          } >> "$GITHUB_STEP_SUMMARY"
