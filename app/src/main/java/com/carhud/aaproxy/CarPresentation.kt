@@ -313,8 +313,9 @@ class CarPresentation(
                     navigateBrowser(query)
                 }
                 currentActiveAppId == "youtube" -> {
+                    YouTubePlayerHelper.cancelSearchAutoPlay(web)
                     if (isDashboardShowing) showWebFullscreen()
-                    YouTubePlayerHelper.search(web, query)
+                    YouTubePlayerHelper.search(web, query, autoPlayFirst = false)
                     hideSearchOverlay(notifyPhone = false)
                 }
             }
@@ -653,13 +654,6 @@ class CarPresentation(
                         CarMediaManager.acquireWakeLock(context)
                         scheduleSafeResume(view, 700L)
                     }
-                } else if (isYouTube && autoResume && CarMediaManager.userWantsPlayback && (url.endsWith("youtube.com") || url.endsWith("youtube.com/"))) {
-                    CarMediaManager.ensureAudioFocus()
-                    view.postDelayed({
-                        if (!CarMediaManager.isPlaying && CarMediaManager.userWantsPlayback) {
-                            YouTubePlayerHelper.playFirstAvailableVideo(view)
-                        }
-                    }, 800L)
                 }
             }
         }
@@ -771,12 +765,10 @@ class CarPresentation(
                 YouTubePlayerHelper.inject(web, isUltrawide, isPortrait, carWidth, carHeight, carDpi, phoneDpi.toInt(), aspectRatio)
                 scheduleSafeResume(web, 700L)
             } else {
+                // Home/results pages are navigation state, not playback state.
+                // Recreating Android Auto after the native keyboard must keep the
+                // result list visible instead of selecting the first video.
                 YouTubePlayerHelper.inject(web, isUltrawide, isPortrait, carWidth, carHeight, carDpi, phoneDpi.toInt(), aspectRatio)
-                if (CarMediaManager.userWantsPlayback && autoResume) {
-                    web.postDelayed({
-                        YouTubePlayerHelper.playFirstAvailableVideo(web)
-                    }, 800L)
-                }
             }
 
         }
@@ -2838,10 +2830,11 @@ class CarPresentation(
         if (q.isEmpty()) return
 
         if (currentActiveAppId != "youtube") return
+        YouTubePlayerHelper.cancelSearchAutoPlay(web)
         if (isDashboardShowing) {
             showWebFullscreen()
         }
-        YouTubePlayerHelper.search(web, q)
+        YouTubePlayerHelper.search(web, q, autoPlayFirst = false)
         if (broadcast) CarMediaManager.submitSearchQuery(q)
         hideSearchOverlay()
     }
@@ -2859,6 +2852,11 @@ class CarPresentation(
         }
 
         val cleanValue = value.trimEnd()
+
+        val pageUrl = web.url.orEmpty()
+        if (pageUrl.contains("youtube.com", true) || pageUrl.contains("youtu.be", true)) {
+            YouTubePlayerHelper.cancelSearchAutoPlay(web)
+        }
 
         // Google changes/replaces its search field dynamically. For a captured
         // Google search box, navigate the CURRENT browser WebView directly to
@@ -3346,6 +3344,10 @@ class CarPresentation(
 
     fun showSearchOverlay() {
         if (isBrowserApp()) { showBrowserAddressOverlay(); return }
+
+        // Opening a keyboard is an explicit manual action. It cancels delayed
+        // voice-search auto-play before the user submits typed text.
+        YouTubePlayerHelper.cancelSearchAutoPlay(web)
         if (currentActiveAppId == "iptv") {
             web.evaluateJavascript("document.getElementById('searchInput')?.click();", null)
             return
@@ -3368,6 +3370,11 @@ class CarPresentation(
         hint: String = "Nhập nội dung...",
         action: String = "input"
     ) {
+        val currentPage = web.url.orEmpty()
+        if (currentPage.contains("youtube.com", true) || currentPage.contains("youtu.be", true)) {
+            YouTubePlayerHelper.cancelSearchAutoPlay(web)
+        }
+
         webKeyboardToken = token
         webKeyboardPage = web.url
         webKeyboardAction = if (action == "search") "search" else "input"
