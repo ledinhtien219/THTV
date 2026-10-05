@@ -1,11 +1,11 @@
 {
-  "versionCode": 207,
-  "versionName": "1.0.34",
-  "downloadUrl": "https://github.com/ledinhtien219/THTV/releases/download/v1.0.34/THTV_v1.0.34_debug.apk",
+  "versionCode": 208,
+  "versionName": "1.0.35",
+  "downloadUrl": "https://github.com/ledinhtien219/THTV/releases/download/v1.0.35/THTV_v1.0.35_debug.apk",
   "changelog": [
-    "Thông báo phiên bản chỉ hiển thị nội dung bản đang cài; bỏ phiên bản cũ.",
-    "Thêm nút × tắt bong bóng cảnh báo trên cả 5 kiểu HUD; bật lại trong Cài đặt HUD.",
-    "Thanh YouTube có nút Quay lại riêng và nút Chất lượng để chọn độ phân giải.",
-    "Nhập trên trang chỉ điền vào đúng ô; không tự gửi Enter, tìm kiếm hay chuyển sang YouTube."
+    "Voice Recognition v2: mở mic nhanh hơn nhờ giữ bộ nhận dạng luôn sẵn sàng.",
+    "Tối ưu tiếng Việt bằng nhiều candidate + confidence thay vì luôn lấy kết quả đầu tiên.",
+    "Ưu tiên đúng tên kênh VTV/HTV/VTC/THVL/K+ và kênh IPTV tùy chỉnh.",
+    "Tự bias theo ngữ cảnh ứng dụng và làm sạch câu lệnh trước khi tìm YouTube."
   ]
 }
