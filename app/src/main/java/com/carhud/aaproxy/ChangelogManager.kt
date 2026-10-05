@@ -27,8 +27,17 @@ object ChangelogManager {
 
     val RELEASE_NOTES = listOf(
         ReleaseNote(
-            versionName = "1.0.21",
+            versionName = "1.0.22",
             releaseDate = "Mới nhất",
+            features = listOf(
+                "🔔 Khôi phục mục Âm thanh cảnh báo & tiếng Ting Waze trong Cài đặt nâng cao.",
+                "🎵 Khôi phục lựa chọn 4 chế độ âm thanh và 5 kiểu tiếng Ting kèm nút nghe thử.",
+                "🧹 Không khôi phục lưới TTS/thử cảnh báo cũ; chỉ giữ đúng phần âm thanh như yêu cầu."
+            )
+        ),
+        ReleaseNote(
+            versionName = "1.0.21",
+            releaseDate = "Trước đó",
             features = listOf(
                 "🎨 Bộ icon cảnh báo mới: Thay emoji bằng icon đồ họa đậm nét, màu sắc theo phong cách Waze cho HUD.",
                 "🏘️ Khu dân cư: Dùng biểu tượng biển giao thông khu dân cư thay cho hình nhà thông thường.",
