@@ -27,6 +27,15 @@ object ChangelogManager {
 
     val RELEASE_NOTES = listOf(
         ReleaseNote(
+            versionName = "1.0.30",
+            releaseDate = "Mới nhất",
+            features = listOf(
+                "⌨️ Sửa nhận chạm bàn phím Android Auto: phím có vùng bấm rộng hơn, dùng tọa độ trong keyboard thay vì vị trí toàn màn hình.",
+                "⚡ Gõ nhanh được xử lý trực tiếp từng lần chạm; giữ hỗ trợ nhấn giữ trên màn hình có luồng touch.",
+                "🛡 Khi bàn phím mở, chạm/scroll không đi xuyên xuống trang web; callback mở bàn phím trùng không xóa nội dung đang gõ."
+            )
+        ),
+        ReleaseNote(
             versionName = "1.0.29",
             releaseDate = "Mới nhất",
             features = listOf(
@@ -48,7 +57,7 @@ object ChangelogManager {
         ),
         ReleaseNote(
             versionName = "1.0.27",
-            releaseDate = "Mới nhất",
+            releaseDate = "Trước đó",
             features = listOf(
                 "🚗 Tối ưu giao diện cho VF6 và màn hình Android Auto không chuẩn: dùng vùng viewport thực tế sau layout thay vì chỉ dựa vào kích thước panel vật lý.",
                 "📐 Dashboard tự co giãn theo chiều rộng/chiều cao khả dụng: thanh trên, ô tìm kiếm, app card, mini player và typography thích ứng tốt hơn.",

@@ -59,6 +59,7 @@ class CarPresentation(
     private var searchOverlaySubmitButton: TextView? = null
     private var searchSuggestionStrip: View? = null
     private var keyboardActionKey: TextView? = null
+    private var carKeyboard: CarKeyboardLayout? = null
     private var webKeyboardTargetPending: Boolean = false
     private var webInputSubmissionPending = false
     private var topToolbarContainer: View? = null
@@ -320,7 +321,7 @@ class CarPresentation(
                 @android.webkit.JavascriptInterface
                 fun openKeyboard(initialValue: String?) {
                     mainHandler.post {
-                        if (isBrowserApp()) {
+                        if (isBrowserApp() && (!::searchOverlay.isInitialized || searchOverlay.visibility != View.VISIBLE)) {
                             showWebKeyboardOverlay(initialValue.orEmpty())
                         }
                     }
@@ -3053,7 +3054,7 @@ class CarPresentation(
             rootLayout.addView(chipScroll)
 
             // 3. Compact & Sleek Automotive Touch Keyboard (5 rows, fixed ergonomic height)
-            val keyboardContainer = LinearLayout(context).apply {
+            val keyboardContainer = CarKeyboardLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 background = rounded(Color.parseColor("#0F1722"), 14f, Color.parseColor("#1E2D3E"), 1)
                 setPadding(dp(4), dp(4), dp(4), dp(4))
@@ -3061,6 +3062,7 @@ class CarPresentation(
                     topMargin = dp(4)
                 }
             }
+            carKeyboard = keyboardContainer
 
             var isTelexEnabled = prefs.getBoolean("car_keyboard_telex", true)
             var telexBtnRef: TextView? = null
@@ -3571,6 +3573,15 @@ class CarPresentation(
     fun getWebView(): WebView = web
 
     fun dispatchTouch(x: Float, y: Float) {
+        if (::searchOverlay.isInitialized && searchOverlay.visibility == View.VISIBLE) {
+            carKeyboard?.let { keyboard ->
+                val point = android.graphics.Rect(x.toInt(), y.toInt(), x.toInt() + 1, y.toInt() + 1)
+                root.offsetRectIntoDescendantCoords(keyboard, point)
+                if (keyboard.clickAt(point.left.toFloat(), point.top.toFloat())) return
+            }
+            dispatchOverlayClick(searchOverlay, x, y)
+            return
+        }
         // Surface clicks have no physical Android touch stream. Route visible
         // native dialogs directly, before HUD movement or the underlying WebView.
         val overlay = listOfNotNull(addAppOverlay, appGridOverlay, if (::searchOverlay.isInitialized) searchOverlay else null)
@@ -3633,6 +3644,7 @@ class CarPresentation(
     }
 
     fun dispatchScroll(dx: Float, dy: Float) {
+        if (::searchOverlay.isInitialized && searchOverlay.visibility == View.VISIBLE) return
         onUserInteraction()
         val hud = hudOverlay
         if (hud != null && hud.visibility == View.VISIBLE && !hud.isHudLocked()) {
@@ -3657,6 +3669,7 @@ class CarPresentation(
     }
 
     fun dispatchFling(vx: Float, vy: Float) {
+        if (::searchOverlay.isInitialized && searchOverlay.visibility == View.VISIBLE) return
         onUserInteraction()
         val hud = hudOverlay
         if (hud != null && hud.visibility == View.VISIBLE && !hud.isHudLocked()) {
