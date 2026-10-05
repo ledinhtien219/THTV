@@ -6,7 +6,14 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_cockpit_charcoal">
 
-    <!-- Supercar Bugatti Wallpaper (Default) -->
+    <!-- Dynamic video wallpaper layer (muted + looped, shown only for custom MP4/WebM) -->
+    <TextureView
+        android:id="@+id/dashboardVideoBackground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <!-- Static / GIF wallpaper layer -->
     <ImageView
         android:id="@+id/dashboardBackground"
         android:layout_width="match_parent"
