@@ -1,4 +1,6 @@
 {
+  "channel": "stable",
+  "approved": true,
   "versionCode": 210,
   "versionName": "1.0.37",
   "downloadUrl": "https://github.com/ledinhtien219/THTV/releases/download/v1.0.37/THTV_v1.0.37_debug.apk",
