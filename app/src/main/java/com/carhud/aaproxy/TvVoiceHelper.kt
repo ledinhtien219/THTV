@@ -52,11 +52,22 @@ object TvVoiceHelper {
     }
 
     private fun normalizeSpokenChannels(query: String): String {
-        var text = query.replace(Regex("""\b(?:vê\s+tê\s+vê|v\s+t\s+v)\b"""), "vtv")
+        var text = query
+            .replace(Regex("""\b(?:vê\s+tê\s+vê|v\s+t\s+v)\b"""), "vtv")
             .replace(Regex("""\b(?:hát\s+tê\s+vê|h\s+t\s+v)\b"""), "htv")
-        val digits = mapOf("một" to "1", "hai" to "2", "ba" to "3", "bốn" to "4", "tư" to "4",
-            "năm" to "5", "sáu" to "6", "bảy" to "7", "tám" to "8", "chín" to "9")
-        text = text.replace(Regex("""\b(vtv|htv|htvc|vtc|thvl)\s+(một|hai|ba|bốn|tư|năm|sáu|bảy|tám|chín)\b""")) {
+            .replace(Regex("""\b(?:vê\s+tê\s+xê|v\s+t\s+c)\b"""), "vtc")
+            .replace(Regex("""\btruyền\s+hình\s+vĩnh\s+long\b"""), "thvl")
+            .replace(Regex("""\b(?:ca|k)\s+cộng\b"""), "k+")
+
+        val digits = mapOf(
+            "một" to "1", "hai" to "2", "ba" to "3", "bốn" to "4", "tư" to "4",
+            "năm" to "5", "sáu" to "6", "bảy" to "7", "tám" to "8", "chín" to "9",
+            "mười" to "10", "mười một" to "11", "mười hai" to "12"
+        )
+
+        text = text.replace(
+            Regex("""\b(vtv|htv|htvc|vtc|thvl|k\+)\s+(mười\s+hai|mười\s+một|mười|một|hai|ba|bốn|tư|năm|sáu|bảy|tám|chín)\b""")
+        ) {
             it.groupValues[1] + digits.getValue(it.groupValues[2])
         }
         return text
