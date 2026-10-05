@@ -27,8 +27,18 @@ object ChangelogManager {
 
     val RELEASE_NOTES = listOf(
         ReleaseNote(
-            versionName = "1.0.23",
+            versionName = "1.0.24",
             releaseDate = "Mới nhất",
+            features = listOf(
+                "🎞️ Hình nền động: Cho phép chọn GIF hoặc video ngắn làm hình nền buồng lái Android Auto.",
+                "🔁 Video tự lặp (loop), tắt tiếng và center-crop để không tranh âm thanh với YouTube/IPTV.",
+                "🖼️ Hỗ trợ chung ảnh JPG/PNG/WEBP, GIF động và video MP4/WebM; tự fallback về Bugatti nếu file lỗi.",
+                "⚡ Giới hạn video tối đa 60 giây để ưu tiên độ ổn định và hiệu năng đầu xe."
+            )
+        ),
+        ReleaseNote(
+            versionName = "1.0.23",
+            releaseDate = "Trước đó",
             features = listOf(
                 "📺 Screen Profile chi tiết: Ghi nhận độ phân giải thật, usable area, WebView viewport, DPI, density, x/y DPI, tỉ lệ, hướng, loại màn và refresh rate của Android Auto.",
                 "☁️ Tự đồng bộ Google Sheet theo mã máy đã kích hoạt: Chỉ Device ID APPROVED mới được ghi vào sheet ScreenProfiles.",
