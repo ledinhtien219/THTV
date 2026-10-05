@@ -242,8 +242,7 @@ class VoiceSearchManager(
 
     private fun createRecognizer(): SpeechRecognizer? {
         return try {
-            if (!SpeechRecognizer.isRecognitionAvailable(context)) null
-            else SpeechRecognizer.createSpeechRecognizer(context)
+            SpeechRecognizer.createSpeechRecognizer(context)
         } catch (_: Throwable) {
             null
         }
