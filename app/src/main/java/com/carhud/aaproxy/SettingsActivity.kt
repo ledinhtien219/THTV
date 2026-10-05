@@ -25,12 +25,15 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 class SettingsActivity : AppCompatActivity() {
@@ -120,6 +123,52 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private var testDialog: androidx.appcompat.app.AlertDialog? = null
+    private val exportSettings = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val text = SettingsBackupManager.export(applicationContext)
+                    val stream = contentResolver.openOutputStream(uri, "wt") ?: error("Không mở được file để lưu.")
+                    stream.use { it.write(text.toByteArray(Charsets.UTF_8)) }
+                }
+                Toast.makeText(this@SettingsActivity, "Đã xuất cấu hình THTV.", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) { showBackupError(e) }
+        }
+    }
+    private val importSettings = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) lifecycleScope.launch {
+            try {
+                val backup = withContext(Dispatchers.IO) {
+                    val stream = contentResolver.openInputStream(uri) ?: error("Không mở được file cấu hình.")
+                    stream.use { SettingsBackupManager.read(it) }
+                }
+                AlertDialog.Builder(this@SettingsActivity)
+                    .setTitle("Nạp cấu hình THTV?")
+                    .setMessage("File gồm ${backup.count} tùy chọn và ${backup.favorites} kênh yêu thích.\n\nCác nhóm cài đặt trong file sẽ được khôi phục, gồm cả tùy chọn mặc định. Ảnh nền và biểu tượng tùy chỉnh cần chọn lại nếu chuyển điện thoại.")
+                    .setNegativeButton("Hủy", null)
+                    .setPositiveButton("Nạp cấu hình") { _, _ ->
+                        lifecycleScope.launch {
+                            try {
+                                withContext(Dispatchers.IO) { SettingsBackupManager.apply(applicationContext, backup) }
+                                CarMediaManager.getActiveWebView()?.let { web ->
+                                    if (web.url?.contains("iptv_player.html") == true) web.reload()
+                                }
+                                Toast.makeText(this@SettingsActivity, "Đã nạp cấu hình. Cài đặt và yêu thích đã được cập nhật.", Toast.LENGTH_LONG).show()
+                                recreate()
+                            } catch (e: Exception) { showBackupError(e) }
+                        }
+                    }.show()
+            } catch (e: Exception) { showBackupError(e) }
+        }
+    }
+
+    private fun showBackupError(error: Exception) {
+        if (error is kotlinx.coroutines.CancellationException) throw error
+        if (isFinishing || isDestroyed) return
+        AlertDialog.Builder(this).setTitle("Không thể xuất/nạp cấu hình")
+            .setMessage(error.message ?: "Vui lòng kiểm tra file hoặc chọn vị trí lưu khác.")
+            .setPositiveButton("Đóng", null).show()
+    }
     private var testKeyInfoView: TextView? = null
 
     // Dynamic High-Contrast Theme Palette (Default Dark Cockpit)
@@ -2133,7 +2182,7 @@ class SettingsActivity : AppCompatActivity() {
                 iconEmoji = "⚙️",
                 iconBgColor = if (isDarkTheme) Color.parseColor("#1E293B") else Color.parseColor("#E2E8F0"),
                 title = "TÍNH NĂNG NÂNG CAO & THÔNG TIN",
-                subtitle = "Phiên bản app, bản quyền, phân tích lỗi & bộ nhớ",
+                subtitle = "Xuất/nạp cấu hình, phiên bản app, phân tích lỗi & bộ nhớ",
                 initiallyExpanded = false
             ) { content ->
                 content.addView(createSeparator())
@@ -2153,6 +2202,22 @@ class SettingsActivity : AppCompatActivity() {
                     title = "KIỂM TRA CẬP NHẬT",
                     subtitle = "Kiểm tra phiên bản mới và xem nội dung cập nhật",
                     onClick = { UpdateNotificationManager.check(this@SettingsActivity, manual = true) }
+                ))
+
+                content.addView(settingCard(
+                    title = "XUẤT CẤU HÌNH & YÊU THÍCH",
+                    subtitle = "Lưu giao diện, HUD, phím vô lăng, ứng dụng và kênh yêu thích vào file JSON. Không kèm ảnh nền/biểu tượng tùy chỉnh.",
+                    badgeText = "Xuất file",
+                    onClick = {
+                        val date = java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.US).format(java.util.Date())
+                        exportSettings.launch("THTV-settings-$date.json")
+                    }
+                ))
+                content.addView(settingCard(
+                    title = "NẠP CẤU HÌNH & YÊU THÍCH",
+                    subtitle = "Chọn file cấu hình THTV đã xuất; xem số tùy chọn trước khi nạp.",
+                    badgeText = "Chọn file",
+                    onClick = { importSettings.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
                 ))
 
                 content.addView(createSeparator())

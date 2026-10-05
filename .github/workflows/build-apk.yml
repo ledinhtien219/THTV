@@ -45,13 +45,16 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Test IPTV aspect retention
+        run: node tests/iptv-aspect.test.cjs
+
       - name: Build Debug APK
         run: ./gradlew testDebugUnitTest assembleDebug --stacktrace
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: THTV-v1.0.30-debug-apk
+          name: THTV-v1.0.31-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14
 

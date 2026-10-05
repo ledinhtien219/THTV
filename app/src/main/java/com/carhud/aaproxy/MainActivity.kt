@@ -1327,6 +1327,7 @@ class MainActivity : AppCompatActivity() {
         if (iptvWeb != null) return
         val w = findViewById<BackgroundAudioWebView>(R.id.phoneIptvWeb) ?: BackgroundAudioWebView(this)
         iptvWeb = w
+        IptvAspectRatio.attach(w)
         val bgAudio = prefs.getBoolean(SettingsActivity.KEY_BACKGROUND_AUDIO, true)
         w.enableBackgroundAudio = bgAudio
 
@@ -2115,6 +2116,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private var appliedSettingsImport = 0L
+
     override fun onResume() {
         super.onResume()
         if (!LicenseManager.isLicensed(this)) {
@@ -2128,6 +2131,13 @@ class MainActivity : AppCompatActivity() {
         youtubeWeb?.resumeTimers()
         iptvWeb?.resumeTimers()
         updatePermissionStatusDisplay()
+        val imported = prefs.getLong(SettingsBackupManager.IMPORT_REVISION, 0L)
+        if (imported != appliedSettingsImport) {
+            appliedSettingsImport = imported
+            applyDisplaySettings()
+            updateWallpaperDisplay()
+            loadIptvChannelsFromM3u()
+        }
     }
 
     override fun onPause() {

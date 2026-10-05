@@ -276,6 +276,7 @@ object CarMediaManager {
             web.setBackgroundColor(android.graphics.Color.BLACK)
             YouTubePlayerHelper.applyUltraPerformance(web)
             setupAndroidVoiceBridge(web, context, isAuto = true)
+            IptvAspectRatio.attach(web)
 
             web.webViewClient = object : android.webkit.WebViewClient() {
                 override fun shouldInterceptRequest(view: WebView?, request: android.webkit.WebResourceRequest?): android.webkit.WebResourceResponse? {
@@ -944,6 +945,9 @@ object CarMediaManager {
     private val searchQueryListeners = java.util.concurrent.CopyOnWriteArraySet<(String) -> Unit>()
     private val searchDismissListeners = java.util.concurrent.CopyOnWriteArraySet<() -> Unit>()
     private val searchLiveTextListeners = java.util.concurrent.CopyOnWriteArraySet<(String) -> Unit>()
+    private val searchTextLock = Any()
+    private var latestSearchText = ""
+    private var searchTextQueued = false
     private val carNativeSearchListeners = java.util.concurrent.CopyOnWriteArraySet<(String) -> Unit>()
 
     fun registerSearchRequestListener(listener: (String) -> Unit) {
@@ -1003,9 +1007,18 @@ object CarMediaManager {
     }
 
     fun updateSearchText(text: String) {
+        synchronized(searchTextLock) {
+            latestSearchText = text
+            if (searchTextQueued) return
+            searchTextQueued = true
+        }
         mainHandler.post {
+            val latest = synchronized(searchTextLock) {
+                searchTextQueued = false
+                latestSearchText
+            }
             for (l in searchLiveTextListeners) {
-                try { l.invoke(text) } catch (e: Exception) {}
+                try { l.invoke(latest) } catch (e: Exception) {}
             }
         }
     }
@@ -1089,4 +1102,3 @@ object CarMediaManager {
         } catch (e: Exception) {}
     }
 }
-

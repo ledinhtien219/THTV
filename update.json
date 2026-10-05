@@ -1,11 +1,14 @@
 {
-  "versionCode": 203,
-  "versionName": "1.0.30",
-  "downloadUrl": "https://github.com/ledinhtien219/THTV/releases/download/v1.0.30/THTV_v1.0.30_debug.apk",
+  "versionCode": 204,
+  "versionName": "1.0.31",
+  "downloadUrl": "https://github.com/ledinhtien219/THTV/releases/download/v1.0.31/THTV_v1.0.31_debug.apk",
   "changelog": [
-    "Sửa nhận chạm bàn phím Android Auto, mở rộng vùng bấm ở mép và khoảng hở giữa phím.",
-    "Xử lý gõ nhanh trực tiếp theo từng lần chạm, giữ hỗ trợ nhấn giữ với luồng touch.",
-    "Không cho chạm hoặc scroll đi xuyên xuống web khi bàn phím mở.",
-    "Chống callback mở bàn phím trùng làm đặt lại nội dung đang nhập."
+    "Tối ưu bàn phím chữ, số/ký tự, Telex và địa chỉ web để giảm hụt phím và xử lý thừa khi gõ nhanh.",
+    "Hỗ trợ các lần chạm hai ngón tay chồng nhau; tối ưu cập nhật chữ/cursor và đồng bộ từ điện thoại.",
+    "IPTV lưu tỉ lệ riêng, giữ nguyên khi chuyển kênh, tải lại trang và quay lại từ app khác.",
+    "Bỏ đổi tỉ lệ do chạm đúp lên video; dùng nút tỉ lệ để thay đổi theo ý muốn.",
+    "Giọng nói chờ kết quả cuối, bỏ tự chốt câu tạm sau 250 ms; không tìm bằng câu chưa xác nhận khi lỗi hoặc hủy mic.",
+    "Nhận lệnh kênh tiếng Việt như VTV một, VTV ba, HTV bảy.",
+    "Thêm Xuất/Nạp cấu hình & yêu thích trong Cài đặt nâng cao, hỗ trợ file JSON và danh sách M3U cục bộ."
   ]
 }

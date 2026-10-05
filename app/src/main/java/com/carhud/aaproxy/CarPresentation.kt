@@ -287,6 +287,10 @@ class CarPresentation(
         mainHandler.post {
             searchInput.setText(query)
             searchInput.setSelection(query.length)
+            if (searchOverlayMode == "web" || searchOverlayMode == "address") {
+                executeSearch(query)
+                return@post
+            }
             if (isDashboardShowing) {
                 showWebFullscreen()
             }
@@ -643,11 +647,12 @@ class CarPresentation(
                     """.trimIndent(), null)
                 }
                 val autoResume = prefs.getBoolean(SettingsActivity.KEY_AUTO_RESUME_LAST_TRACK, true)
-                val savedAspect = prefs.getString("car_video_aspect_mode", "fill") ?: "fill"
+                val savedAspect = prefs.getString(if (web.url?.contains("iptv_player.html") == true) IptvAspectRatio.PREF else "car_video_aspect_mode", "fill") ?: "fill"
                 view.postDelayed({
+                    if (view.url != url) return@postDelayed
                     if (url.contains("iptv_player.html")) {
                         val toolbarScale = prefs.getInt(SettingsActivity.KEY_TOOLBAR_SCALE, 100).coerceIn(50, 150)
-                        view.evaluateJavascript("if (typeof window.setVideoAspectRatio === 'function') window.setVideoAspectRatio('$savedAspect');", null)
+                        view.evaluateJavascript("if (typeof window.restoreVideoAspectRatio === 'function') window.restoreVideoAspectRatio();", null)
                         view.evaluateJavascript("if (typeof window.setIptvToolbarScale === 'function') window.setIptvToolbarScale($toolbarScale);", null)
                         view.evaluateJavascript("if (typeof window.setIptvTheme === 'function') window.setIptvTheme(${if (isDay) "true" else "false"});", null)
                     } else if (isYouTube) {
@@ -1041,6 +1046,9 @@ class CarPresentation(
     fun isDayMode(): Boolean = SettingsActivity.resolveIsDay(context)
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
+        if (key == IptvAspectRatio.PREF || key == "car_keyboard_telex" ||
+            key == SettingsActivity.KEY_LAST_PLAYED_URL || key?.startsWith("car_screen_") == true ||
+            key?.startsWith("car_layout_") == true || key?.startsWith("screen_profile_") == true) return
         mainHandler.post {
             if (key == SystemVoiceModule.PREF_ENABLED) cancelSystemVoiceRequest()
             if (key == SettingsActivity.KEY_DESKTOP_MODE && currentActiveAppId == "youtube") {
@@ -1516,6 +1524,7 @@ class CarPresentation(
     }
 
     fun onUserInteraction() {
+        if (::searchOverlay.isInitialized && searchOverlay.visibility == View.VISIBLE) return
         mainHandler.post {
             showBars()
         }
@@ -1940,6 +1949,7 @@ class CarPresentation(
                     web.evaluateJavascript(
                         """
                         (function() {
+                            if (window.restoreVideoAspectRatio) window.restoreVideoAspectRatio();
                             if (window.__iptvUserPaused) return;
                             var v = document.querySelector('video');
                             if (v && v.paused) { try { if (v.muted) v.muted = false; v.play(); } catch(e){} }
@@ -2048,14 +2058,15 @@ class CarPresentation(
     private var aspectRatioOverlay: View? = null
 
     fun cycleVideoAspectRatio() {
-        val currentMode = prefs.getString("car_video_aspect_mode", "fill") ?: "fill"
+        val currentMode = prefs.getString(if (web.url?.contains("iptv_player.html") == true) IptvAspectRatio.PREF else "car_video_aspect_mode", "fill") ?: "fill"
         val nextIdx = (ASPECT_MODES.indexOf(currentMode) + 1) % ASPECT_MODES.size
         val nextMode = ASPECT_MODES[nextIdx]
         applyVideoAspectRatio(nextMode)
     }
 
     fun applyVideoAspectRatio(mode: String) {
-        prefs.edit().putString("car_video_aspect_mode", mode).apply()
+        val aspectPref = if (web.url?.contains("iptv_player.html") == true) IptvAspectRatio.PREF else "car_video_aspect_mode"
+        prefs.edit().putString(aspectPref, mode).apply()
 
         if (isDashboardShowing) {
             showWebFullscreen()
@@ -2090,7 +2101,7 @@ class CarPresentation(
         aspectRatioOverlay?.let { root.removeView(it) }
 
         val isDay = isDayMode()
-        val currentMode = prefs.getString("car_video_aspect_mode", "fill") ?: "fill"
+        val currentMode = prefs.getString(if (web.url?.contains("iptv_player.html") == true) IptvAspectRatio.PREF else "car_video_aspect_mode", "fill") ?: "fill"
 
         val overlay = FrameLayout(context).apply {
             setBackgroundColor(Color.parseColor("#99000000"))
@@ -2939,7 +2950,7 @@ class CarPresentation(
                         background = null
                         isSingleLine = true
                         imeOptions = EditorInfo.IME_ACTION_SEARCH
-                        inputType = InputType.TYPE_CLASS_TEXT
+                        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
                         isFocusableInTouchMode = true
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                             showSoftInputOnFocus = false
@@ -3067,39 +3078,9 @@ class CarPresentation(
             var isTelexEnabled = prefs.getBoolean("car_keyboard_telex", true)
             var telexBtnRef: TextView? = null
 
+            val keyboardEditor = CarKeyboardEditor(searchInput)
             fun addChar(ch: String) {
-                // Fast path: mutate the existing Editable in-place. setText() rebuilds
-                // the full text/layout and is noticeably slow on Android Auto DHU.
-                val editable = searchInput.text ?: return
-                val len = editable.length
-                val rawStart = searchInput.selectionStart.takeIf { it >= 0 } ?: len
-                val rawEnd = searchInput.selectionEnd.takeIf { it >= 0 } ?: rawStart
-                val start = minOf(rawStart, rawEnd).coerceIn(0, len)
-                val end = maxOf(rawStart, rawEnd).coerceIn(0, len)
-                val useTelex = isTelexEnabled && searchOverlayMode != "address" && ch.length == 1
-
-                if (!useTelex) {
-                    editable.replace(start, end, ch)
-                    searchInput.setSelection((start + ch.length).coerceAtMost(editable.length))
-                    return
-                }
-
-                var wordStart = start
-                while (wordStart > 0) {
-                    val prev = editable[wordStart - 1]
-                    if (prev.isWhitespace() || prev in ",.?!:;()[]{}\"'-/\\") break
-                    wordStart--
-                }
-
-                val currentWord = editable.subSequence(wordStart, start).toString()
-                val transformed = VietnameseTelexEngine.transformWord(currentWord, ch[0])
-                if (transformed != null) {
-                    editable.replace(wordStart, end, transformed)
-                    searchInput.setSelection((wordStart + transformed.length).coerceAtMost(editable.length))
-                } else {
-                    editable.replace(start, end, ch)
-                    searchInput.setSelection((start + ch.length).coerceAtMost(editable.length))
-                }
+                keyboardEditor.insert(ch, isTelexEnabled && searchOverlayMode != "address")
             }
 
             fun applyDirectTone(toneIdx: Int) {
@@ -3118,25 +3099,7 @@ class CarPresentation(
                 }
             }
 
-            fun deleteChar() {
-                val editable = searchInput.text ?: return
-                if (editable.isEmpty()) return
-                val len = editable.length
-                val rawStart = searchInput.selectionStart.takeIf { it >= 0 } ?: len
-                val rawEnd = searchInput.selectionEnd.takeIf { it >= 0 } ?: rawStart
-                val start = minOf(rawStart, rawEnd).coerceIn(0, len)
-                val end = maxOf(rawStart, rawEnd).coerceIn(0, len)
-
-                if (start != end) {
-                    editable.delete(start, end)
-                    searchInput.setSelection(start.coerceAtMost(editable.length))
-                } else if (start > 0) {
-                    // Delete one Unicode code point, not just one UTF-16 code unit.
-                    val cpStart = Character.offsetByCodePoints(editable, start, -1)
-                    editable.delete(cpStart, start)
-                    searchInput.setSelection(cpStart.coerceAtMost(editable.length))
-                }
-            }
+            fun deleteChar() = keyboardEditor.delete()
 
             fun createKey(
                 text: String,
@@ -3158,6 +3121,7 @@ class CarPresentation(
                     this.background = rounded(bg, 10f, stroke, 1)
                     isClickable = true
                     isFocusable = false
+                    isSoundEffectsEnabled = false
                     setOnClickListener { onClick() }
                     if (onLongClick != null) {
                         setOnLongClickListener {
@@ -3433,6 +3397,9 @@ class CarPresentation(
     }
 
     private fun showKeyboardOverlayInternal() {
+        autoHideHandler.removeCallbacks(hideBarsRunnable)
+        sidebarContainer?.animate()?.cancel()
+        topToolbarContainer?.animate()?.cancel()
         searchOverlay.elevation = dp(200).toFloat()
         searchOverlay.visibility = View.VISIBLE
         searchOverlay.bringToFront()

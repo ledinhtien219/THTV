@@ -126,5 +126,31 @@ class CarKeyboardLayoutTest {
         assertFalse(keyboard.clickAt(50f, 25f))
         assertEquals("", text.toString())
     }
-}
 
+    @Test fun overlappingTwoFingerTapsKeepBothCharacters() {
+        fun pointers(action: Int, ids: IntArray, xs: FloatArray) {
+            val props = ids.map { id -> MotionEvent.PointerProperties().apply {
+                this.id = id
+                toolType = MotionEvent.TOOL_TYPE_FINGER
+            } }.toTypedArray()
+            val coords = xs.map { x -> MotionEvent.PointerCoords().apply {
+                this.x = x
+                y = 25f
+                pressure = 1f
+                size = 1f
+            } }.toTypedArray()
+            val event = MotionEvent.obtain(0, 10, action, ids.size, props, coords,
+                0, 0, 1f, 1f, 0, 0, android.view.InputDevice.SOURCE_TOUCHSCREEN, 0)
+            keyboard.dispatchTouchEvent(event)
+            event.recycle()
+        }
+        repeat(50) {
+            pointers(MotionEvent.ACTION_DOWN, intArrayOf(0), floatArrayOf(50f))
+            pointers(MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT),
+                intArrayOf(0, 1), floatArrayOf(50f, 150f))
+            pointers(MotionEvent.ACTION_POINTER_UP, intArrayOf(0, 1), floatArrayOf(50f, 150f))
+            pointers(MotionEvent.ACTION_UP, intArrayOf(1), floatArrayOf(150f))
+        }
+        assertEquals("QW".repeat(50), text.toString())
+    }
+}

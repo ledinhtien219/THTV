@@ -22,17 +22,10 @@ object TvVoiceHelper {
     )
 
     fun parse(rawQuery: String): TvCommand? {
-        val q = rawQuery.trim().lowercase()
-
-        // 1. General TV opening
-        for (kw in GENERAL_TV_KEYWORDS) {
-            if (q == kw || q.startsWith("$kw ") || q.endsWith(" $kw")) {
-                return TvCommand(isTvCommand = true, channelTarget = "")
-            }
-        }
+        val q = normalizeSpokenChannels(rawQuery.trim().lowercase())
 
         // 2. Specific channel pattern
-        val match = CHANNEL_PATTERN.find(rawQuery)
+        val match = CHANNEL_PATTERN.find(q)
         if (match != null) {
             val matchedGroup = match.groupValues[1].trim()
             val normalized = normalizeChannelName(matchedGroup)
@@ -43,14 +36,30 @@ object TvVoiceHelper {
 
         // 3. Standalone channel name (e.g. "vtv1", "vtv 3", "htv7")
         val standaloneRegex = Regex("""^(?:kênh\s+)?(vtv\s*\d+|htv\s*\d+|thvl\s*\d+|vtc\s*\d+|k\+\s*\d+)$""", RegexOption.IGNORE_CASE)
-        val standaloneMatch = standaloneRegex.find(rawQuery.trim())
+        val standaloneMatch = standaloneRegex.find(q)
         if (standaloneMatch != null) {
             val group = standaloneMatch.groupValues[1].trim()
             val normalized = normalizeChannelName(group)
             return TvCommand(isTvCommand = true, channelTarget = normalized)
         }
 
+        for (kw in GENERAL_TV_KEYWORDS) {
+            if (q == kw || q.startsWith("$kw ") || q.endsWith(" $kw")) {
+                return TvCommand(isTvCommand = true, channelTarget = "")
+            }
+        }
         return null
+    }
+
+    private fun normalizeSpokenChannels(query: String): String {
+        var text = query.replace(Regex("""\b(?:vê\s+tê\s+vê|v\s+t\s+v)\b"""), "vtv")
+            .replace(Regex("""\b(?:hát\s+tê\s+vê|h\s+t\s+v)\b"""), "htv")
+        val digits = mapOf("một" to "1", "hai" to "2", "ba" to "3", "bốn" to "4", "tư" to "4",
+            "năm" to "5", "sáu" to "6", "bảy" to "7", "tám" to "8", "chín" to "9")
+        text = text.replace(Regex("""\b(vtv|htv|htvc|vtc|thvl)\s+(một|hai|ba|bốn|tư|năm|sáu|bảy|tám|chín)\b""")) {
+            it.groupValues[1] + digits.getValue(it.groupValues[2])
+        }
+        return text
     }
 
     fun normalizeChannelName(raw: String): String {

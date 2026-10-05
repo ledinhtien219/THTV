@@ -98,9 +98,8 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
     }
 
     override fun onClick(x: Float, y: Float) {
-        handler.post {
-            presentation?.dispatchTouch(x, y)
-        }
+        if (Looper.myLooper() == handler.looper) presentation?.dispatchTouch(x, y)
+        else handler.post { presentation?.dispatchTouch(x, y) }
     }
 
     override fun onScroll(distanceX: Float, distanceY: Float) {
@@ -198,7 +197,3 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
             .build()
     }
 }
-
-
-
-

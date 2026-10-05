@@ -27,8 +27,21 @@ object ChangelogManager {
 
     val RELEASE_NOTES = listOf(
         ReleaseNote(
-            versionName = "1.0.30",
+            versionName = "1.0.31",
             releaseDate = "Mới nhất",
+            features = listOf(
+                "⌨️ Tối ưu mọi chế độ bàn phím: tính sẵn vùng phím, giảm cấp phát và cập nhật UI thừa khi gõ nhanh.",
+                "✌️ Nhận chạm hai ngón tay chồng nhau; gom thao tác nhập/cursor và đồng bộ chữ từ điện thoại.",
+                "📺 IPTV nhớ tỉ lệ riêng khi đổi kênh, tải lại trang hoặc quay lại từ app khác.",
+                "🔒 Bỏ đổi tỉ lệ do chạm đúp; chỉ nút chọn tỉ lệ mới thay đổi chế độ hiển thị.",
+                "🎙️ Giọng nói chờ câu nhận diện cuối, bỏ tự chốt sau 250 ms và ngắt câu quá sớm; chặn kết quả cũ sau khi hủy mic.",
+                "📺 Hiểu tên kênh nói bằng tiếng Việt như VTV một, VTV ba, HTV bảy.",
+                "💾 Xuất/nạp cấu hình JSON trong Cài đặt nâng cao: giao diện, HUD, phím vô lăng, ứng dụng, kênh yêu thích và M3U cục bộ."
+            )
+        ),
+        ReleaseNote(
+            versionName = "1.0.30",
+            releaseDate = "Trước đó",
             features = listOf(
                 "⌨️ Sửa nhận chạm bàn phím Android Auto: phím có vùng bấm rộng hơn, dùng tọa độ trong keyboard thay vì vị trí toàn màn hình.",
                 "⚡ Gõ nhanh được xử lý trực tiếp từng lần chạm; giữ hỗ trợ nhấn giữ trên màn hình có luồng touch.",

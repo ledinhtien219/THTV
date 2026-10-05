@@ -143,6 +143,11 @@ object IptvManager {
         return emptyList()
     }
 
+    internal fun invalidateCache(context: Context) {
+        cachedChannels = emptyList()
+        File(context.cacheDir, "iptv_channels.json").delete()
+    }
+
     fun getCachedJson(context: Context): String {
         val list = getCachedChannelsList(context)
         val arr = JSONArray()

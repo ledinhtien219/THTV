@@ -2184,6 +2184,10 @@ object YouTubePlayerHelper {
      * - '21:9': Ultrawide car display ratio
      */
     fun setVideoAspectRatio(view: WebView?, mode: String) {
+        if (view?.url?.contains("iptv_player.html") == true) {
+            view.evaluateJavascript("if (window.restoreVideoAspectRatio) window.restoreVideoAspectRatio();", null)
+            return
+        }
         val js = """
             (function() {
                 var m = '$mode';
@@ -2232,5 +2236,3 @@ object YouTubePlayerHelper {
         } catch (e: Exception) {}
     }
 }
-
-

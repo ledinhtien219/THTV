@@ -824,6 +824,7 @@
     </div>
   </div>
 
+  <script src="iptv_aspect.js"></script>
   <script>
     // 1. Spoof Page Visibility & Focus so IPTV background playback NEVER pauses
     try {
@@ -1081,22 +1082,12 @@
     }
 
     const FIT_MODES = ['fill', 'contain', 'cover', '4:3', '21:9'];
-    let currentFitMode = localStorage.getItem('iptv_fit_mode') || 'fill';
+    let currentFitMode = window.ThtvIptvFit.read();
 
-    function applyFitMode(mode) {
+    function applyFitMode(mode, persist = true) {
+      if (!window.ThtvIptvFit.apply(mode, persist)) return;
       currentFitMode = mode;
-      localStorage.setItem('iptv_fit_mode', mode);
-      const v = document.getElementById('videoPlayer');
       const btn = document.getElementById('btnToggleFit');
-      if (!v) return;
-      v.classList.remove('fit-contain', 'fit-cover', 'fit-fill', 'fit-4-3', 'fit-21-9');
-      if (mode === '4:3') {
-        v.classList.add('fit-4-3');
-      } else if (mode === '21:9') {
-        v.classList.add('fit-21-9');
-      } else {
-        v.classList.add('fit-' + mode);
-      }
       if (btn) {
         if (mode === 'fill') {
           btn.style.color = '#00E5FF';
@@ -1119,7 +1110,7 @@
 
     function toggleVideoFit(e) {
       if (e) e.stopPropagation();
-      const nextIdx = (FIT_MODES.indexOf(currentFitMode) + 1) % FIT_MODES.length;
+      const nextIdx = (FIT_MODES.indexOf(window.ThtvIptvFit.mode) + 1) % FIT_MODES.length;
       const nextMode = FIT_MODES[nextIdx];
       applyFitMode(nextMode);
       if (nextMode === 'fill') {
@@ -1169,7 +1160,6 @@
         // launch a competing play() while HLS attaches the new source.
       });
     }
-    let lastTapTime = 0;
     const playerSection = document.getElementById('playerSection');
     const touchWakeLayer = document.getElementById('iptvTouchWakeLayer');
 
@@ -1193,14 +1183,6 @@
         if (e.target.closest('.btn-fs') || e.target.closest('#btnShowChannels') || e.target.closest('.badge-live') || e.target.closest('.iptv-dock-bar') || e.target.closest('#iptvQuickMenu')) {
           return;
         }
-        const now = Date.now();
-        if (now - lastTapTime < 350) {
-          toggleVideoFit(e);
-          lastTapTime = 0;
-          return;
-        }
-        lastTapTime = now;
-
         // Touching the video always reveals the toolbar. If the channel panel
         // is open, close only the panel and keep the toolbar visible.
         showControlsOnly();
@@ -1221,7 +1203,6 @@
     function handleVideoAspectRatio(mode) {
       if (mode === 'split' || mode === 'channels') {
         showControlsOnly();
-        applyFitMode('fill');
         showToast('📺 Danh sách kênh mở bằng nút Kênh TV');
         return;
       }
@@ -1246,6 +1227,9 @@
     window.toggleVideoFit = toggleVideoFit;
     window.setFitMode = handleVideoAspectRatio;
     window.setVideoAspectRatio = handleVideoAspectRatio;
+    window.restoreVideoAspectRatio = function() {
+      applyFitMode(window.ThtvIptvFit.restore(), false);
+    };
     window.hideChannelsAndControls = hideChannelsAndControls;
     window.showChannelsAndControls = showChannelsAndControls;
 
@@ -1662,6 +1646,7 @@
 
     function playStream(channel, el) {
       if (!channel) return;
+      window.restoreVideoAspectRatio();
       iptvPlaybackGeneration++;
       iptvPlayPending = false;
       window.userPaused = false;
