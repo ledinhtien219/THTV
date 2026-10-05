@@ -76,7 +76,9 @@ function getOrCreateSheet() {
       "HUD",
       "Screen ID",
       "Đồng Bộ Màn Hình",
-      "Số Lần Sync"
+      "Số Lần Sync",
+      "Layout Dùng",
+      "Layout Class"
     ];
     sheet.appendRow(headers);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#0284C7").setFontColor("#FFFFFF");
@@ -146,7 +148,9 @@ function ensureScreenProfileColumns(sheet) {
     "HUD",
     "Screen ID",
     "Đồng Bộ Màn Hình",
-    "Số Lần Sync"
+    "Số Lần Sync",
+    "Layout Dùng",
+    "Layout Class"
   ];
 
   // K = 11, ghi tiêu đề K:Y. Không đụng vào A:J hiện có.
@@ -189,6 +193,8 @@ function ensureScreenProfileColumns(sheet) {
  * W Screen ID
  * X Đồng Bộ Màn Hình
  * Y Số Lần Sync
+ * Z Layout Dùng
+ * AA Layout Class
  */
 function handleScreenProfile(data) {
   const deviceId = String(data.deviceId || "").trim().toUpperCase();
@@ -303,7 +309,11 @@ function handleScreenProfile(data) {
     hudText,                             // V
     String(data.screenSignature || ""),  // W
     nowStr,                              // X
-    syncCount                            // Y
+    syncCount,                           // Y
+    (Number(data.layoutWidth || 0) > 0 && Number(data.layoutHeight || 0) > 0)
+      ? Number(data.layoutWidth) + " × " + Number(data.layoutHeight)
+      : "",                              // Z
+    String(data.layoutClass || "")       // AA
   ]];
 
   sheet.getRange(rowIndex, 11, 1, screenValues[0].length).setValues(screenValues);
