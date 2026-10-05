@@ -461,6 +461,13 @@ class MainActivity : AppCompatActivity() {
 
         // Hiển thị nhật ký cập nhật phiên bản mới khi vừa cập nhật app
         ChangelogManager.checkAndShowChangelog(this)
+
+        // Kiểm tra bản mới từ Google Apps Script. Chạy trễ nhẹ để không chồng
+        // lên popup changelog của phiên bản vừa cài.
+        window.decorView.postDelayed({
+            AppUpdateManager.checkForUpdate(this)
+        }, 1600L)
+
         startMediaObserver()
         loadQuickChannels()
     }
