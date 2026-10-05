@@ -6,6 +6,6 @@
     "Voice Recognition v2: mở mic nhanh hơn nhờ giữ bộ nhận dạng luôn sẵn sàng.",
     "Tối ưu tiếng Việt bằng nhiều candidate + confidence thay vì luôn lấy kết quả đầu tiên.",
     "Ưu tiên đúng tên kênh VTV/HTV/VTC/THVL/K+ và kênh IPTV tùy chỉnh.",
-    "Tự bias theo ngữ cảnh ứng dụng và làm sạch câu lệnh trước khi tìm YouTube."
+    "Tự bias theo ngữ cảnh ứng dụng; lệnh YouTube bằng giọng nói sẽ tự mở và phát kết quả đầu tiên phù hợp."
   ]
 }
