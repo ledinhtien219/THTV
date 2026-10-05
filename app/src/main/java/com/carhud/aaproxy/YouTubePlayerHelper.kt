@@ -14,8 +14,16 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import java.io.ByteArrayInputStream
 import java.net.URLEncoder
+import java.util.concurrent.atomic.AtomicLong
 
 object YouTubePlayerHelper {
+
+    /**
+     * Every explicit search gets a generation. A manual keyboard search bumps
+     * this counter and invalidates delayed "play first result" jobs left by an
+     * older voice command.
+     */
+    private val searchGeneration = AtomicLong(0L)
 
     private val JS_CAR_SEARCH_HOME = """
         (function initSearchHome() {
@@ -2024,6 +2032,8 @@ object YouTubePlayerHelper {
         val cleanQuery = query.trim()
         if (cleanQuery.isEmpty()) return
 
+        val generation = searchGeneration.incrementAndGet()
+
         view.post {
             try {
                 val encoded = URLEncoder.encode(cleanQuery, "UTF-8")
@@ -2032,6 +2042,16 @@ object YouTubePlayerHelper {
 
                 val curUrl = view.url.orEmpty()
                 val isAlreadyOnYouTube = curUrl.contains("youtube.com") || curUrl.contains("youtu.be")
+
+                if (!autoPlayFirst) {
+                    // Typed/manual search must never inherit a voice auto-play flag.
+                    try {
+                        view.evaluateJavascript(
+                            "try { sessionStorage.removeItem('carhud_auto_play'); window.__carhudVoiceAutoPlay = false; } catch(e) {}",
+                            null
+                        )
+                    } catch (_: Exception) {}
+                }
 
                 if (autoPlayFirst && isAlreadyOnYouTube) {
                     try {
@@ -2103,7 +2123,7 @@ object YouTubePlayerHelper {
                 }
 
                 if (autoPlayFirst) {
-                    scheduleAutoPlayFirstSearchResult(view)
+                    scheduleAutoPlayFirstSearchResult(view, generation)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -2111,7 +2131,17 @@ object YouTubePlayerHelper {
         }
     }
 
-    private fun scheduleAutoPlayFirstSearchResult(view: WebView) {
+    fun cancelSearchAutoPlay(view: WebView?) {
+        searchGeneration.incrementAndGet()
+        try {
+            view?.evaluateJavascript(
+                "try { sessionStorage.removeItem('carhud_auto_play'); window.__carhudVoiceAutoPlay = false; } catch(e) {}",
+                null
+            )
+        } catch (_: Exception) {}
+    }
+
+    private fun scheduleAutoPlayFirstSearchResult(view: WebView, generation: Long) {
         val js = """
             (function() {
                 try {
@@ -2140,6 +2170,7 @@ object YouTubePlayerHelper {
 
         longArrayOf(650L, 1200L, 2100L, 3200L).forEach { delay ->
             view.postDelayed({
+                if (searchGeneration.get() != generation) return@postDelayed
                 try {
                     view.evaluateJavascript(js, null)
                 } catch (_: Exception) {}
