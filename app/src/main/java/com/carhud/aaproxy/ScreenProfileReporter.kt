@@ -80,6 +80,9 @@ object ScreenProfileReporter {
         val hudStyleId: Int,
         val hudScale: Int,
         val hudOpacity: Int,
+        val layoutWidth: Int,
+        val layoutHeight: Int,
+        val layoutClass: String,
         val screenSignature: String
     ) {
         fun toJson(): JSONObject = JSONObject().apply {
@@ -120,6 +123,9 @@ object ScreenProfileReporter {
             put("hudStyleId", hudStyleId)
             put("hudScale", hudScale)
             put("hudOpacity", hudOpacity)
+            put("layoutWidth", layoutWidth)
+            put("layoutHeight", layoutHeight)
+            put("layoutClass", layoutClass)
             put("screenSignature", screenSignature)
         }
 
@@ -163,6 +169,10 @@ object ScreenProfileReporter {
 
         val phone = appContext.resources.displayMetrics
         val deviceId = LicenseManager.getDeviceId(appContext)
+        val settingsPrefs = appContext.getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
+        val layoutWidth = settingsPrefs.getInt("car_layout_width", usableWidth)
+        val layoutHeight = settingsPrefs.getInt("car_layout_height", usableHeight)
+        val layoutClass = settingsPrefs.getString("car_layout_class", formFactor) ?: formFactor
 
         val signatureInput = listOf(
             carWidth,
@@ -211,6 +221,9 @@ object ScreenProfileReporter {
             hudStyleId = WazeHudManager.getActiveStyleId(appContext),
             hudScale = WazeHudManager.getScale(appContext),
             hudOpacity = WazeHudManager.getOpacity(appContext),
+            layoutWidth = layoutWidth,
+            layoutHeight = layoutHeight,
+            layoutClass = layoutClass,
             screenSignature = signature
         )
 
@@ -248,6 +261,10 @@ object ScreenProfileReporter {
         val phone = appContext.resources.displayMetrics
         val signature = settings.getString("car_screen_signature", null)
             ?: sha256Short("$w|$h|$dpi|$usableW|$usableH|$webW|$webH")
+        val layoutW = settings.getInt("car_layout_width", usableW)
+        val layoutH = settings.getInt("car_layout_height", usableH)
+        val layoutClass = settings.getString("car_layout_class", classifyFormFactor(ratio))
+            ?: classifyFormFactor(ratio)
 
         val profile = Profile(
             deviceId = LicenseManager.getDeviceId(appContext),
@@ -282,6 +299,9 @@ object ScreenProfileReporter {
             hudStyleId = WazeHudManager.getActiveStyleId(appContext),
             hudScale = WazeHudManager.getScale(appContext),
             hudOpacity = WazeHudManager.getOpacity(appContext),
+            layoutWidth = layoutW,
+            layoutHeight = layoutH,
+            layoutClass = layoutClass,
             screenSignature = signature
         )
         maybeSync(appContext, profile, force)
