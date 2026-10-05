@@ -1851,7 +1851,19 @@ class CarPresentation(
         }
     }
 
-    private fun isBrowserApp(): Boolean = currentActiveAppId != "youtube" && currentActiveAppId != "iptv"
+    private fun isBrowserApp(): Boolean {
+        if (currentActiveAppId != "youtube" && currentActiveAppId != "iptv") return true
+
+        // The persistent WebView can outlive/recreate the Presentation. During
+        // that handoff the stored app id can briefly be stale. Trust the actual
+        // page too, so a visible Google/browser page can never be treated as
+        // YouTube just because currentActiveAppId still says "youtube".
+        val url = web.url.orEmpty()
+        if (url.isBlank() || url == "about:blank") return false
+        val isYoutubePage = url.contains("youtube.com", true) || url.contains("youtu.be", true)
+        val isIptvPage = url.contains("iptv_player.html", true)
+        return !isYoutubePage && !isIptvPage
+    }
 
     fun switchWebApp(app: WebAppItem, embedded: Boolean = false, startUrl: String? = null) {
         hideVideoQualityMenu()
