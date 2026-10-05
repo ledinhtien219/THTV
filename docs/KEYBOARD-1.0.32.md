@@ -6,4 +6,8 @@ Mặc định nhập bằng SearchTemplate của Android Auto với setShowKeybo
 
 CarInputSession giữ nguyên nội dung, snapshot thưa vẫn không mất chữ, submit cuối ưu tiên hơn preview cũ, chặn gửi trùng, giữ draft khi Back, cho phép xóa trống field web. Destination được chụp lúc mở (YouTube / địa chỉ / field web + URL hiện tại). Submit web chờ JS trả OK rồi mới pop screen, không tự tìm YouTube do mode trên Presentation mới. Callback của Presentation đã dismiss được unregister để không nhân đôi listener.
 
-Unit tests: hàng nghìn snapshot nhanh, chữ Việt/số/URL/ký tự, paste/delete, chuỗi final mới hơn preview, submit trùng, lỗi thử lại/hủy/kết quả muộn. Device test APK: CarHostKeyboardTest chạy trên emulator nối DHU, yêu cầu THTV đang mở; gửi 108 ký tự qua input connection của host và so sánh chuỗi submit. Build test APK không đồng nghĩa test đã chạy trên DHU; chỉ ghi PASS thiết bị khi thực sự chạy và có assertion thành công.
+Unit tests: hàng nghìn snapshot nhanh, chữ Việt/số/URL/ký tự, paste/delete, chuỗi final mới hơn preview, submit trùng, lỗi thử lại/hủy/kết quả muộn. Workflow 37277225856 đã PASS testDebugUnitTest, kiểm thử IPTV và build APK/app test APK.
+
+Đã cài đè APK Build 205 lên emulator-5554 thành công. Chứng chỉ SHA-256 của APK 1.0.32 khớp bản 1.0.27: dbdb9e695d351e19899e17d9fd9258b11f9cc24ab6df386c21c138d5a70a3de2. Host Android Auto đã nhận SearchTemplate và screenshot xác nhận màn hình nhập mới hiển thị.
+
+CarHostKeyboardTest chưa PASS trên DHU: lệnh ADB input text/keyevent không đưa được chuỗi vào bàn phím projected host, assertion hết thời gian chờ submit. Không coi phép thử này là bằng chứng gõ nhanh thành công. Cần thay bước injection bằng tap qua CLI Desktop Head Unit và kiểm tra chuỗi cuối; Windows đang từ chối truy cập/chạy CLI SDK trong phiên này dù đã cấp quyền. Không suy diễn rằng GhostActivity có input connection tương đương bàn phím host.
