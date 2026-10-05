@@ -883,6 +883,16 @@ class SettingsActivity : AppCompatActivity() {
                 content.addView(createSwitchRow("Nút Tỷ lệ khung hình (⤢)", "Chọn tỷ lệ hiển thị YouTube & IPTV (Tràn viền, 16:9, Phóng to...)", KEY_SHOW_TV, true))
                 content.addView(createSwitchRow("Nút Giao diện Sáng / Tối (☀️/🌙)", "Chuyển nhanh chế độ Ngày / Đêm", KEY_SHOW_DAY_NIGHT, true))
                 content.addView(createSwitchRow("Nút Bàn phím Web (⌨️)", "Hiện bàn phím trên Android Auto khi dùng Trình duyệt Web", KEY_SHOW_KEYBOARD_SEARCH, true))
+                content.addView(settingCard(
+                    title = "BÀN PHÍM NHẬP TRÊN XE",
+                    subtitle = "Android Auto nhận chữ trực tiếp để gõ nhanh; bàn phím THTV dùng chạm trên màn hình.",
+                    badgeText = if (prefs.getString("car_keyboard_input_mode", "native") == "thtv") "THTV" else "Android Auto",
+                    onClick = {
+                        choose("Chọn bàn phím trên xe",
+                            arrayOf("Android Auto (Khuyên dùng để gõ nhanh)", "Bàn phím THTV"),
+                            arrayOf("native", "thtv"), "car_keyboard_input_mode")
+                    }
+                ))
                 content.addView(createSwitchRow("Nút Tìm kiếm giọng nói (🎙️)", "Kích hoạt micro nói tên bài hát / kênh", KEY_SHOW_VOICE_SEARCH, true))
             }
         )

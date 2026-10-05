@@ -21,6 +21,7 @@ object SettingsBackupManager {
             "auto_resume_last_track" to "Boolean",
             "background_audio_enabled" to "Boolean",
             "car_keyboard_telex" to "Boolean",
+            "car_keyboard_input_mode" to "String",
             "car_video_aspect_mode" to "String",
             "carhud_day_mode" to "Boolean",
             "carhud_theme_mode" to "String",
@@ -244,6 +245,7 @@ object SettingsBackupManager {
 
     private fun validateString(key: String, value: String) {
         val choices = when (key) {
+            "car_keyboard_input_mode" -> setOf("native", "thtv")
             "iptv_video_aspect_mode", "car_video_aspect_mode" -> setOf("fill", "contain", "cover", "4:3", "21:9")
             "carhud_theme_mode", "pref_phone_theme_mode" -> setOf("auto", "day", "night", "dark", "light", "system")
             "toolbar_position" -> setOf("auto", "left", "right", "bottom")

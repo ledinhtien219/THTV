@@ -2797,7 +2797,7 @@ class CarPresentation(
         }
     }
 
-    private fun executeSearch(query: String) {
+    private fun executeSearch(query: String, broadcast: Boolean = true) {
         if (searchOverlayMode == "address" && isBrowserApp()) {
             navigateBrowser(query)
             return
@@ -2817,12 +2817,12 @@ class CarPresentation(
             showWebFullscreen()
         }
         YouTubePlayerHelper.search(web, q)
-        CarMediaManager.submitSearchQuery(q)
+        if (broadcast) CarMediaManager.submitSearchQuery(q)
         hideSearchOverlay()
     }
 
-    private fun submitWebKeyboardText(value: String) {
-        if (webInputSubmissionPending) return
+    private fun submitWebKeyboardText(value: String, onComplete: ((Boolean) -> Unit)? = null) {
+        if (webInputSubmissionPending) { onComplete?.invoke(false); return }
         webInputSubmissionPending = true
         val quoted = org.json.JSONObject.quote(value)
         val js = """
@@ -2870,10 +2870,12 @@ class CarPresentation(
                 val noTarget = result == null || result.contains("NO_TARGET") || result.contains("ERROR")
                 if (noTarget) {
                     searchInput.error = "Ô nhập đã thay đổi. Chạm lại ô trên trang để nhập tiếp."
+                    onComplete?.invoke(false)
                     return@post
                 }
                 webKeyboardTargetPending = false
                 hideSearchOverlay()
+                onComplete?.invoke(true)
             }
         }
     }
@@ -3304,7 +3306,12 @@ class CarPresentation(
                     addView(spaceKey)
 
                     // Search Action Button
-                    val searchActionKey = createKey("🔍 TÌM KIẾM", 2.1f, bg = Color.parseColor("#0284C7"), stroke = Color.parseColor("#38BDF8"), textColor = Color.WHITE, textSize = 13.5f) {
+                    val actionText = when (searchOverlayMode) {
+                        "web" -> "↵ NHẬP / MỞ"
+                        "address" -> "TÌM KIẾM / ĐI →"
+                        else -> "🔍 TÌM KIẾM"
+                    }
+                    val searchActionKey = createKey(actionText, 2.1f, bg = Color.parseColor("#0284C7"), stroke = Color.parseColor("#38BDF8"), textColor = Color.WHITE, textSize = 13.5f) {
                         executeSearch(searchInput.text.toString())
                     }
                     keyboardActionKey = searchActionKey
@@ -3397,6 +3404,39 @@ class CarPresentation(
     }
 
     private fun showKeyboardOverlayInternal() {
+        if (prefs.getString("car_keyboard_input_mode", "native") != "thtv") {
+            val mode = searchOverlayMode
+            val page = web.url
+            val input = CarInputSession(
+                initialText = searchInput.text.toString(),
+                hint = searchInput.hint.toString(),
+                allowEmpty = mode == "web",
+                onSubmit = { value, complete ->
+                    // Keep the destination captured when opening the keyboard; a later
+                    // Presentation or phone search must not turn web input into YouTube.
+                    when (mode) {
+                        "web" -> {
+                            if (web.url != page) complete(false)
+                            else submitWebKeyboardText(value, complete)
+                        }
+                        "address" -> {
+                            val target = BrowserNavigation.targetFor(value)
+                            if (target == null) complete(false)
+                            else { web.loadUrl(target); complete(true) }
+                        }
+                        else -> {
+                            executeSearch(value, broadcast = false)
+                            complete(true)
+                        }
+                    }
+                },
+                onCancel = { value ->
+                    searchInput.setText(value)
+                    searchInput.setSelection(value.length)
+                }
+            )
+            if (CarMediaManager.requestCarNativeSearch(input)) return
+        }
         autoHideHandler.removeCallbacks(hideBarsRunnable)
         sidebarContainer?.animate()?.cancel()
         topToolbarContainer?.animate()?.cancel()
@@ -3800,6 +3840,7 @@ class CarPresentation(
     override fun dismiss() {
         cancelSystemVoiceRequest()
         SystemVoiceModule.detach(systemVoiceReceiver)
+        detachInputCallbacks()
         try {
             (web.parent as? ViewGroup)?.removeView(web)
         } catch(e: Exception) {}
@@ -3809,15 +3850,7 @@ class CarPresentation(
     fun destroyWeb() {
         cancelSystemVoiceRequest()
         SystemVoiceModule.detach(systemVoiceReceiver)
-        try {
-            hudPrefs.unregisterOnSharedPreferenceChangeListener(hudPrefsListener)
-        } catch (e: Exception) {}
-        prefs.unregisterOnSharedPreferenceChangeListener(this)
-        voiceManager.stop()
-        CarMediaManager.unregisterVoiceListener(voiceListener)
-        CarMediaManager.unregisterSearchQueryListener(searchQueryListener)
-        CarMediaManager.unregisterSearchDismissListener(searchDismissListener)
-        CarMediaManager.unregisterSearchLiveTextListener(searchLiveTextListener)
+        detachInputCallbacks()
         try {
             web.webChromeClient?.onHideCustomView()
             web.evaluateJavascript("try { document.exitFullscreen(); } catch(e) {}", null)
@@ -3825,6 +3858,20 @@ class CarPresentation(
         CarMediaManager.unregisterCarWebView(web)
         web.stopLoading()
         web.destroy()
+    }
+
+    private var inputCallbacksDetached = false
+    private fun detachInputCallbacks() {
+        if (inputCallbacksDetached) return
+        inputCallbacksDetached = true
+        voiceManager.stop()
+        if (CarMediaManager.activeVoiceManager === voiceManager) CarMediaManager.activeVoiceManager = null
+        CarMediaManager.unregisterVoiceListener(voiceListener)
+        CarMediaManager.unregisterSearchQueryListener(searchQueryListener)
+        CarMediaManager.unregisterSearchDismissListener(searchDismissListener)
+        CarMediaManager.unregisterSearchLiveTextListener(searchLiveTextListener)
+        prefs.unregisterOnSharedPreferenceChangeListener(this)
+        hudPrefs.unregisterOnSharedPreferenceChangeListener(hudPrefsListener)
     }
 
     private fun rounded(fill: Int, radiusDp: Float, stroke: Int, strokeDp: Int): GradientDrawable {

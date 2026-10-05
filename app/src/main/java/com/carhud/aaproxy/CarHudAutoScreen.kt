@@ -26,11 +26,18 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
     private var carSurface: Surface? = null
     private val handler = Handler(Looper.getMainLooper())
 
-    private val nativeSearchListener: (String) -> Unit = { query ->
+    private var nativeInput: CarInputSession? = null
+    private val nativeSearchListener: (CarInputSession) -> Unit = { input ->
         handler.post {
             try {
-                screenManager.push(CarSearchScreen(carContext, query))
+                if (nativeInput?.closed == false) {
+                    input.cancel()
+                } else {
+                    nativeInput = input
+                    screenManager.push(CarSearchScreen(carContext, input))
+                }
             } catch (e: Exception) {
+                input.cancel()
                 e.printStackTrace()
             }
         }
@@ -51,6 +58,7 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
 
         lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onDestroy(owner: LifecycleOwner) {
+                nativeInput?.cancel()
                 CarMediaManager.unregisterCarNativeSearchListener(nativeSearchListener)
                 fullCleanup()
             }

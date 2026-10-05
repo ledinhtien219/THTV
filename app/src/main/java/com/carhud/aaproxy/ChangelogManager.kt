@@ -27,8 +27,18 @@ object ChangelogManager {
 
     val RELEASE_NOTES = listOf(
         ReleaseNote(
-            versionName = "1.0.31",
+            versionName = "1.0.32",
             releaseDate = "Mới nhất",
+            features = listOf(
+                "⌨️ Nhập trên xe mặc định dùng bàn phím Android Auto, nhận chuỗi chữ trực tiếp để tránh hụt phím do cử chỉ Surface khi gõ nhanh.",
+                "🌐 Áp dụng cho tìm YouTube, tìm/nhập địa chỉ web và ô nhập trên trang; giữ đúng nơi nhận nội dung.",
+                "🔁 Giữ đầy đủ chuỗi cuối, chữ tiếng Việt, dán/xóa; chặn gửi trùng khi nhấn Enter và nút Nhập liên tiếp.",
+                "⚙️ Có thể chọn lại bàn phím THTV trong Cài đặt; dọn listener của màn hình cũ khi Android Auto tạo lại giao diện."
+            )
+        ),
+        ReleaseNote(
+            versionName = "1.0.31",
+            releaseDate = "Trước đó",
             features = listOf(
                 "⌨️ Tối ưu mọi chế độ bàn phím: tính sẵn vùng phím, giảm cấp phát và cập nhật UI thừa khi gõ nhanh.",
                 "✌️ Nhận chạm hai ngón tay chồng nhau; gom thao tác nhập/cursor và đồng bộ chữ từ điện thoại.",

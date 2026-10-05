@@ -948,7 +948,7 @@ object CarMediaManager {
     private val searchTextLock = Any()
     private var latestSearchText = ""
     private var searchTextQueued = false
-    private val carNativeSearchListeners = java.util.concurrent.CopyOnWriteArraySet<(String) -> Unit>()
+    private val carNativeSearchListeners = java.util.concurrent.CopyOnWriteArraySet<(CarInputSession) -> Unit>()
 
     fun registerSearchRequestListener(listener: (String) -> Unit) {
         searchRequestListeners.add(listener)
@@ -1023,20 +1023,22 @@ object CarMediaManager {
         }
     }
 
-    fun registerCarNativeSearchListener(listener: (String) -> Unit) {
+    fun registerCarNativeSearchListener(listener: (CarInputSession) -> Unit) {
         carNativeSearchListeners.add(listener)
     }
 
-    fun unregisterCarNativeSearchListener(listener: (String) -> Unit) {
+    fun unregisterCarNativeSearchListener(listener: (CarInputSession) -> Unit) {
         carNativeSearchListeners.remove(listener)
     }
 
-    fun requestCarNativeSearch(query: String = "") {
+    fun requestCarNativeSearch(input: CarInputSession): Boolean {
+        if (carNativeSearchListeners.isEmpty()) return false
         mainHandler.post {
             for (l in carNativeSearchListeners) {
-                try { l.invoke(query) } catch (e: Exception) {}
+                try { l.invoke(input) } catch (_: Exception) { input.cancel() }
             }
         }
+        return true
     }
 
     fun launchPhoneSearchActivity(context: Context, query: String = "") {

@@ -12,8 +12,8 @@ android {
         applicationId = "com.tcar.auto"
         minSdk = 29
         targetSdk = 35
-        versionCode = 204
-        versionName = "1.0.31"
+        versionCode = 205
+        versionName = "1.0.32"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -89,6 +89,8 @@ android {
 }
 
 dependencies {
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.14.1")
     implementation("androidx.media:media:1.7.0")
