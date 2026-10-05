@@ -47,6 +47,11 @@ object UpdateNotificationManager {
                         require(!source.request(64 * 1024L + 1)) { "Metadata too large" }
                         val text = source.readUtf8()
                         val json = JSONObject(text)
+                        val channel = json.optString("channel", "").trim().lowercase()
+                        val approved = json.optBoolean("approved", false)
+                        require(channel == "stable" && approved) {
+                            "Update manifest is not an approved stable release"
+                        }
                         val code = json.getInt("versionCode")
                         val name = json.getString("versionName").trim()
                         val url = json.getString("downloadUrl")
