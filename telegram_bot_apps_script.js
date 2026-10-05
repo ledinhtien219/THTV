@@ -14,7 +14,6 @@
 const TELEGRAM_BOT_TOKEN = "ĐIỀN_BOT_TOKEN_TỪ_BOTFATHER_VÀO_ĐÂY"; // Ví dụ: "7123456789:AAHxxxxxx..."
 const TELEGRAM_ADMIN_CHAT_ID = "ĐIỀN_CHAT_ID_CỦA_BẠN_VÀO_ĐÂY"; // Ví dụ: "123456789"
 const SHEET_NAME = "Licenses";
-const SCREEN_PROFILE_SHEET_NAME = "ScreenProfiles";
 // ID của bảng tính Google Sheet của bạn (lấy từ link docs.google.com/spreadsheets/d/ID/edit)
 const SPREADSHEET_ID = "14vfUIJWl33kXI7ck6mlpt2Pnstp1FeR7Z9UIQ0ktpao";
 
@@ -39,16 +38,31 @@ function getOrCreateSheet() {
     }
     // Tạo tiêu đề các cột
     const headers = [
-      "Device ID", 
-      "Email", 
-      "Thiết Bị", 
-      "Android", 
-      "Trạng Thái", 
-      "Gói Bản Quyền", 
-      "Ngày Kích Hoạt", 
-      "Hạn Dùng", 
-      "Cập Nhật Cuối", 
-      "Ghi Chú"
+      "Device ID",
+      "Email",
+      "Thiết Bị",
+      "Android",
+      "Trạng Thái",
+      "Gói Bản Quyền",
+      "Ngày Kích Hoạt",
+      "Hạn Dùng",
+      "Cập Nhật Cuối",
+      "Ghi Chú",
+      "App",
+      "Màn Hình Xe",
+      "Vùng Dùng Được",
+      "WebView",
+      "Tỉ Lệ",
+      "DPI",
+      "Loại Màn",
+      "Hz",
+      "Insets",
+      "Màn Điện Thoại",
+      "Phone DPI",
+      "HUD",
+      "Screen ID",
+      "Đồng Bộ Màn Hình",
+      "Số Lần Sync"
     ];
     sheet.appendRow(headers);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#0284C7").setFontColor("#FFFFFF");
@@ -99,64 +113,68 @@ function doPost(e) {
 }
 
 /**
- * Khởi tạo/lấy sheet hồ sơ màn hình xe.
- * Mỗi Device ID chỉ có một dòng; app cập nhật lại dòng cũ khi profile thay đổi.
+ * Đảm bảo các cột hồ sơ màn hình tồn tại ngay trong sheet Licenses.
+ * A:J giữ nguyên dữ liệu bản quyền. Hồ sơ màn hình dùng K:Y.
  */
-function getOrCreateScreenProfileSheet() {
-  let ss;
-  try {
-    ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  } catch (e) {
-    ss = SpreadsheetApp.getActiveSpreadsheet();
+function ensureScreenProfileColumns(sheet) {
+  const headers = [
+    "App",
+    "Màn Hình Xe",
+    "Vùng Dùng Được",
+    "WebView",
+    "Tỉ Lệ",
+    "DPI",
+    "Loại Màn",
+    "Hz",
+    "Insets",
+    "Màn Điện Thoại",
+    "Phone DPI",
+    "HUD",
+    "Screen ID",
+    "Đồng Bộ Màn Hình",
+    "Số Lần Sync"
+  ];
+
+  // K = 11, ghi tiêu đề K:Y. Không đụng vào A:J hiện có.
+  const existing = sheet.getRange(1, 11, 1, headers.length).getValues()[0];
+  let needsWrite = false;
+  for (let i = 0; i < headers.length; i++) {
+    if (String(existing[i] || "").trim() !== headers[i]) {
+      needsWrite = true;
+      break;
+    }
   }
 
-  let sheet = ss.getSheetByName(SCREEN_PROFILE_SHEET_NAME);
-  if (!sheet) {
-    sheet = ss.insertSheet(SCREEN_PROFILE_SHEET_NAME);
-    const headers = [
-      "Device ID",
-      "Email",
-      "Thiết Bị",
-      "Android",
-      "App Version",
-      "Build",
-      "Car Resolution",
-      "Usable Area",
-      "WebView",
-      "Aspect Ratio",
-      "DPI",
-      "Density",
-      "xDPI",
-      "yDPI",
-      "Orientation",
-      "Form Factor",
-      "Refresh Hz",
-      "Rotation",
-      "Insets L/T/R/B",
-      "Phone Resolution",
-      "Phone DPI",
-      "HUD Style",
-      "HUD Scale",
-      "HUD Opacity",
-      "Screen Signature",
-      "First Seen",
-      "Last Seen",
-      "Sync Count",
-      "Ghi Chú"
-    ];
-    sheet.appendRow(headers);
-    sheet.getRange(1, 1, 1, headers.length)
+  if (needsWrite) {
+    sheet.getRange(1, 11, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 11, 1, headers.length)
       .setFontWeight("bold")
       .setBackground("#0F766E")
-      .setFontColor("#FFFFFF");
-    sheet.setFrozenRows(1);
+      .setFontColor("#FFFFFF")
+      .setHorizontalAlignment("center");
   }
-  return sheet;
 }
 
 /**
- * Nhận profile màn hình từ THTV.
- * Bảo vệ dữ liệu bằng cách chỉ cho phép mã máy đã APPROVED trong Licenses.
+ * Nhận profile màn hình từ THTV và cập nhật NGAY TRÊN DÒNG license.
+ * Chỉ Device ID đang APPROVED mới được ghi.
+ *
+ * Cột:
+ * K App
+ * L Màn Hình Xe
+ * M Vùng Dùng Được
+ * N WebView
+ * O Tỉ Lệ
+ * P DPI
+ * Q Loại Màn
+ * R Hz
+ * S Insets
+ * T Màn Điện Thoại
+ * U Phone DPI
+ * V HUD
+ * W Screen ID
+ * X Đồng Bộ Màn Hình
+ * Y Số Lần Sync
  */
 function handleScreenProfile(data) {
   const deviceId = String(data.deviceId || "").trim().toUpperCase();
@@ -168,19 +186,27 @@ function handleScreenProfile(data) {
     })).setMimeType(ContentService.MimeType.JSON);
   }
 
-  // Xác nhận mã máy đang được kích hoạt.
-  const licenseSheet = getOrCreateSheet();
-  const licenseRows = licenseSheet.getDataRange().getValues();
-  let approvedEmail = "";
+  const sheet = getOrCreateSheet();
+  ensureScreenProfileColumns(sheet);
+
+  const rows = sheet.getDataRange().getValues();
+  let rowIndex = -1;
   let approved = false;
 
-  for (let i = 1; i < licenseRows.length; i++) {
-    if (String(licenseRows[i][0]).trim().toUpperCase() === deviceId) {
-      const status = String(licenseRows[i][4] || "").trim().toUpperCase();
-      approvedEmail = String(licenseRows[i][1] || "").trim();
-      approved = (status === "APPROVED");
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0] || "").trim().toUpperCase() === deviceId) {
+      rowIndex = i + 1;
+      approved = String(rows[i][4] || "").trim().toUpperCase() === "APPROVED";
       break;
     }
+  }
+
+  if (rowIndex < 0) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      status: "SCREEN_PROFILE_DEVICE_NOT_FOUND",
+      error: "Device ID not found in Licenses"
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 
   if (!approved) {
@@ -191,24 +217,7 @@ function handleScreenProfile(data) {
     })).setMimeType(ContentService.MimeType.JSON);
   }
 
-  const sheet = getOrCreateScreenProfileSheet();
-  const rows = sheet.getDataRange().getValues();
-  let rowIndex = -1;
-  let firstSeen = "";
-  let syncCount = 0;
-
-  for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).trim().toUpperCase() === deviceId) {
-      rowIndex = i + 1;
-      firstSeen = rows[i][25] || "";
-      syncCount = Number(rows[i][27] || 0);
-      break;
-    }
-  }
-
   const nowStr = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy HH:mm:ss");
-  if (!firstSeen) firstSeen = nowStr;
-  syncCount += 1;
 
   const carW = Number(data.carWidth || 0);
   const carH = Number(data.carHeight || 0);
@@ -219,56 +228,77 @@ function handleScreenProfile(data) {
   const phoneW = Number(data.phoneWidth || 0);
   const phoneH = Number(data.phoneHeight || 0);
 
-  const row = [
-    deviceId,
-    approvedEmail,
-    String(data.deviceModel || ""),
-    String(data.androidVer || "") + " / SDK " + String(data.sdkInt || ""),
-    String(data.appVersion || ""),
-    Number(data.buildNumber || 0),
-    carW + " × " + carH,
-    usableW + " × " + usableH,
-    webW + " × " + webH,
-    Number(data.aspectRatio || 0),
-    Number(data.carDpi || 0),
-    Number(data.carDensity || 0),
-    Number(data.xdpi || 0),
-    Number(data.ydpi || 0),
-    String(data.orientation || ""),
-    String(data.formFactor || ""),
-    Number(data.refreshRate || 0),
-    Number(data.rotation || 0),
-    [
-      Number(data.insetLeft || 0),
-      Number(data.insetTop || 0),
-      Number(data.insetRight || 0),
-      Number(data.insetBottom || 0)
-    ].join("/"),
-    phoneW + " × " + phoneH,
-    Number(data.phoneDpi || 0),
-    Number(data.hudStyleId || 0),
-    Number(data.hudScale || 0),
-    Number(data.hudOpacity || 0),
-    String(data.screenSignature || ""),
-    firstSeen,
-    nowStr,
-    syncCount,
-    "Tự động từ THTV"
-  ];
+  const currentSyncCount = Number(sheet.getRange(rowIndex, 25).getValue() || 0);
+  const syncCount = currentSyncCount + 1;
 
-  let status;
-  if (rowIndex > 0) {
-    sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
-    status = "SCREEN_PROFILE_UPDATED";
-  } else {
-    sheet.appendRow(row);
-    status = "SCREEN_PROFILE_SAVED";
-  }
+  const appText =
+    String(data.appVersion || "") +
+    (data.buildNumber ? " (" + String(data.buildNumber) + ")" : "");
+
+  const carResolution = carW > 0 && carH > 0 ? carW + " × " + carH : "";
+  const usableArea = usableW > 0 && usableH > 0 ? usableW + " × " + usableH : "";
+  const webViewArea = webW > 0 && webH > 0 ? webW + " × " + webH : "";
+  const phoneResolution = phoneW > 0 && phoneH > 0 ? phoneW + " × " + phoneH : "";
+
+  const ratio = Number(data.aspectRatio || 0);
+  const ratioText = ratio > 0 ? ratio.toFixed(3) + ":1" : "";
+
+  const dpi = Number(data.carDpi || 0);
+  const density = Number(data.carDensity || 0);
+  const dpiText = dpi > 0
+    ? String(dpi) + (density > 0 ? " / " + density.toFixed(2) + "x" : "")
+    : "";
+
+  const formFactor = String(data.formFactor || "");
+  const orientation = String(data.orientation || "");
+  const screenType = [formFactor, orientation].filter(String).join(" • ");
+
+  const refresh = Number(data.refreshRate || 0);
+  const hzText = refresh > 0 ? refresh.toFixed(1) + " Hz" : "";
+
+  const insetText = [
+    Number(data.insetLeft || 0),
+    Number(data.insetTop || 0),
+    Number(data.insetRight || 0),
+    Number(data.insetBottom || 0)
+  ].join("/");
+
+  const phoneDpi = Number(data.phoneDpi || 0);
+  const phoneDensity = Number(data.phoneDensity || 0);
+  const phoneDpiText = phoneDpi > 0
+    ? String(phoneDpi) + (phoneDensity > 0 ? " / " + phoneDensity.toFixed(2) + "x" : "")
+    : "";
+
+  const hudText =
+    "Style " + String(data.hudStyleId || 0) +
+    " • Scale " + String(data.hudScale || 0) + "%" +
+    " • Opacity " + String(data.hudOpacity || 0) + "%";
+
+  const screenValues = [[
+    appText,                              // K
+    carResolution,                       // L
+    usableArea,                          // M
+    webViewArea,                         // N
+    ratioText,                           // O
+    dpiText,                             // P
+    screenType,                          // Q
+    hzText,                              // R
+    insetText,                           // S
+    phoneResolution,                     // T
+    phoneDpiText,                        // U
+    hudText,                             // V
+    String(data.screenSignature || ""),  // W
+    nowStr,                              // X
+    syncCount                            // Y
+  ]];
+
+  sheet.getRange(rowIndex, 11, 1, screenValues[0].length).setValues(screenValues);
 
   return ContentService.createTextOutput(JSON.stringify({
     success: true,
-    status: status,
+    status: "SCREEN_PROFILE_UPDATED",
     deviceId: deviceId,
+    row: rowIndex,
     screenSignature: String(data.screenSignature || ""),
     syncCount: syncCount
   })).setMimeType(ContentService.MimeType.JSON);
