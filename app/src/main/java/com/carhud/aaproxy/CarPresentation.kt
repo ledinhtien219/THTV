@@ -65,6 +65,7 @@ class CarPresentation(
     private var webInputSubmissionPending = false
     private var webKeyboardToken = ""
     private var webKeyboardPage: String? = null
+    private var webKeyboardAction: String = "input" // input | search
     private var activeCarInput: CarInputSession? = null
     private val pageInputScript by lazy { context.assets.open("page_input.js").bufferedReader().use { it.readText() } }
     private var topToolbarContainer: View? = null
@@ -300,15 +301,23 @@ class CarPresentation(
         mainHandler.post {
             searchInput.setText(query)
             searchInput.setSelection(query.length)
-            if (searchOverlayMode == "web" || searchOverlayMode == "address") {
-                executeSearch(query)
-                return@post
+
+            // Route by the ACTIVE APP, not by a transient overlay mode. This
+            // prevents browser/Google input from falling through to YouTube
+            // after the keyboard screen is recreated or dismissed.
+            when {
+                currentActiveAppId == "iptv" -> {
+                    playTvChannel(query)
+                }
+                isBrowserApp() -> {
+                    navigateBrowser(query)
+                }
+                currentActiveAppId == "youtube" -> {
+                    if (isDashboardShowing) showWebFullscreen()
+                    YouTubePlayerHelper.search(web, query)
+                    hideSearchOverlay(notifyPhone = false)
+                }
             }
-            if (isDashboardShowing) {
-                showWebFullscreen()
-            }
-            YouTubePlayerHelper.search(web, query)
-            hideSearchOverlay(notifyPhone = false)
         }
     }
 
@@ -337,13 +346,18 @@ class CarPresentation(
         try {
             web.addJavascriptInterface(object : Any() {
                 @android.webkit.JavascriptInterface
-                fun openKeyboard(token: String?, initialValue: String?, hint: String?) {
+                fun openKeyboard(token: String?, initialValue: String?, hint: String?, action: String?) {
                     mainHandler.post {
                         // WebView keeps its bridge across host surface recreation.
                         val current = keyboardPresentation.get() ?: return@post
                         if (current.web === web && current.activeCarInput?.closed != false &&
                             current.searchOverlay.visibility != View.VISIBLE) {
-                            current.showWebKeyboardOverlay(initialValue.orEmpty(), token.orEmpty(), hint.orEmpty())
+                            current.showWebKeyboardOverlay(
+                                initialValue.orEmpty(),
+                                token.orEmpty(),
+                                hint.orEmpty(),
+                                action.orEmpty()
+                            )
                         }
                     }
                 }
@@ -2821,24 +2835,53 @@ class CarPresentation(
     }
 
     private fun submitWebKeyboardText(
-        value: String, onComplete: ((Boolean) -> Unit)? = null,
-        token: String = webKeyboardToken, page: String? = webKeyboardPage
+        value: String,
+        onComplete: ((Boolean) -> Unit)? = null,
+        token: String = webKeyboardToken,
+        page: String? = webKeyboardPage,
+        performAction: Boolean = webKeyboardAction == "search"
     ) {
         if (webInputSubmissionPending || page == null || web.url != page) {
             onComplete?.invoke(false)
             return
         }
+
+        val cleanValue = value.trimEnd()
+
+        // Google changes/replaces its search field dynamically. For a captured
+        // Google search box, navigate the CURRENT browser WebView directly to
+        // Google results. This is deterministic and can never fall into YouTube.
+        val currentUrl = web.url.orEmpty()
+        val isGooglePage = Regex("""https?://([a-z0-9-]+\.)?google\.[^/]+/""", RegexOption.IGNORE_CASE)
+            .containsMatchIn(currentUrl)
+        if (performAction && isGooglePage && cleanValue.isNotBlank()) {
+            val targetUrl = BrowserNavigation.targetFor(cleanValue)
+            if (targetUrl != null) {
+                webKeyboardTargetPending = false
+                web.evaluateJavascript("if(window.__thtvPageInput) window.__thtvPageInput.clear();", null)
+                hideSearchOverlay()
+                web.loadUrl(targetUrl)
+                onComplete?.invoke(true)
+                return
+            }
+        }
+
         webInputSubmissionPending = true
         val quoted = org.json.JSONObject.quote(value)
         val target = org.json.JSONObject.quote(token)
-        web.evaluateJavascript("window.__thtvPageInput ? window.__thtvPageInput.fill($target, $quoted) : 'NO_TARGET';") { result ->
+        val method = if (performAction) "submit" else "fill"
+        web.evaluateJavascript(
+            "window.__thtvPageInput ? window.__thtvPageInput.$method($target, $quoted) : 'NO_TARGET';"
+        ) { result ->
             mainHandler.post {
                 webInputSubmissionPending = false
-                if (result != "\"OK\"") {
+                val accepted = result == "\"OK\"" || result == "\"SUBMITTED\""
+                if (!accepted) {
                     searchInput.error = "Ô nhập đã thay đổi. Chạm lại ô trên trang để nhập tiếp."
                     onComplete?.invoke(false)
                     return@post
                 }
+
                 webKeyboardTargetPending = false
                 hideSearchOverlay()
                 onComplete?.invoke(true)
@@ -3307,20 +3350,35 @@ class CarPresentation(
         showKeyboardOverlayInternal()
     }
 
-    private fun showWebKeyboardOverlay(initialValue: String, token: String, hint: String = "Nhập nội dung...") {
+    private fun showWebKeyboardOverlay(
+        initialValue: String,
+        token: String,
+        hint: String = "Nhập nội dung...",
+        action: String = "input"
+    ) {
         webKeyboardToken = token
         webKeyboardPage = web.url
+        webKeyboardAction = if (action == "search") "search" else "input"
         searchOverlayMode = "web"
         searchInput.error = null
-        searchInput.imeOptions = EditorInfo.IME_ACTION_DONE
+        searchInput.imeOptions = if (webKeyboardAction == "search") {
+            EditorInfo.IME_ACTION_SEARCH
+        } else {
+            EditorInfo.IME_ACTION_DONE
+        }
         webKeyboardTargetPending = true
-        searchInput.hint = hint.ifBlank { "Nhập nội dung..." }
+        searchInput.hint = hint.ifBlank {
+            if (webKeyboardAction == "search") "Nhập từ khóa tìm kiếm..." else "Nhập nội dung..."
+        }
         searchInput.setText(initialValue)
         searchInput.setSelection(searchInput.text.length)
         searchOverlayVoiceButton?.visibility = View.GONE
-        searchOverlaySubmitButton?.apply { visibility = View.VISIBLE; text = "↵ Nhập" }
+        searchOverlaySubmitButton?.apply {
+            visibility = View.VISIBLE
+            text = if (webKeyboardAction == "search") "🔍 Tìm" else "↵ Nhập"
+        }
         searchSuggestionStrip?.visibility = View.GONE
-        keyboardActionKey?.text = "↵ NHẬP"
+        keyboardActionKey?.text = if (webKeyboardAction == "search") "🔍 TÌM / ĐI" else "↵ NHẬP"
         showKeyboardOverlayInternal()
     }
 
@@ -3367,7 +3425,14 @@ class CarPresentation(
             web.evaluateJavascript(pageInputScript + "\n" + js) { result ->
                 if (result != null && result != "null" && activeCarInput?.closed != false && searchOverlay.visibility != View.VISIBLE) {
                     val input = try { org.json.JSONObject(result) } catch (_: Exception) { null }
-                    if (input != null) showWebKeyboardOverlay(input.optString("value"), input.optString("token"), input.optString("hint"))
+                    if (input != null) {
+                        showWebKeyboardOverlay(
+                            input.optString("value"),
+                            input.optString("token"),
+                            input.optString("hint"),
+                            input.optString("action", "input")
+                        )
+                    }
                 }
             }
         }, 100)
@@ -3378,12 +3443,20 @@ class CarPresentation(
         val page = web.url
         val owner = currentActiveAppId
         val token = webKeyboardToken
+        val webAction = webKeyboardAction
         return CarInputSession(
             initialText = searchInput.text.toString(), hint = searchInput.hint.toString(), allowEmpty = true,
             onSubmit = { value, complete ->
                 if (CarMediaManager.activeAppId != owner || web.url != page) complete(false)
-                else if (mode == "web") submitWebKeyboardText(value, complete, token, page)
-                else {
+                else if (mode == "web") {
+                    submitWebKeyboardText(
+                        value = value,
+                        onComplete = complete,
+                        token = token,
+                        page = page,
+                        performAction = webAction == "search"
+                    )
+                } else {
                     // App controls act on this draft only after their own Search/Go button.
                     CarMediaManager.editorDraft = CarMediaManager.EditorDraft(owner, page, mode, value)
                     keyboardPresentation.get()?.takeIf {
@@ -3410,8 +3483,14 @@ class CarPresentation(
     }
 
     private fun commitEditorText() {
-        if (searchOverlayMode == "web") submitWebKeyboardText(searchInput.text.toString())
-        else carKeyboard?.visibility = View.GONE
+        if (searchOverlayMode == "web") {
+            submitWebKeyboardText(
+                value = searchInput.text.toString(),
+                performAction = webKeyboardAction == "search"
+            )
+        } else {
+            carKeyboard?.visibility = View.GONE
+        }
     }
 
     private fun showKeyboardOverlayInternal(requestNative: Boolean = true, showKeys: Boolean = true) {
