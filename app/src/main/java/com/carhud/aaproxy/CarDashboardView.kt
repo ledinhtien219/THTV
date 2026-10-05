@@ -199,6 +199,7 @@ class CarDashboardView(
         dashboardVideoBackground = findViewById(R.id.dashboardVideoBackground)
         dashboardBackground = findViewById(R.id.dashboardBackground)
         dashboardScrim = findViewById(R.id.dashboardScrim)
+        forceWallpaperLayersFullscreen()
         topLeftContainer = findViewById(R.id.topLeftContainer)
         greetingText = findViewById(R.id.greetingText)
         clockText = findViewById(R.id.clockText)
@@ -498,6 +499,7 @@ class CarDashboardView(
 
     fun updateWallpaper() {
         stopDynamicWallpaper()
+        forceWallpaperLayersFullscreen()
 
         val rawType = prefs.getString(PREF_WALLPAPER_TYPE, WALLPAPER_BUGATTI) ?: WALLPAPER_BUGATTI
         val type = if (rawType == "homer") WALLPAPER_BUGATTI else rawType
@@ -535,7 +537,9 @@ class CarDashboardView(
 
     private fun showStaticWallpaper(resId: Int, scrimColor: String = "#35000000") {
         setBackgroundResource(R.drawable.bg_cockpit_charcoal)
+        forceWallpaperLayersFullscreen()
         dashboardVideoBackground.visibility = View.GONE
+        dashboardBackground.scaleType = ImageView.ScaleType.CENTER_CROP
         dashboardBackground.setImageResource(resId)
         dashboardBackground.visibility = View.VISIBLE
         dashboardScrim.visibility = View.VISIBLE
@@ -546,7 +550,9 @@ class CarDashboardView(
         try {
             val bmp = BitmapFactory.decodeFile(path)
             if (bmp != null) {
+                forceWallpaperLayersFullscreen()
                 dashboardVideoBackground.visibility = View.GONE
+                dashboardBackground.scaleType = ImageView.ScaleType.CENTER_CROP
                 dashboardBackground.setImageBitmap(bmp)
                 dashboardBackground.visibility = View.VISIBLE
                 dashboardScrim.visibility = View.VISIBLE
@@ -561,10 +567,19 @@ class CarDashboardView(
 
     private fun playGifWallpaper(path: String) {
         try {
+            forceWallpaperLayersFullscreen()
             val drawable = ImageDecoder.decodeDrawable(ImageDecoder.createSource(File(path)))
             dashboardVideoBackground.visibility = View.GONE
+            dashboardBackground.scaleType = ImageView.ScaleType.CENTER_CROP
+            dashboardBackground.adjustViewBounds = false
             dashboardBackground.setImageDrawable(drawable)
             dashboardBackground.visibility = View.VISIBLE
+            dashboardBackground.post {
+                forceWallpaperLayersFullscreen()
+                dashboardBackground.scaleType = ImageView.ScaleType.CENTER_CROP
+                dashboardBackground.requestLayout()
+                dashboardBackground.invalidate()
+            }
             dashboardScrim.visibility = View.VISIBLE
             dashboardScrim.setBackgroundColor(Color.parseColor("#35000000"))
             if (drawable is AnimatedImageDrawable) {
@@ -578,9 +593,11 @@ class CarDashboardView(
     }
 
     private fun playVideoWallpaper(path: String) {
+        forceWallpaperLayersFullscreen()
         dashboardBackground.setImageDrawable(null)
         dashboardBackground.visibility = View.GONE
         dashboardVideoBackground.visibility = View.VISIBLE
+        dashboardVideoBackground.alpha = 1f
         dashboardScrim.visibility = View.VISIBLE
         dashboardScrim.setBackgroundColor(Color.parseColor("#42000000"))
 
@@ -621,8 +638,13 @@ class CarDashboardView(
                 }
 
                 override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
+                    forceWallpaperLayersFullscreen()
                     val p = wallpaperPlayer
-                    if (p != null) applyVideoCenterCrop(p.videoWidth, p.videoHeight)
+                    if (p != null) {
+                        dashboardVideoBackground.post {
+                            applyVideoCenterCrop(p.videoWidth, p.videoHeight)
+                        }
+                    }
                 }
 
                 override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
@@ -637,16 +659,67 @@ class CarDashboardView(
 
     private fun applyVideoCenterCrop(videoW: Int, videoH: Int) {
         if (videoW <= 0 || videoH <= 0) return
+
+        forceWallpaperLayersFullscreen()
+
         val viewW = dashboardVideoBackground.width.toFloat().takeIf { it > 0f } ?: return
         val viewH = dashboardVideoBackground.height.toFloat().takeIf { it > 0f } ?: return
-        val scale = maxOf(viewW / videoW.toFloat(), viewH / videoH.toFloat())
-        val dx = (viewW - videoW * scale) / 2f
-        val dy = (viewH - videoH * scale) / 2f
+
+        // TextureView already maps the video buffer to the full view bounds.
+        // Only compensate for the DIFFERENCE in aspect ratio. Using
+        // viewWidth/videoWidth here would shrink a 1080p video into the
+        // top-left corner on a lower-resolution Android Auto display.
+        val videoAspect = videoW.toFloat() / videoH.toFloat()
+        val viewAspect = viewW / viewH
+
+        var scaleX = 1f
+        var scaleY = 1f
+        if (videoAspect > viewAspect) {
+            // Video is wider than the display -> crop the left/right sides.
+            scaleX = videoAspect / viewAspect
+        } else if (videoAspect < viewAspect) {
+            // Video is taller/narrower -> crop top/bottom.
+            scaleY = viewAspect / videoAspect
+        }
+
         val matrix = Matrix().apply {
-            setScale(scale, scale)
-            postTranslate(dx, dy)
+            setScale(scaleX, scaleY, viewW / 2f, viewH / 2f)
         }
         dashboardVideoBackground.setTransform(matrix)
+        dashboardVideoBackground.invalidate()
+    }
+
+    private fun forceWallpaperLayersFullscreen() {
+        if (::dashboardVideoBackground.isInitialized) {
+            dashboardVideoBackground.layoutParams = dashboardVideoBackground.layoutParams.apply {
+                width = ViewGroup.LayoutParams.MATCH_PARENT
+                height = ViewGroup.LayoutParams.MATCH_PARENT
+            }
+            dashboardVideoBackground.translationX = 0f
+            dashboardVideoBackground.translationY = 0f
+            dashboardVideoBackground.scaleX = 1f
+            dashboardVideoBackground.scaleY = 1f
+        }
+
+        if (::dashboardBackground.isInitialized) {
+            dashboardBackground.layoutParams = dashboardBackground.layoutParams.apply {
+                width = ViewGroup.LayoutParams.MATCH_PARENT
+                height = ViewGroup.LayoutParams.MATCH_PARENT
+            }
+            dashboardBackground.scaleType = ImageView.ScaleType.CENTER_CROP
+            dashboardBackground.adjustViewBounds = false
+            dashboardBackground.translationX = 0f
+            dashboardBackground.translationY = 0f
+            dashboardBackground.scaleX = 1f
+            dashboardBackground.scaleY = 1f
+        }
+
+        if (::dashboardScrim.isInitialized) {
+            dashboardScrim.layoutParams = dashboardScrim.layoutParams.apply {
+                width = ViewGroup.LayoutParams.MATCH_PARENT
+                height = ViewGroup.LayoutParams.MATCH_PARENT
+            }
+        }
     }
 
     private fun stopDynamicWallpaper() {
