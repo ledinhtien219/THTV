@@ -209,6 +209,10 @@ class CarPresentation(
         autoResumePending = true
         target.postDelayed({
             autoResumePending = false
+            if (currentActiveAppId != "youtube" ||
+                CarMediaManager.activeAppId != "youtube" ||
+                CarMediaManager.getPersistentWebView() !== target
+            ) return@postDelayed
 
             val currentUrl = target.url.orEmpty()
             val isYouTubeWatch = currentUrl.contains("youtube.com/watch") ||
@@ -776,7 +780,12 @@ class CarPresentation(
 
         val dash = CarDashboardView(
             context,
-            onAppClick = { app -> switchWebApp(app, embedded = false) },
+            onAppClick = { app ->
+                val explicitUrl = app.url.takeIf {
+                    app.id == "iptv" && it.contains("iptv_player.html#channel=")
+                }
+                switchWebApp(app, embedded = false, startUrl = explicitUrl)
+            },
             onAddAppClick = { showAddAppDialog() },
             onAllAppsClick = { showAppGridOverlay() },
             onFullscreenRequested = { app -> showWebFullscreen(app) },
@@ -1932,12 +1941,12 @@ class CarPresentation(
         }
 
         // Dashboard's showEmbeddedApp is a placeholder, not a visible browser.
+        // showWebFullscreen() already rebuilds the visible chrome and resets its
+        // auto-hide timer, so do not repeat those relatively expensive operations.
         showWebFullscreen(app)
 
-        rebuildTopToolbar()
         rebuildAppGrid()
         dashboardView?.refreshAppsList()
-        resetAutoHideTimer()
     }
 
     val isShowingDashboard: Boolean
@@ -1978,29 +1987,37 @@ class CarPresentation(
         showBars()
         resetAutoHideTimer()
 
-        // Restore dimensions and force rendering resume when entering fullscreen
-        try { 
+        // Restore dimensions and rendering state when entering fullscreen.
+        // Do not blindly play every <video>: that made a deliberately paused
+        // YouTube/browser video start again merely because the user switched apps.
+        try {
             web.layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             updateBrowserViewport()
             web.requestLayout()
+            val expectedAppId = currentActiveAppId
             root.post {
+                if (currentActiveAppId != expectedAppId || CarMediaManager.activeAppId != expectedAppId) {
+                    return@post
+                }
                 try {
-                    web.onResume() 
+                    web.onResume()
+                    web.resumeTimers()
                     web.evaluateJavascript(
-                        """
-                        (function() {
-                            if (window.restoreVideoAspectRatio) window.restoreVideoAspectRatio();
-                            if (window.__iptvUserPaused) return;
-                            var v = document.querySelector('video');
-                            if (v && v.paused) { try { if (v.muted) v.muted = false; v.play(); } catch(e){} }
-                            var p = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
-                            if (p && typeof p.playVideo === 'function' && p.getPlayerState && p.getPlayerState() !== 1) { try { p.playVideo(); } catch(e){} }
-                        })();
-                        """.trimIndent(), null
+                        "if (window.restoreVideoAspectRatio) window.restoreVideoAspectRatio();",
+                        null
                     )
-                } catch (e: Exception) {}
+                    when (expectedAppId) {
+                        "youtube" -> scheduleSafeResume(web, 450L)
+                        "iptv" -> if (CarMediaManager.userWantsPlayback) {
+                            web.evaluateJavascript(
+                                "if (!window.__iptvUserPaused && window.setIptvPlaying) window.setIptvPlaying(true);",
+                                null
+                            )
+                        }
+                    }
+                } catch (_: Exception) {}
             }
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
     }
 
     fun showDashboard() {
