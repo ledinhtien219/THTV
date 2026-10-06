@@ -1598,7 +1598,13 @@ class CarPresentation(
     fun moveCommanderTarget(dx: Float, dy: Float, source: String) {
         if (!::root.isInitialized) return
 
-        if (isDashboardShowing) {
+        val nativeOverlayVisible =
+            videoQualityOverlay != null ||
+            (::searchOverlay.isInitialized && searchOverlay.visibility == View.VISIBLE) ||
+            appGridOverlay?.visibility == View.VISIBLE ||
+            addAppOverlay?.visibility == View.VISIBLE
+
+        if (isDashboardShowing && !nativeOverlayVisible) {
             val handled = dashboardView?.moveCommanderFocus(dx, dy) == true
             if (handled) {
                 hideCommanderCursorVisual()
@@ -1630,7 +1636,13 @@ class CarPresentation(
     }
 
     fun clickCommanderTarget(source: String): Boolean {
-        if (isDashboardShowing) {
+        val nativeOverlayVisible =
+            videoQualityOverlay != null ||
+            (::searchOverlay.isInitialized && searchOverlay.visibility == View.VISIBLE) ||
+            appGridOverlay?.visibility == View.VISIBLE ||
+            addAppOverlay?.visibility == View.VISIBLE
+
+        if (isDashboardShowing && !nativeOverlayVisible) {
             if (dashboardView?.clickCommanderFocus() == true) {
                 hideCommanderCursorVisual()
                 showRotaryDiagnostic("SELECT DASHBOARD $source")
