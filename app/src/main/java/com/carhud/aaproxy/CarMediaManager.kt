@@ -96,6 +96,93 @@ object CarMediaManager {
     fun phoneInput(id: String): CarInputSession? = phoneEditor?.takeIf { it.first == id }?.second
 
     var lastEmbeddedApp: WebAppItem? = null
+
+    data class WebAppSession(
+        val state: android.os.Bundle,
+        val url: String,
+        val scrollX: Int,
+        val scrollY: Int,
+        val videoPositionSec: Int,
+        val wasPlaying: Boolean
+    )
+
+    private val webAppSessions = mutableMapOf<String, WebAppSession>()
+
+    fun hasWebAppSession(appId: String): Boolean = synchronized(webAppSessions) {
+        webAppSessions.containsKey(appId)
+    }
+
+    fun saveWebAppSession(appId: String, web: WebView?) {
+        if (web == null || appId !in setOf("web", "youtube")) return
+        try {
+            val url = web.url.orEmpty()
+            if (url.isBlank() || url == "about:blank") return
+
+            val state = android.os.Bundle()
+            web.saveState(state)
+            val session = WebAppSession(
+                state = state,
+                url = url,
+                scrollX = web.scrollX,
+                scrollY = web.scrollY,
+                videoPositionSec = if (appId == "youtube") currentPositionSec else 0,
+                wasPlaying = appId == "youtube" && isPlaying
+            )
+            synchronized(webAppSessions) {
+                webAppSessions[appId] = session
+            }
+
+            try {
+                val prefs = web.context.applicationContext
+                    .getSharedPreferences(SettingsActivity.PREFS, Context.MODE_PRIVATE)
+                prefs.edit()
+                    .putString("carhud_session_url_$appId", url)
+                    .putInt("carhud_session_scroll_x_$appId", session.scrollX)
+                    .putInt("carhud_session_scroll_y_$appId", session.scrollY)
+                    .putInt("carhud_session_video_sec_$appId", session.videoPositionSec)
+                    .apply()
+            } catch (_: Exception) {}
+        } catch (_: Throwable) {}
+    }
+
+    fun restoreWebAppSession(appId: String, web: WebView?): Boolean {
+        if (web == null || appId !in setOf("web", "youtube")) return false
+        val session = synchronized(webAppSessions) { webAppSessions[appId] } ?: return false
+
+        return try {
+            web.stopLoading()
+            val restored = web.restoreState(android.os.Bundle(session.state)) != null
+            if (!restored && session.url.isNotBlank()) {
+                web.loadUrl(session.url)
+            }
+
+            val restoreViewport = Runnable {
+                try {
+                    web.scrollTo(session.scrollX, session.scrollY)
+                    if (appId == "youtube" && session.videoPositionSec > 0) {
+                        YouTubePlayerHelper.seekTo(web, session.videoPositionSec.toLong())
+                        if (session.wasPlaying) {
+                            userWantsPlayback = true
+                            YouTubePlayerHelper.resumePlayback(web)
+                        }
+                    }
+                } catch (_: Throwable) {}
+            }
+            web.postDelayed(restoreViewport, 450L)
+            web.postDelayed(restoreViewport, 1200L)
+            web.postDelayed(restoreViewport, 2400L)
+            true
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
+    fun clearWebAppSession(appId: String) {
+        synchronized(webAppSessions) {
+            webAppSessions.remove(appId)
+        }
+    }
+
     var userWantsPlayback = false
     var activeAudioManager: CarAudioManager? = null
 
@@ -331,7 +418,8 @@ object CarMediaManager {
                     }
                     carWebView = null
                     mainHandler.postDelayed({
-                        getPersistentCarWebView(appCtx)
+                        val replacement = getPersistentCarWebView(appCtx)
+                        restoreWebAppSession(activeAppId, replacement)
                     }, 1000L)
                     return true
                 }
