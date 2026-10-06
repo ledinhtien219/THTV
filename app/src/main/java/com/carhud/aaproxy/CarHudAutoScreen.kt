@@ -25,6 +25,15 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
     private var presentation: CarPresentation? = null
     private var carSurface: Surface? = null
     private val handler = Handler(Looper.getMainLooper())
+    private var panModeEnabled = false
+    private var surfaceInputCount = 0
+
+    private fun reportSurfaceInput(label: String) {
+        surfaceInputCount += 1
+        presentation?.showRotaryDiagnostic(
+            "HOST #$surfaceInputCount ${if (panModeEnabled) "PAN" else "IDLE"} $label"
+        )
+    }
 
     private var nativeInput: CarInputSession? = null
     private val nativeSearchListener: (CarInputSession) -> Unit = { input ->
@@ -106,23 +115,36 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
     }
 
     override fun onClick(x: Float, y: Float) {
-        if (Looper.myLooper() == handler.looper) presentation?.dispatchTouch(x, y)
-        else handler.post { presentation?.dispatchTouch(x, y) }
+        val action = {
+            reportSurfaceInput("CLICK x=${"%.0f".format(x)} y=${"%.0f".format(y)}")
+            presentation?.dispatchTouch(x, y)
+        }
+        if (Looper.myLooper() == handler.looper) action() else handler.post(action)
     }
 
     override fun onScroll(distanceX: Float, distanceY: Float) {
         handler.post {
+            reportSurfaceInput(
+                "SCROLL dx=${"%.1f".format(distanceX)} dy=${"%.1f".format(distanceY)}"
+            )
             presentation?.dispatchScroll(distanceX, distanceY)
         }
     }
 
     override fun onFling(velocityX: Float, velocityY: Float) {
         handler.post {
+            reportSurfaceInput(
+                "FLING vx=${"%.0f".format(velocityX)} vy=${"%.0f".format(velocityY)}"
+            )
             presentation?.dispatchFling(velocityX, velocityY)
         }
     }
 
-    override fun onScale(focusX: Float, focusY: Float, scaleFactor: Float) {}
+    override fun onScale(focusX: Float, focusY: Float, scaleFactor: Float) {
+        handler.post {
+            reportSurfaceInput("SCALE factor=${"%.2f".format(scaleFactor)}")
+        }
+    }
 
     fun onCarConfigurationChanged(newConfiguration: android.content.res.Configuration) {
         handler.post {
@@ -200,8 +222,26 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
             .addAction(Action.BACK)
             .build()
 
+        // Mazda Commander and other non-touch rotary head units keep rotary
+        // input in the Android Auto host unless a map-based template exposes
+        // PAN mode. This diagnostic build intentionally enables Action.PAN so
+        // the host can translate rotary/nudge input into SurfaceCallback events.
+        val mapActionStrip = ActionStrip.Builder()
+            .addAction(Action.PAN)
+            .build()
+
         return NavigationTemplate.Builder()
             .setActionStrip(actionStrip)
+            .setMapActionStrip(mapActionStrip)
+            .setPanModeListener { enabled ->
+                handler.post {
+                    panModeEnabled = enabled
+                    surfaceInputCount = 0
+                    presentation?.showRotaryDiagnostic(
+                        if (enabled) "HOST PAN ON - xoay/gạt Commander" else "HOST PAN OFF"
+                    )
+                }
+            }
             .build()
     }
 }
