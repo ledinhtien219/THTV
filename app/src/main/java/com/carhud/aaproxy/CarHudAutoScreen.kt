@@ -207,6 +207,7 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
             .addAction(
                 Action.Builder()
                     .setTitle("\u200B")
+                    .setFlags(Action.FLAG_PRIMARY)
                     .setBackgroundColor(transparent)
                     .build()
             )
