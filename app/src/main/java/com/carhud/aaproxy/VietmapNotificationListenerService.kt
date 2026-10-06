@@ -76,6 +76,7 @@ class VietmapNotificationListenerService : NotificationListenerService() {
 
     private val wazeBroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            if (!HudSourceManager.isWaze(this@VietmapNotificationListenerService)) return
             intent ?: return
             val action = intent.action ?: return
             Log.d(TAG, "Received Waze Mod broadcast: $action")
@@ -162,8 +163,14 @@ class VietmapNotificationListenerService : NotificationListenerService() {
         Log.i(TAG, "NotificationListenerService connected!")
         CarTtsManager.init(applicationContext)
         CarTtsManager.startListeningToRepository()
+        HudSourceManager.init(applicationContext)
         registerWazeReceiver()
-        WazeHlpWebSocketManager.start()
+        if (HudSourceManager.isWaze(applicationContext)) {
+            WazeHlpWebSocketManager.start()
+        } else {
+            WazeHlpWebSocketManager.stop()
+            GofaHudManager.start(applicationContext)
+        }
         checkActiveNotifications()
     }
 
@@ -232,7 +239,7 @@ class VietmapNotificationListenerService : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         sbn ?: return
         val pkg = sbn.packageName ?: return
-        if (isWazePackage(pkg)) {
+        if (isWazePackage(pkg) && HudSourceManager.isWaze(this)) {
             processWazeNotification(sbn)
         } else if (isGoogleMapsPackage(pkg, sbn.notification)) {
             processGoogleMapsNotification(sbn)
@@ -254,7 +261,7 @@ class VietmapNotificationListenerService : NotificationListenerService() {
         try {
             val active = activeNotifications ?: return
             for (sbn in active) {
-                if (isWazePackage(sbn.packageName)) {
+                if (isWazePackage(sbn.packageName) && HudSourceManager.isWaze(this)) {
                     processWazeNotification(sbn)
                 } else if (isGoogleMapsPackage(sbn.packageName, sbn.notification)) {
                     processGoogleMapsNotification(sbn)

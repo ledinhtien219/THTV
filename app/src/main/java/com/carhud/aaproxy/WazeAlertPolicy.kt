@@ -217,7 +217,8 @@ object WazeAlertPolicy {
     }
 
     fun sourcePriority(source: String): Int = when (source.uppercase(Locale.ROOT)) {
-        "MANUAL_TEST" -> 5
+        "MANUAL_TEST" -> 6
+        "GOFA_BLE", "GOFA" -> 5
         "WAZE_HLP", "HLP" -> 4
         "WAZE_BROADCAST", "BROADCAST" -> 3
         "WAZE_NOTIFICATION", "NOTIFICATION" -> 2

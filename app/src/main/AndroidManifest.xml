@@ -28,6 +28,7 @@
         </intent>
         <package android:name="com.waze"/>
         <package android:name="com.waze.mod"/>
+        <package android:name="com.gofa.mobile"/>
         <package android:name="com.google.android.apps.maps"/>
         <package android:name="com.google.android.projection.gearhead"/>
         <package android:name="com.andrerinas.openheadunit"/>
@@ -166,7 +167,7 @@
 
         <service
             android:name="com.carhud.aaproxy.VietmapNotificationListenerService"
-            android:label="THTV Waze &amp; Maps Data Sync"
+            android:label="THTV HUD &amp; Maps Data Sync"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="true">
             <intent-filter>
