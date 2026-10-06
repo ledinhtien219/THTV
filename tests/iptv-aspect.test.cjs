@@ -4,6 +4,14 @@ const vm = require('node:vm');
 const path = require('node:path');
 const asset = name => fs.readFileSync(path.join(__dirname, '../app/src/main/assets', name), 'utf8');
 
+const iptvHtml = asset('iptv_player.html');
+assert.match(iptvHtml, /video#videoPlayer::\-webkit-media-controls-overlay-play-button/);
+assert.match(iptvHtml, /video#videoPlayer::\-webkit-media-controls-start-playback-button/);
+assert.match(
+  iptvHtml,
+  /video#videoPlayer::\-webkit-media-controls[\s\S]*?display: none !important;[\s\S]*?pointer-events: none !important;/
+);
+
 function fixture(storage = new Map(), native = { mode: null }, storageFails = false) {
   const elements = new Map();
   function element(id) {
