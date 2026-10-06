@@ -14,13 +14,15 @@ const dashboardXml = fs.readFileSync(
   'utf8'
 );
 
-// The host-rendered circular back button and placeholder chrome must be gone.
-// Use a navigation template that supports the drawing surface without any action strip.
+// The host-rendered BACK action and list-template overlay must both be gone.
+// Keep NavigationTemplate for the full app surface, but make the required
+// placeholder action fully transparent.
 assert.doesNotMatch(screen, /Action\.BACK/);
-assert.doesNotMatch(screen, /ActionStrip/);
-assert.doesNotMatch(screen, /hiddenActionStrip/);
-assert.doesNotMatch(screen, /\bNavigationTemplate\.Builder/);
-assert.match(screen, /PlaceListNavigationTemplate\.Builder\(\)[\s\S]*?\.setItemList\(ItemList\.Builder\(\)\.build\(\)\)[\s\S]*?\.build\(\)/);
+assert.doesNotMatch(screen, /PlaceListNavigationTemplate/);
+assert.doesNotMatch(screen, /ItemList\.Builder/);
+assert.match(screen, /CarColor\.createCustom\(0x00000000, 0x00000000\)/);
+assert.match(screen, /ActionStrip\.Builder\(\)[\s\S]*?setTitle\("\\u200B"\)[\s\S]*?setBackgroundColor\(transparent\)/);
+assert.match(screen, /NavigationTemplate\.Builder\(\)[\s\S]*?setActionStrip\(hiddenActionStrip\)/);
 
 // Keep the existing weather-card bounds, but render weather with vector icons.
 assert.match(dashboardXml, /android:id="@\+id\/weatherCard"[\s\S]*?android:layout_width="150dp"[\s\S]*?android:layout_height="76dp"/);
