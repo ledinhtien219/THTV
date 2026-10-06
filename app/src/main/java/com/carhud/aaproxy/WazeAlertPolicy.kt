@@ -216,6 +216,44 @@ object WazeAlertPolicy {
         return "${type.name}|$cleanTitle|$cleanRoad"
     }
 
+    /**
+     * WazeMod may repeat the same report in alrs with slightly different payload
+     * richness. Keep the original near-to-far ordering, but collapse duplicates
+     * and retain the closest/richest copy.
+     */
+    fun dedupeAlerts(alerts: List<WazeAlertItem>): List<WazeAlertItem> {
+        if (alerts.size < 2) return alerts
+        val ordered = linkedMapOf<String, WazeAlertItem>()
+        for (item in alerts) {
+            val road = item.roadName.orEmpty()
+                .lowercase(Locale.ROOT)
+                .replace(Regex("""\s+"""), " ")
+                .trim()
+            val key = if (item.code > 0) {
+                "code:${item.code}|road:$road"
+            } else {
+                alertKey(item.warningType, item.title, item.roadName)
+            }
+
+            val previous = ordered[key]
+            if (previous == null) {
+                ordered[key] = item
+                continue
+            }
+
+            val previousDistance = previous.distanceMeters?.takeIf { it > 0 }
+            val incomingDistance = item.distanceMeters?.takeIf { it > 0 }
+            val preferIncoming = when {
+                previousDistance == null && incomingDistance != null -> true
+                previousDistance != null && incomingDistance != null && incomingDistance < previousDistance -> true
+                previous.title.isNullOrBlank() && !item.title.isNullOrBlank() -> true
+                else -> false
+            }
+            if (preferIncoming) ordered[key] = item
+        }
+        return ordered.values.toList()
+    }
+
     fun sourcePriority(source: String): Int = when (source.uppercase(Locale.ROOT)) {
         "MANUAL_TEST" -> 5
         "WAZE_HLP", "HLP" -> 4
