@@ -19,7 +19,7 @@ const dashboardXml = fs.readFileSync(
 assert.doesNotMatch(screen, /Action\.BACK/);
 assert.doesNotMatch(screen, /ActionStrip/);
 assert.doesNotMatch(screen, /hiddenActionStrip/);
-assert.doesNotMatch(screen, /NavigationTemplate\.Builder/);
+assert.doesNotMatch(screen, /\bNavigationTemplate\.Builder/);
 assert.match(screen, /PlaceListNavigationTemplate\.Builder\(\)[\s\S]*?\.setItemList\(ItemList\.Builder\(\)\.build\(\)\)[\s\S]*?\.build\(\)/);
 
 // Keep the existing weather-card bounds, but render weather with vector icons.
