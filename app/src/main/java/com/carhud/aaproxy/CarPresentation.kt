@@ -1941,12 +1941,9 @@ class CarPresentation(
         }
 
         // Dashboard's showEmbeddedApp is a placeholder, not a visible browser.
-        // showWebFullscreen() already rebuilds the visible chrome and resets its
-        // auto-hide timer, so do not repeat those relatively expensive operations.
+        // showWebFullscreen() owns the visible transition. The app grid is rebuilt
+        // lazily next time it is opened, so switching apps does no hidden UI work.
         showWebFullscreen(app)
-
-        rebuildAppGrid()
-        dashboardView?.refreshAppsList()
     }
 
     val isShowingDashboard: Boolean
