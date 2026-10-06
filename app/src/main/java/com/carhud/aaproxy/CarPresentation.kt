@@ -1415,6 +1415,12 @@ class CarPresentation(
             addView(toolButton(R.drawable.ic_bar_setting, "Chất lượng") {
                 showVideoQualityMenu()
             })
+
+            val youtubeMicButton = toolButton(R.drawable.ic_bar_mic, "Giọng nói") {
+                startVoiceSearch()
+            }
+            micBtn = youtubeMicButton.getChildAt(0) as? ImageView
+            addView(youtubeMicButton)
         }
 
         sidebarView = panel
