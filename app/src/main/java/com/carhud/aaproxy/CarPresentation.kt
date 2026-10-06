@@ -1590,6 +1590,69 @@ class CarPresentation(
         }
     }
 
+    private fun hideCommanderCursorVisual() {
+        commanderCursor?.visibility = View.GONE
+        mainHandler.removeCallbacks(hideCommanderCursorRunnable)
+    }
+
+    private fun moveCommanderTarget(dx: Float, dy: Float, source: String) {
+        if (!::root.isInitialized) return
+
+        if (isDashboardShowing) {
+            val handled = dashboardView?.moveCommanderFocus(dx, dy) == true
+            if (handled) {
+                hideCommanderCursorVisual()
+                YouTubePlayerHelper.clearCommanderSelection(web)
+                showRotaryDiagnostic("FOCUS DASHBOARD $source")
+                return
+            }
+        }
+
+        val ytStep = when {
+            kotlin.math.abs(dy) >= kotlin.math.abs(dx) && dy < 0f -> -1
+            kotlin.math.abs(dy) >= kotlin.math.abs(dx) && dy > 0f -> 1
+            dx < 0f -> -1
+            else -> 1
+        }
+        if (currentActiveAppId == "youtube" && !isDashboardShowing &&
+            YouTubePlayerHelper.moveCommanderSelection(web, ytStep)
+        ) {
+            hideCommanderCursorVisual()
+            dashboardView?.clearCommanderFocus()
+            val direction = if (ytStep < 0) "PREV" else "NEXT"
+            showRotaryDiagnostic("FOCUS YOUTUBE $direction $source")
+            return
+        }
+
+        dashboardView?.clearCommanderFocus()
+        YouTubePlayerHelper.clearCommanderSelection(web)
+        moveCommanderCursor(dx, dy, source)
+    }
+
+    private fun clickCommanderTarget(source: String): Boolean {
+        if (isDashboardShowing) {
+            if (dashboardView?.clickCommanderFocus() == true) {
+                hideCommanderCursorVisual()
+                showRotaryDiagnostic("SELECT DASHBOARD $source")
+                return true
+            }
+            if (dashboardView?.moveCommanderFocus(1f, 0f) == true) {
+                hideCommanderCursorVisual()
+                showRotaryDiagnostic("FOCUS DASHBOARD $source")
+                return true
+            }
+        }
+
+        if (currentActiveAppId == "youtube" && !isDashboardShowing &&
+            YouTubePlayerHelper.clickCommanderSelection(web)
+        ) {
+            hideCommanderCursorVisual()
+            showRotaryDiagnostic("SELECT YOUTUBE $source")
+            return true
+        }
+
+        return clickCommanderCursor(source)
+    }
     fun moveCommanderCursor(dx: Float, dy: Float, source: String = "DPAD") {
         mainHandler.post {
             if (!::root.isInitialized || root.width <= 0 || root.height <= 0) return@post
@@ -1651,7 +1714,7 @@ class CarPresentation(
             distanceY > 0f -> 1f
             else -> -1f
         }
-        moveCommanderCursor(dx, dy, "HOST")
+        moveCommanderTarget(dx, dy, "HOST")
     }
 
     fun clickCommanderCursor(source: String = "DPAD"): Boolean {
@@ -4116,7 +4179,7 @@ class CarPresentation(
                 else -> 0f
             }
             if (primary != 0f) {
-                moveCommanderCursor(
+                moveCommanderTarget(
                     if (kotlin.math.abs(horizontal) > 0.01f) {
                         if (horizontal > 0f) 1f else -1f
                     } else 0f,
@@ -4135,45 +4198,45 @@ class CarPresentation(
                 KeyEvent.KEYCODE_DPAD_UP,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP,
                 KeyEvent.KEYCODE_NAVIGATE_PREVIOUS -> {
-                    moveCommanderCursor(0f, -1f, "RAW UP")
+                    moveCommanderTarget(0f, -1f, "RAW UP")
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_DOWN,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN,
                 KeyEvent.KEYCODE_NAVIGATE_NEXT -> {
-                    moveCommanderCursor(0f, 1f, "RAW DOWN")
+                    moveCommanderTarget(0f, 1f, "RAW DOWN")
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_LEFT,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT -> {
-                    moveCommanderCursor(-1f, 0f, "RAW LEFT")
+                    moveCommanderTarget(-1f, 0f, "RAW LEFT")
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_RIGHT,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT -> {
-                    moveCommanderCursor(1f, 0f, "RAW RIGHT")
+                    moveCommanderTarget(1f, 0f, "RAW RIGHT")
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_UP_LEFT -> {
-                    moveCommanderCursor(-1f, -1f, "RAW UP_LEFT")
+                    moveCommanderTarget(-1f, -1f, "RAW UP_LEFT")
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_UP_RIGHT -> {
-                    moveCommanderCursor(1f, -1f, "RAW UP_RIGHT")
+                    moveCommanderTarget(1f, -1f, "RAW UP_RIGHT")
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_DOWN_LEFT -> {
-                    moveCommanderCursor(-1f, 1f, "RAW DOWN_LEFT")
+                    moveCommanderTarget(-1f, 1f, "RAW DOWN_LEFT")
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_DOWN_RIGHT -> {
-                    moveCommanderCursor(1f, 1f, "RAW DOWN_RIGHT")
+                    moveCommanderTarget(1f, 1f, "RAW DOWN_RIGHT")
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_CENTER,
                 KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                    clickCommanderCursor("RAW SELECT")
+                    clickCommanderTarget("RAW SELECT")
                     return true
                 }
                 KeyEvent.KEYCODE_BACK -> {
