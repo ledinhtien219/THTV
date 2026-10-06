@@ -1,13 +1,12 @@
 {
   "channel": "stable",
   "approved": true,
-  "versionCode": 210,
-  "versionName": "1.0.37",
-  "downloadUrl": "https://github.com/ledinhtien219/THTV/releases/download/v1.0.37/THTV_v1.0.37_debug.apk",
+  "versionCode": 212,
+  "versionName": "1.0.39",
+  "downloadUrl": "https://github.com/ledinhtien219/THTV/releases/download/v1.0.39/THTV_v1.0.39_debug.apk",
+  "approvedCommit": "0049bb0a4d4acefd4c02d5df870f3dd0a904e748",
+  "approvedAt": "2026-10-06T00:58:26+00:00",
   "changelog": [
-    "Sửa lỗi nhập ô tìm kiếm trong trình duyệt: chữ trả đúng vào ô Google/trang web đang chọn.",
-    "Ô tìm kiếm dùng TÌM/ĐI để submit trên chính trang hiện tại; ô nhập thường chỉ điền nội dung.",
-    "Không còn trường hợp truy vấn trình duyệt chạy nhầm sang YouTube khi bàn phím hoặc Presentation bị dựng lại.",
-    "Dùng URL WebView thật làm lớp bảo vệ khi app-id bị cũ; thêm regression test cho Google và input web."
+    "DUYET STABLE"
   ]
 }
