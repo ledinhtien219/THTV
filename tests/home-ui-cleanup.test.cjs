@@ -15,8 +15,11 @@ const dashboardXml = fs.readFileSync(
 );
 
 // The host-rendered circular back button must not be requested anymore.
+// NavigationTemplate still requires a non-empty ActionStrip at runtime, so
+// use an invisible zero-width title action instead of omitting the strip.
 assert.doesNotMatch(screen, /\.addAction\(Action\.BACK\)/);
-assert.match(screen, /NavigationTemplate\.Builder\(\)[\s\S]*?\.build\(\)/);
+assert.match(screen, /ActionStrip\.Builder\(\)[\s\S]*?setTitle\("\\u200B"\)[\s\S]*?\.build\(\)/);
+assert.match(screen, /NavigationTemplate\.Builder\(\)[\s\S]*?\.setActionStrip\(hiddenActionStrip\)[\s\S]*?\.build\(\)/);
 
 // Keep the existing weather-card bounds, but render weather with vector icons.
 assert.match(dashboardXml, /android:id="@\+id\/weatherCard"[\s\S]*?android:layout_width="150dp"[\s\S]*?android:layout_height="76dp"/);
