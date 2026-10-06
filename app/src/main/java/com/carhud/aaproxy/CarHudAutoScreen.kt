@@ -117,7 +117,11 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
     override fun onClick(x: Float, y: Float) {
         val action: () -> Unit = {
             reportSurfaceInput("CLICK x=${"%.0f".format(x)} y=${"%.0f".format(y)}")
-            presentation?.dispatchTouch(x, y)
+            if (panModeEnabled) {
+                presentation?.clickCommanderCursor("HOST SELECT")
+            } else {
+                presentation?.dispatchTouch(x, y)
+            }
             Unit
         }
         if (Looper.myLooper() == handler.looper) action() else handler.post(action)
@@ -128,7 +132,11 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
             reportSurfaceInput(
                 "SCROLL dx=${"%.1f".format(distanceX)} dy=${"%.1f".format(distanceY)}"
             )
-            presentation?.dispatchScroll(distanceX, distanceY)
+            if (panModeEnabled) {
+                presentation?.moveCommanderCursorFromSurface(distanceX, distanceY)
+            } else {
+                presentation?.dispatchScroll(distanceX, distanceY)
+            }
         }
     }
 
@@ -137,7 +145,21 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
             reportSurfaceInput(
                 "FLING vx=${"%.0f".format(velocityX)} vy=${"%.0f".format(velocityY)}"
             )
-            presentation?.dispatchFling(velocityX, velocityY)
+            if (panModeEnabled) {
+                val dx = when {
+                    velocityX > 50f -> 2f
+                    velocityX < -50f -> -2f
+                    else -> 0f
+                }
+                val dy = when {
+                    velocityY > 50f -> 2f
+                    velocityY < -50f -> -2f
+                    else -> 0f
+                }
+                if (dx != 0f || dy != 0f) presentation?.moveCommanderCursor(dx, dy, "HOST FLING")
+            } else {
+                presentation?.dispatchFling(velocityX, velocityY)
+            }
         }
     }
 
@@ -238,9 +260,11 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
                 handler.post {
                     panModeEnabled = enabled
                     surfaceInputCount = 0
-                    presentation?.showRotaryDiagnostic(
-                        if (enabled) "HOST PAN ON - xoay/gạt Commander" else "HOST PAN OFF"
-                    )
+                    if (enabled) {
+                        presentation?.showCommanderCursor("HOST PAN ON")
+                    } else {
+                        presentation?.showRotaryDiagnostic("HOST PAN OFF")
+                    }
                 }
             }
             .build()
