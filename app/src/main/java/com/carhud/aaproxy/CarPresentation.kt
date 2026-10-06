@@ -1595,7 +1595,7 @@ class CarPresentation(
         mainHandler.removeCallbacks(hideCommanderCursorRunnable)
     }
 
-    private fun moveCommanderTarget(dx: Float, dy: Float, source: String) {
+    fun moveCommanderTarget(dx: Float, dy: Float, source: String) {
         if (!::root.isInitialized) return
 
         if (isDashboardShowing) {
@@ -1629,7 +1629,7 @@ class CarPresentation(
         moveCommanderCursor(dx, dy, source)
     }
 
-    private fun clickCommanderTarget(source: String): Boolean {
+    fun clickCommanderTarget(source: String): Boolean {
         if (isDashboardShowing) {
             if (dashboardView?.clickCommanderFocus() == true) {
                 hideCommanderCursorVisual()
