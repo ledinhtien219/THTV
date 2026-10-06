@@ -84,10 +84,30 @@
     /* Android WebView can paint its own oversized start/play affordance before
        the first HLS frame arrives. IPTV already has a dedicated car-safe toolbar,
        so keep Chromium's native media chrome completely out of the video layer. */
-    video#videoPlayer::-webkit-media-controls,
-    video#videoPlayer::-webkit-media-controls-enclosure,
-    video#videoPlayer::-webkit-media-controls-panel,
-    video#videoPlayer::-webkit-media-controls-overlay-play-button,
+    video#videoPlayer::-webkit-media-controls {
+      display: none !important;
+      -webkit-appearance: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+    video#videoPlayer::-webkit-media-controls-enclosure {
+      display: none !important;
+      -webkit-appearance: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+    video#videoPlayer::-webkit-media-controls-panel {
+      display: none !important;
+      -webkit-appearance: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+    video#videoPlayer::-webkit-media-controls-overlay-play-button {
+      display: none !important;
+      -webkit-appearance: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
     video#videoPlayer::-webkit-media-controls-start-playback-button {
       display: none !important;
       -webkit-appearance: none !important;
