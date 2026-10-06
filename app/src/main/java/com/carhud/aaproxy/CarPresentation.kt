@@ -947,11 +947,8 @@ class CarPresentation(
         val overlay = VietmapHudOverlay(context).apply {
             // bringToFront alone cannot draw over the browser toolbar's 150dp Z.
             // Keep warnings above browser chrome, below launcher/input dialogs.
+            // HUD visibility is controlled only from the phone app settings.
             elevation = dp(170).toFloat()
-            onCloseRequested = {
-                WazeHudManager.setFloatingOverlayEnabled(context, false)
-                visibility = View.GONE
-            }
         }
         hudOverlay = overlay
         root.addView(overlay)
