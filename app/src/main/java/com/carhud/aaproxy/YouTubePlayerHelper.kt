@@ -988,10 +988,17 @@ object YouTubePlayerHelper {
 
         if (window.location.pathname.indexOf('/results') === 0 && window.sessionStorage.getItem('carhud_auto_play') === 'true') {
             var attempts = 0;
-            var intv = setInterval(function() {
+            if (window.__carhudAutoPlayInterval) clearInterval(window.__carhudAutoPlayInterval);
+            window.__carhudAutoPlayInterval = setInterval(function() {
+                if (window.sessionStorage.getItem('carhud_auto_play') !== 'true') {
+                    clearInterval(window.__carhudAutoPlayInterval);
+                    window.__carhudAutoPlayInterval = null;
+                    return;
+                }
                 var firstVideo = document.querySelector('ytm-video-with-context-renderer a, ytm-compact-video-renderer a, a.media-item-thumbnail-container, a.compact-media-item-metadata-content');
                 if (firstVideo && firstVideo.href) {
-                    clearInterval(intv);
+                    clearInterval(window.__carhudAutoPlayInterval);
+                    window.__carhudAutoPlayInterval = null;
                     window.sessionStorage.removeItem('carhud_auto_play');
                     triggerSyntheticClick(firstVideo);
                     setTimeout(function() {
@@ -1005,7 +1012,11 @@ object YouTubePlayerHelper {
                         }
                     }, 500);
                 }
-                if (++attempts > 40) { clearInterval(intv); window.sessionStorage.removeItem('carhud_auto_play'); }
+                if (++attempts > 40) {
+                    clearInterval(window.__carhudAutoPlayInterval);
+                    window.__carhudAutoPlayInterval = null;
+                    window.sessionStorage.removeItem('carhud_auto_play');
+                }
             }, 60);
         }
 
@@ -2047,7 +2058,7 @@ object YouTubePlayerHelper {
                     // Typed/manual search must never inherit a voice auto-play flag.
                     try {
                         view.evaluateJavascript(
-                            "try { sessionStorage.removeItem('carhud_auto_play'); window.__carhudVoiceAutoPlay = false; } catch(e) {}",
+                            "try { sessionStorage.removeItem('carhud_auto_play'); window.__carhudVoiceAutoPlay = false; if (window.__carhudAutoPlayInterval) { clearInterval(window.__carhudAutoPlayInterval); window.__carhudAutoPlayInterval = null; } } catch(e) {}",
                             null
                         )
                     } catch (_: Exception) {}
@@ -2062,65 +2073,10 @@ object YouTubePlayerHelper {
                     } catch (_: Exception) {}
                 }
 
-                if (isAlreadyOnYouTube) {
-                    val fastNavJs = """
-                        (function() {
-                            try {
-                                var query = "${cleanQuery.replace("\\", "\\\\").replace("\"", "\\\"").replace("'", "\\'")}";
-                                var encoded = encodeURIComponent(query);
-                                var targetPath = '/results?search_query=' + encoded;
-                                if (!$autoPlayFirst) window.sessionStorage.removeItem('carhud_auto_play');
-
-                                // 1. Try filling the existing YouTube search input and submitting form (triggers ultra-fast AJAX search)
-                                var searchInput = document.querySelector('input.searchbox-input, input[name="search_query"], input#search, ytm-searchbox input');
-                                var form = searchInput ? (searchInput.form || searchInput.closest('form')) : null;
-                                if (searchInput && form) {
-                                    searchInput.value = query;
-                                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                                    searchInput.dispatchEvent(new Event('change', { bubbles: true }));
-                                    if (typeof form.requestSubmit === 'function') {
-                                        form.requestSubmit();
-                                        return 'fast_form';
-                                    } else if (typeof form.submit === 'function') {
-                                        form.submit();
-                                        return 'fast_form';
-                                    }
-                                }
-
-                                // 2. If already on /results, simply update query string directly
-                                if (window.location && window.location.pathname.indexOf('/results') !== -1) {
-                                    window.location.search = '?search_query=' + encoded;
-                                    return 'fast_search';
-                                }
-
-                                // 3. Fast SPA location assign without destroying browser instance
-                                window.location.assign(targetPath);
-                                return 'fast_assign';
-                            } catch(e) {
-                                return 'fallback';
-                            }
-                        })();
-                    """.trimIndent()
-
-                    view.evaluateJavascript(fastNavJs) { result ->
-                        val r = result?.replace("\"", "")?.trim() ?: ""
-                        if (r == "fallback" || r == "error" || r == "null" || r.isEmpty()) {
-                            view.loadUrl(targetUrl)
-                        }
-                    }
-                    view.postDelayed({
-                        try {
-                            view.evaluateJavascript("try { if (typeof ensureSearchResultsTitles === 'function') ensureSearchResultsTitles(); } catch(e) {}", null)
-                        } catch (e: Exception) {}
-                    }, 600L)
-                    view.postDelayed({
-                        try {
-                            view.evaluateJavascript("try { if (typeof ensureSearchResultsTitles === 'function') ensureSearchResultsTitles(); } catch(e) {}", null)
-                        } catch (e: Exception) {}
-                    }, 1400L)
-                } else {
-                    view.loadUrl(targetUrl)
-                }
+                // Always navigate to the explicit results URL. Submitting YouTube's
+                // live search form can trigger stale SPA selection/voice handlers and
+                // jump directly to /watch before manual-search cancellation settles.
+                view.loadUrl(targetUrl)
 
                 if (autoPlayFirst) {
                     scheduleAutoPlayFirstSearchResult(view, generation)
@@ -2135,7 +2091,7 @@ object YouTubePlayerHelper {
         searchGeneration.incrementAndGet()
         try {
             view?.evaluateJavascript(
-                "try { sessionStorage.removeItem('carhud_auto_play'); window.__carhudVoiceAutoPlay = false; } catch(e) {}",
+                "try { sessionStorage.removeItem('carhud_auto_play'); window.__carhudVoiceAutoPlay = false; if (window.__carhudAutoPlayInterval) { clearInterval(window.__carhudAutoPlayInterval); window.__carhudAutoPlayInterval = null; } } catch(e) {}",
                 null
             )
         } catch (_: Exception) {}

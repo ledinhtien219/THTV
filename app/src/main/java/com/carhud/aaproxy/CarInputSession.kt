@@ -8,6 +8,7 @@ class CarInputSession(
     initialText: String,
     val hint: String,
     val allowEmpty: Boolean = false,
+    val submitLabel: String = "Nhập",
     private val onSubmit: (String, (Boolean) -> Unit) -> Unit,
     private val onCancel: (String) -> Unit = {}
 ) {

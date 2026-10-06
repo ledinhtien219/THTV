@@ -313,7 +313,7 @@ class CarPresentation(
                     navigateBrowser(query)
                 }
                 currentActiveAppId == "youtube" -> {
-                    YouTubePlayerHelper.cancelSearchAutoPlay(web)
+                    prepareManualYouTubeSearch()
                     if (isDashboardShowing) showWebFullscreen()
                     YouTubePlayerHelper.search(web, query, autoPlayFirst = false)
                     hideSearchOverlay(notifyPhone = false)
@@ -2817,7 +2817,17 @@ class CarPresentation(
         }
     }
 
-    private fun executeSearch(query: String, broadcast: Boolean = true) {
+    private fun prepareManualYouTubeSearch() {
+        // A typed search is navigation, not a playback request. Clear every
+        // pending voice/auto-resume path before moving to /results so returning
+        // from the Android Auto keyboard cannot jump back into a video.
+        cancelSystemVoiceRequest()
+        YouTubePlayerHelper.cancelSearchAutoPlay(web)
+        CarMediaManager.userWantsPlayback = false
+        CarMediaManager.setPlaybackState(false)
+    }
+
+    private fun executeSearch(query: String, broadcast: Boolean = false) {
         if (searchOverlayMode == "address") {
             if (isBrowserApp()) navigateBrowser(query)
             return
@@ -2830,7 +2840,7 @@ class CarPresentation(
         if (q.isEmpty()) return
 
         if (currentActiveAppId != "youtube") return
-        YouTubePlayerHelper.cancelSearchAutoPlay(web)
+        prepareManualYouTubeSearch()
         if (isDashboardShowing) {
             showWebFullscreen()
         }
@@ -2855,7 +2865,8 @@ class CarPresentation(
 
         val pageUrl = web.url.orEmpty()
         if (pageUrl.contains("youtube.com", true) || pageUrl.contains("youtu.be", true)) {
-            YouTubePlayerHelper.cancelSearchAutoPlay(web)
+            if (performAction) prepareManualYouTubeSearch()
+            else YouTubePlayerHelper.cancelSearchAutoPlay(web)
         }
 
         // Google changes/replaces its search field dynamically. For a captured
@@ -3326,7 +3337,7 @@ class CarPresentation(
                     addView(spaceKey)
 
                     // Search Action Button
-                    val searchActionKey = createKey("↵ NHẬP", 2.1f, bg = Color.parseColor("#0284C7"), stroke = Color.parseColor("#38BDF8"), textColor = Color.WHITE, textSize = 13.5f) {
+                    val searchActionKey = createKey("🔍 TÌM", 2.1f, bg = Color.parseColor("#0284C7"), stroke = Color.parseColor("#38BDF8"), textColor = Color.WHITE, textSize = 13.5f) {
                         commitEditorText()
                     }
                     keyboardActionKey = searchActionKey
@@ -3360,7 +3371,7 @@ class CarPresentation(
         searchOverlayVoiceButton?.visibility = View.VISIBLE
         searchOverlaySubmitButton?.apply { visibility = View.VISIBLE; text = "🔍 Tìm" }
         searchSuggestionStrip?.visibility = View.VISIBLE
-        keyboardActionKey?.text = "↵ NHẬP"
+        keyboardActionKey?.text = "🔍 TÌM"
         showKeyboardOverlayInternal()
     }
 
@@ -3415,7 +3426,7 @@ class CarPresentation(
         searchOverlayVoiceButton?.visibility = View.VISIBLE
         searchOverlaySubmitButton?.apply { visibility = View.VISIBLE; text = "Đi →" }
         searchSuggestionStrip?.visibility = View.GONE
-        keyboardActionKey?.text = "↵ NHẬP"
+        keyboardActionKey?.text = "ĐI →"
         showKeyboardOverlayInternal()
     }
 
@@ -3464,7 +3475,15 @@ class CarPresentation(
         val token = webKeyboardToken
         val webAction = webKeyboardAction
         return CarInputSession(
-            initialText = searchInput.text.toString(), hint = searchInput.hint.toString(), allowEmpty = true,
+            initialText = searchInput.text.toString(),
+            hint = searchInput.hint.toString(),
+            allowEmpty = mode == "web" && webAction != "search",
+            submitLabel = when {
+                mode == "youtube" -> "Tìm"
+                mode == "address" -> "Đi"
+                mode == "web" && webAction == "search" -> "Tìm"
+                else -> "Nhập"
+            },
             onSubmit = { value, complete ->
                 if (CarMediaManager.activeAppId != owner || web.url != page) complete(false)
                 else if (mode == "web") {
@@ -3476,12 +3495,20 @@ class CarPresentation(
                         performAction = webAction == "search"
                     )
                 } else {
-                    // App controls act on this draft only after their own Search/Go button.
-                    CarMediaManager.editorDraft = CarMediaManager.EditorDraft(owner, page, mode, value)
-                    keyboardPresentation.get()?.takeIf {
+                    // Native Android Auto submit is the final action for YouTube/address.
+                    // Do not bounce back to a second in-app "Tìm" button.
+                    val current = keyboardPresentation.get()?.takeIf {
                         it.isShowing && it.web === web && it.currentActiveAppId == owner
-                    }?.applyEditorDraft(CarMediaManager.editorDraft!!)
-                    complete(true)
+                    }
+                    if (current == null) {
+                        complete(false)
+                    } else {
+                        CarMediaManager.editorDraft = null
+                        current.searchInput.setText(value)
+                        current.searchInput.setSelection(value.length)
+                        current.executeSearch(value, broadcast = false)
+                        complete(true)
+                    }
                 }
             },
             onCancel = { value -> searchInput.setText(value); searchInput.setSelection(value.length) }
@@ -3508,7 +3535,9 @@ class CarPresentation(
                 performAction = webKeyboardAction == "search"
             )
         } else {
-            carKeyboard?.visibility = View.GONE
+            // THTV keyboard Enter/Search should perform the same final action as
+            // the visible Search/Go button, not merely hide the key rows.
+            executeSearch(searchInput.text.toString(), broadcast = false)
         }
     }
 

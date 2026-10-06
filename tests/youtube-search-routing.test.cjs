@@ -9,6 +9,18 @@ const presentation = fs.readFileSync(
   'app/src/main/java/com/carhud/aaproxy/CarPresentation.kt',
   'utf8'
 );
+const inputSession = fs.readFileSync(
+  'app/src/main/java/com/carhud/aaproxy/CarInputSession.kt',
+  'utf8'
+);
+const searchScreen = fs.readFileSync(
+  'app/src/main/java/com/carhud/aaproxy/CarSearchScreen.kt',
+  'utf8'
+);
+const mediaManager = fs.readFileSync(
+  'app/src/main/java/com/carhud/aaproxy/CarMediaManager.kt',
+  'utf8'
+);
 
 // Manual search must be the default.
 assert.match(
@@ -36,6 +48,21 @@ assert.match(
 );
 assert.match(presentation, /YouTubePlayerHelper\.cancelSearchAutoPlay\(web\)/);
 
+
+// Manual search navigation must bypass YouTube's live form/SPA submit path.
+// Stale voice auto-play intervals must also be actively cancellable after they start.
+assert.match(helper, /view\.loadUrl\(targetUrl\)/);
+assert.doesNotMatch(helper, /form\.requestSubmit\(\)/);
+assert.match(helper, /window\.__carhudAutoPlayInterval/);
+assert.match(
+  helper,
+  /sessionStorage\.getItem\('carhud_auto_play'\) !== 'true'[\s\S]*?clearInterval\(window\.__carhudAutoPlayInterval\)/
+);
+assert.match(
+  helper,
+  /cancelSearchAutoPlay\(view: WebView\?\)[\s\S]*?clearInterval\(window\.__carhudAutoPlayInterval\)/
+);
+
 // Voice keeps the deliberate Google-Assistant-like direct play behavior.
 assert.match(
   presentation,
@@ -48,6 +75,55 @@ assert.doesNotMatch(
   /YouTubePlayerHelper\.playFirstAvailableVideo\((?:web|view)\)/
 );
 
+
+// Typed search must also clear stale playback intent and pending system voice work.
+assert.match(
+  presentation,
+  /private fun prepareManualYouTubeSearch\(\)[\s\S]*?cancelSystemVoiceRequest\(\)[\s\S]*?CarMediaManager\.userWantsPlayback = false[\s\S]*?CarMediaManager\.setPlaybackState\(false\)/
+);
+
+// The persistent/background WebView must never auto-pick a result merely because
+// "auto resume last track" is enabled. Only a /watch page may auto-resume.
+const persistentClient = mediaManager.match(
+  /web\.webViewClient = object : android\.webkit\.WebViewClient\(\) \{[\s\S]*?override fun onRenderProcessGone/
+)?.[0] || '';
+assert.notEqual(persistentClient, '');
+assert.doesNotMatch(persistentClient, /playFirstAvailableVideo/);
+assert.match(
+  persistentClient,
+  /if \(!isPlaying && view\.url\?\.contains\("watch"\) == true\)/
+);
+
+// Re-acquiring the persistent WebView after the native keyboard must preserve
+// /results or home. Last-track restore is allowed only when the WebView is blank.
+assert.match(
+  mediaManager,
+  /if \(\(cur\.isNullOrBlank\(\) \|\| cur == "about:blank"\) &&[\s\S]*?autoResume && !lastUrl\.isNullOrBlank\(\) && lastUrl\.contains\("watch"\)/
+);
+assert.doesNotMatch(
+  mediaManager,
+  /cur\.isNullOrBlank\(\) \|\| cur == "about:blank" \|\| !cur\.contains\("watch"\)/
+);
+
+// Host/native keyboard submission is a final action, not a draft handoff.
+assert.match(
+  presentation,
+  /private fun executeSearch\(query: String, broadcast: Boolean = false\)/
+);
+assert.match(
+  presentation,
+  /current\.executeSearch\(value, broadcast = false\)/
+);
+assert.match(
+  presentation,
+  /executeSearch\(searchInput\.text\.toString\(\), broadcast = false\)/
+);
+
+// The host action uses the semantic label supplied by the active input mode.
+assert.match(inputSession, /val submitLabel: String = "Nhập"/);
+assert.match(searchScreen, /setTitle\(input\.submitLabel\)/);
+
+
 console.log(
-  'PASS YouTube search routing: keyboard shows results, stale voice autoplay cancelled, voice can direct-play'
+  'PASS YouTube keyboard routing: native/THTV submit once, shows results, voice-only autoplay preserved'
 );
