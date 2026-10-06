@@ -100,6 +100,14 @@ class CarPresentation(
     private val hideRotaryDebugRunnable = Runnable {
         rotaryDebugBanner?.visibility = View.GONE
     }
+    private var commanderCursor: TextView? = null
+    private var commanderCursorX = 0f
+    private var commanderCursorY = 0f
+    private var commanderCursorAccel = 1f
+    private var commanderLastMoveAt = 0L
+    private val hideCommanderCursorRunnable = Runnable {
+        commanderCursor?.visibility = View.GONE
+    }
 
     // Prevent repeated play/resume commands when Android Auto recreates the surface
     // or YouTube briefly reports a paused/buffering state.
@@ -1541,6 +1549,129 @@ class CarPresentation(
             mainHandler.removeCallbacks(hideRotaryDebugRunnable)
             mainHandler.postDelayed(hideRotaryDebugRunnable, 4500L)
         }
+    }
+
+    fun showCommanderCursor(source: String = "DPAD") {
+        mainHandler.post {
+            if (!::root.isInitialized || root.width <= 0 || root.height <= 0) return@post
+            val size = dp(36)
+            val cursor = commanderCursor ?: TextView(context).apply {
+                text = "◎"
+                textSize = 25f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                setTextColor(Color.WHITE)
+                background = rounded(
+                    Color.parseColor("#CC0F172A"),
+                    999f,
+                    Color.parseColor("#38BDF8"),
+                    2
+                )
+                elevation = dp(300).toFloat()
+                isClickable = false
+                isFocusable = false
+                root.addView(this, FrameLayout.LayoutParams(size, size))
+                commanderCursor = this
+            }
+
+            if (commanderCursorX <= 0f || commanderCursorY <= 0f) {
+                commanderCursorX = root.width / 2f
+                commanderCursorY = root.height / 2f
+            }
+            commanderCursorX = commanderCursorX.coerceIn(size / 2f, root.width - size / 2f)
+            commanderCursorY = commanderCursorY.coerceIn(size / 2f, root.height - size / 2f)
+            cursor.x = commanderCursorX - size / 2f
+            cursor.y = commanderCursorY - size / 2f
+            cursor.visibility = View.VISIBLE
+            cursor.bringToFront()
+            mainHandler.removeCallbacks(hideCommanderCursorRunnable)
+            mainHandler.postDelayed(hideCommanderCursorRunnable, 6000L)
+            showRotaryDiagnostic("CURSOR $source x=${commanderCursorX.toInt()} y=${commanderCursorY.toInt()}")
+        }
+    }
+
+    fun moveCommanderCursor(dx: Float, dy: Float, source: String = "DPAD") {
+        mainHandler.post {
+            if (!::root.isInitialized || root.width <= 0 || root.height <= 0) return@post
+            showCommanderCursor(source)
+
+            val now = SystemClock.uptimeMillis()
+            commanderCursorAccel = if (now - commanderLastMoveAt <= 220L) {
+                (commanderCursorAccel + 0.35f).coerceAtMost(3.5f)
+            } else {
+                1f
+            }
+            commanderLastMoveAt = now
+
+            val cursorSize = dp(36).toFloat()
+            val baseStep = (minOf(root.width, root.height) * 0.055f).coerceAtLeast(dp(18).toFloat())
+            val step = baseStep * commanderCursorAccel
+            commanderCursorX = (commanderCursorX + dx * step)
+                .coerceIn(cursorSize / 2f, root.width - cursorSize / 2f)
+            commanderCursorY = (commanderCursorY + dy * step)
+                .coerceIn(cursorSize / 2f, root.height - cursorSize / 2f)
+
+            commanderCursor?.let { cursor ->
+                cursor.x = commanderCursorX - cursorSize / 2f
+                cursor.y = commanderCursorY - cursorSize / 2f
+                cursor.visibility = View.VISIBLE
+                cursor.bringToFront()
+            }
+
+            val edge = cursorSize / 2f + dp(8)
+            when {
+                dy < 0f && commanderCursorY <= edge -> dispatchScroll(0f, -140f)
+                dy > 0f && commanderCursorY >= root.height - edge -> dispatchScroll(0f, 140f)
+            }
+
+            mainHandler.removeCallbacks(hideCommanderCursorRunnable)
+            mainHandler.postDelayed(hideCommanderCursorRunnable, 6000L)
+            showRotaryDiagnostic(
+                "CURSOR $source dx=${"%.1f".format(dx)} dy=${"%.1f".format(dy)} " +
+                    "x=${commanderCursorX.toInt()} y=${commanderCursorY.toInt()} a=${"%.1f".format(commanderCursorAccel)}"
+            )
+        }
+    }
+
+    fun moveCommanderCursorFromSurface(distanceX: Float, distanceY: Float) {
+        val ax = kotlin.math.abs(distanceX)
+        val ay = kotlin.math.abs(distanceY)
+        if (ax < 0.01f && ay < 0.01f) return
+        val dx = when {
+            ax < 0.01f -> 0f
+            distanceX > 0f -> 1f
+            else -> -1f
+        }
+        val dy = when {
+            ay < 0.01f -> 0f
+            distanceY > 0f -> 1f
+            else -> -1f
+        }
+        moveCommanderCursor(dx, dy, "HOST")
+    }
+
+    fun clickCommanderCursor(source: String = "DPAD"): Boolean {
+        if (!::root.isInitialized) return false
+        val cursor = commanderCursor
+        if (cursor == null || cursor.visibility != View.VISIBLE) {
+            showCommanderCursor(source)
+            return true
+        }
+
+        val x = commanderCursorX
+        val y = commanderCursorY
+        cursor.visibility = View.INVISIBLE
+        showRotaryDiagnostic("CURSOR CLICK $source x=${x.toInt()} y=${y.toInt()}")
+        dispatchTouch(x, y)
+        mainHandler.postDelayed({
+            if (::root.isInitialized) {
+                commanderCursor?.visibility = View.VISIBLE
+                commanderCursor?.bringToFront()
+                mainHandler.removeCallbacks(hideCommanderCursorRunnable)
+                mainHandler.postDelayed(hideCommanderCursorRunnable, 6000L)
+            }
+        }, 120L)
+        return true
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
@@ -3980,7 +4111,15 @@ class CarPresentation(
                 kotlin.math.abs(vertical) > 0.01f -> vertical
                 else -> 0f
             }
-            if (primary != 0f) dispatchScroll(0f, -primary * 120f)
+            if (primary != 0f) {
+                moveCommanderCursor(
+                    if (kotlin.math.abs(horizontal) > 0.01f) {
+                        if (horizontal > 0f) 1f else -1f
+                    } else 0f,
+                    if (primary > 0f) -1f else 1f,
+                    "RAW ROTARY"
+                )
+            }
             return true
         }
         return super.dispatchGenericMotionEvent(ev)
@@ -3992,37 +4131,45 @@ class CarPresentation(
                 KeyEvent.KEYCODE_DPAD_UP,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP,
                 KeyEvent.KEYCODE_NAVIGATE_PREVIOUS -> {
-                    showRotaryDiagnostic("RAW KEY UP/PREV code=${event.keyCode}")
-                    dispatchScroll(0f, -120f)
+                    moveCommanderCursor(0f, -1f, "RAW UP")
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_DOWN,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN,
                 KeyEvent.KEYCODE_NAVIGATE_NEXT -> {
-                    showRotaryDiagnostic("RAW KEY DOWN/NEXT code=${event.keyCode}")
-                    dispatchScroll(0f, 120f)
+                    moveCommanderCursor(0f, 1f, "RAW DOWN")
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_LEFT,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT -> {
-                    showRotaryDiagnostic("RAW KEY LEFT code=${event.keyCode}")
-                    dispatchScroll(-120f, 0f)
+                    moveCommanderCursor(-1f, 0f, "RAW LEFT")
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_RIGHT,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT -> {
-                    showRotaryDiagnostic("RAW KEY RIGHT code=${event.keyCode}")
-                    dispatchScroll(120f, 0f)
+                    moveCommanderCursor(1f, 0f, "RAW RIGHT")
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_UP_LEFT -> {
+                    moveCommanderCursor(-1f, -1f, "RAW UP_LEFT")
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_UP_RIGHT -> {
+                    moveCommanderCursor(1f, -1f, "RAW UP_RIGHT")
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN_LEFT -> {
+                    moveCommanderCursor(-1f, 1f, "RAW DOWN_LEFT")
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN_RIGHT -> {
+                    moveCommanderCursor(1f, 1f, "RAW DOWN_RIGHT")
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_CENTER,
                 KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                    val focused = if (::root.isInitialized) root.findFocus() else null
-                    val clicked = focused?.performClick() == true
-                    showRotaryDiagnostic(
-                        "RAW KEY SELECT code=${event.keyCode} focus=${focused?.javaClass?.simpleName ?: "none"} click=$clicked"
-                    )
+                    clickCommanderCursor("RAW SELECT")
                     return true
                 }
                 KeyEvent.KEYCODE_BACK -> {
