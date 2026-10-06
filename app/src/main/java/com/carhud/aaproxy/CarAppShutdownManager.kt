@@ -38,6 +38,7 @@ object CarAppShutdownManager {
             // 2. Stop Background Services & WebSockets
             try {
                 WazeHlpWebSocketManager.stop()
+                GofaHudManager.stop()
                 GpsSpeedManager.stop()
                 CarTtsManager.shutdown()
             } catch (e: Exception) {
