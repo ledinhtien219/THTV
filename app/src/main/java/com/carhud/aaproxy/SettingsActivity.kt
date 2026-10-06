@@ -334,7 +334,14 @@ class SettingsActivity : AppCompatActivity() {
             finish()
             return
         }
-        WazeHlpWebSocketManager.start()
+        HudSourceManager.init(applicationContext)
+        if (HudSourceManager.isWaze(applicationContext)) {
+            WazeHlpWebSocketManager.start()
+            GofaHudManager.stop()
+        } else {
+            WazeHlpWebSocketManager.stop()
+            GofaHudManager.start(applicationContext)
+        }
         updateThemeColors()
         window.statusBarColor = colorBg
         window.navigationBarColor = colorBg
@@ -1090,7 +1097,7 @@ class SettingsActivity : AppCompatActivity() {
         )
 
         // ==========================================
-        // CARD 4: CẢNH BÁO TỐC ĐỘ (WAZE MOD / GPS)
+        // CARD 4: WAZE HUD
         // ==========================================
         var activeHudStyleId = WazeHudManager.getActiveStyleId(this)
 
@@ -1098,10 +1105,29 @@ class SettingsActivity : AppCompatActivity() {
             createExpandableCard(
                 iconEmoji = "🛡️",
                 iconBgColor = if (isDarkTheme) Color.parseColor("#064E3B") else Color.parseColor("#D1FAE5"),
-                title = "CẢNH BÁO TỐC ĐỘ (WAZE MOD / GPS)",
-                subtitle = "Đồng bộ tốc độ, camera phạt nguội, kết nối HLP & 5 mẫu HUD Waze Mod chuẩn",
+                title = "WAZE HUD",
+                subtitle = "Nguồn Waze Mod riêng • HLP, camera, tốc độ và cảnh báo giao thông",
                 initiallyExpanded = false
             ) { content ->
+                content.addView(createSeparator())
+
+                val wazeSelected = HudSourceManager.isWaze(this@SettingsActivity)
+                content.addView(
+                    settingCard(
+                        title = "NGUỒN HUD: WAZE",
+                        subtitle = if (wazeSelected) {
+                            "Waze đang là nguồn dữ liệu HUD chính"
+                        } else {
+                            "Chạm để chuyển từ GOFA sang Waze"
+                        },
+                        badgeText = if (wazeSelected) "✓ ĐANG DÙNG" else "CHỌN WAZE",
+                        onClick = {
+                            HudSourceManager.activate(this@SettingsActivity, HudSourceManager.SOURCE_WAZE)
+                            Toast.makeText(this@SettingsActivity, "Đã chọn nguồn HUD: Waze", Toast.LENGTH_SHORT).show()
+                            recreate()
+                        }
+                    )
+                )
                 content.addView(createSeparator())
 
                 // ----------------------------------------------------
@@ -1168,6 +1194,10 @@ class SettingsActivity : AppCompatActivity() {
                                 marginEnd = dp(4)
                             }
                             setOnClickListener {
+                                if (!HudSourceManager.isWaze(this@SettingsActivity)) {
+                                    Toast.makeText(this@SettingsActivity, "Hãy chọn nguồn Waze trước", Toast.LENGTH_SHORT).show()
+                                    return@setOnClickListener
+                                }
                                 WazeHlpWebSocketManager.restartConnection()
                                 Toast.makeText(this@SettingsActivity, "Đang khởi động lại Server WebSocket (Cổng 8766)...", Toast.LENGTH_SHORT).show()
                             }
@@ -1613,7 +1643,7 @@ class SettingsActivity : AppCompatActivity() {
                             addView(compassIcon)
 
                             val roadTv = TextView(this@SettingsActivity).apply {
-                                text = "Đang kết nối định vị Waze..."
+                                text = "Đang chờ dữ liệu ${HudSourceManager.displayName(HudSourceManager.getActiveSource(this@SettingsActivity))}..."
                                 textSize = 11.5f
                                 typeface = Typeface.DEFAULT_BOLD
                                 setTextColor(Color.parseColor("#CBD5E1"))
@@ -1698,7 +1728,11 @@ class SettingsActivity : AppCompatActivity() {
                             // Update bottom road & alert
                             val leftPart = (bottomBar.getChildAt(0) as? LinearLayout)
                             val roadTv = (leftPart?.getChildAt(1) as? TextView)
-                            roadTv?.text = if (!d.roadName.isNullOrBlank()) d.roadName else "Đang kết nối định vị Waze..."
+                            roadTv?.text = if (!d.roadName.isNullOrBlank()) {
+                                d.roadName
+                            } else {
+                                "Đang chờ dữ liệu ${HudSourceManager.displayName(HudSourceManager.getActiveSource(this@SettingsActivity))}..."
+                            }
 
                             val alertBadge = (bottomBar.getChildAt(1) as? TextView)
                             val alertDesc = d.alertDescription ?: d.alertTitle
@@ -1728,13 +1762,13 @@ class SettingsActivity : AppCompatActivity() {
                     val titleCol = LinearLayout(this@SettingsActivity).apply {
                         orientation = LinearLayout.VERTICAL
                         addView(TextView(this@SettingsActivity).apply {
-                            text = "GIAO DIỆN HUD WAZE MOD (5 MẪU CHUẨN)"
+                            text = "GIAO DIỆN HUD DÙNG CHUNG (5 MẪU)"
                             textSize = 13.5f
                             typeface = Typeface.DEFAULT_BOLD
                             setTextColor(colorTextPrimary)
                         })
                         addView(TextView(this@SettingsActivity).apply {
-                            text = "Chạm để đổi kiểu trực tiếp cho màn xe Android Auto và cửa sổ nổi kính lái"
+                            text = "Kiểu HUD dùng chung cho cả nguồn Waze và GOFA"
                             textSize = 11f
                             setTextColor(colorTextSecondary)
                             setPadding(0, dp(2), 0, 0)
@@ -2076,7 +2110,137 @@ class SettingsActivity : AppCompatActivity() {
         )
 
         // ==========================================
-        // CARD 5: QUẢN LÝ ỨNG DỤNG XE & THANH DOCK
+        // CARD 5: GOFA HUD (BLE)
+        // ==========================================
+        root.addView(
+            createExpandableCard(
+                iconEmoji = "🛰️",
+                iconBgColor = if (isDarkTheme) Color.parseColor("#3B0764") else Color.parseColor("#F3E8FF"),
+                title = "GOFA HUD",
+                subtitle = "Nguồn GOFA riêng • BLE HUD, tốc độ, giới hạn và cảnh báo",
+                initiallyExpanded = false
+            ) { content ->
+                content.addView(createSeparator())
+
+                val gofaSelected = HudSourceManager.isGofa(this@SettingsActivity)
+                content.addView(
+                    settingCard(
+                        title = "NGUỒN HUD: GOFA",
+                        subtitle = if (gofaSelected) {
+                            "GOFA đang là nguồn dữ liệu HUD chính"
+                        } else {
+                            "Chạm để chuyển từ Waze sang GOFA"
+                        },
+                        badgeText = if (gofaSelected) "✓ ĐANG DÙNG" else "CHỌN GOFA",
+                        onClick = {
+                            HudSourceManager.activate(this@SettingsActivity, HudSourceManager.SOURCE_GOFA)
+                            Toast.makeText(this@SettingsActivity, "Đã chọn nguồn HUD: GOFA", Toast.LENGTH_SHORT).show()
+                            recreate()
+                        }
+                    )
+                )
+
+                content.addView(createSeparator())
+
+                val gofaStatusBox = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(14), dp(12), dp(14), dp(12))
+                    background = rounded(
+                        if (isDarkTheme) Color.parseColor("#1E1033") else Color.parseColor("#FAF5FF"),
+                        12f,
+                        if (isDarkTheme) Color.parseColor("#5B21B6") else Color.parseColor("#D8B4FE"),
+                        1
+                    )
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        bottomMargin = dp(10)
+                    }
+
+                    val statusTv = TextView(this@SettingsActivity).apply {
+                        text = "📡 ${GofaHudManager.statusText.value}"
+                        textSize = 13f
+                        typeface = Typeface.DEFAULT_BOLD
+                        setTextColor(if (GofaHudManager.isConnected.value) Color.parseColor("#10B981") else colorAccent)
+                    }
+                    addView(statusTv)
+
+                    lifecycleScope.launch {
+                        GofaHudManager.statusText.collectLatest { status ->
+                            statusTv.text = "📡 $status"
+                            statusTv.setTextColor(
+                                if (GofaHudManager.isConnected.value) Color.parseColor("#10B981") else colorAccent
+                            )
+                        }
+                    }
+
+                    addView(TextView(this@SettingsActivity).apply {
+                        text = "BLE bridge đã tách riêng. Phần UUID/GATT packet GOFA sẽ nối vào GofaHudManager khi map xong protocol."
+                        textSize = 11.5f
+                        setTextColor(colorTextSecondary)
+                        setPadding(0, dp(5), 0, dp(8))
+                    })
+
+                    val actionRow = LinearLayout(this@SettingsActivity).apply {
+                        orientation = LinearLayout.HORIZONTAL
+
+                        addView(TextView(this@SettingsActivity).apply {
+                            text = "🚀 Mở GOFA"
+                            textSize = 11.5f
+                            typeface = Typeface.DEFAULT_BOLD
+                            setTextColor(Color.WHITE)
+                            gravity = Gravity.CENTER
+                            background = rounded(colorAccent, 8f)
+                            setPadding(dp(10), dp(8), dp(10), dp(8))
+                            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                                marginEnd = dp(4)
+                            }
+                            setOnClickListener {
+                                if (!GofaHudManager.openGofa(this@SettingsActivity)) {
+                                    Toast.makeText(this@SettingsActivity, "Chưa cài GOFA hoặc không tìm thấy app GOFA", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        })
+
+                        addView(TextView(this@SettingsActivity).apply {
+                            text = "🎨 Tùy chỉnh HUD"
+                            textSize = 11.5f
+                            typeface = Typeface.DEFAULT_BOLD
+                            setTextColor(colorTextPrimary)
+                            gravity = Gravity.CENTER
+                            background = rounded(colorItemBg, 8f, colorItemBorder, 1)
+                            setPadding(dp(10), dp(8), dp(10), dp(8))
+                            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                                marginStart = dp(4)
+                            }
+                            setOnClickListener {
+                                showWazeHudCustomizerDialog {
+                                    inAppFloatingHud?.applyHudConfig()
+                                }
+                            }
+                        })
+                    }
+                    addView(actionRow)
+                }
+                content.addView(gofaStatusBox)
+
+                content.addView(TextView(this).apply {
+                    text = if (gofaSelected) {
+                        "✓ Waze đã được tắt. HUD hiện chỉ chờ dữ liệu GOFA (GPS vẫn dùng làm tốc độ dự phòng)."
+                    } else {
+                        "GOFA đang ở chế độ chờ. Bấm “CHỌN GOFA” để tắt nguồn Waze và chuyển HUD sang GOFA."
+                    }
+                    textSize = 11f
+                    setTypeface(typeface, Typeface.ITALIC)
+                    setTextColor(colorTextSecondary)
+                    setPadding(0, dp(4), 0, dp(6))
+                })
+            }
+        )
+
+        // ==========================================
+        // CARD 6: QUẢN LÝ ỨNG DỤNG XE & THANH DOCK
         // ==========================================
         root.addView(
             createExpandableCard(
