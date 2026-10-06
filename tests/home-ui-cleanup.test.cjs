@@ -31,6 +31,10 @@ assert.match(dashboardXml, /android:src="@drawable\/ic_weather_partly_cloudy"/);
 assert.match(dashboardKt, /private lateinit var weatherIcon: ImageView/);
 assert.match(dashboardKt, /fun weatherIconRes\(iconEmoji: String\): Int/);
 assert.match(dashboardKt, /weatherIcon\.setImageResource\(weatherIconRes\(weather\.iconEmoji\)\)/);
+assert.match(dashboardKt, /Color\.parseColor\("#66F8FAFC"\)/);
+assert.match(dashboardKt, /Color\.parseColor\("#66101A24"\)/);
+assert.match(dashboardKt, /Color\.parseColor\("#80FFFFFF"\)/);
+assert.match(dashboardKt, /Color\.parseColor\("#4DFFFFFF"\)/);
 
 for (const file of [
   'ic_weather_sunny.xml',
