@@ -158,6 +158,10 @@ object CarMediaManager {
 
             val restoreViewport = Runnable {
                 try {
+                    // A restore is delayed because WebView history/video state settles
+                    // asynchronously. Do not let an old callback mutate the page after
+                    // the driver has already switched to another app.
+                    if (activeAppId != appId || getPersistentWebView() !== web) return@Runnable
                     web.scrollTo(session.scrollX, session.scrollY)
                     if (appId == "youtube" && session.videoPositionSec > 0) {
                         YouTubePlayerHelper.seekTo(web, session.videoPositionSec.toLong())
