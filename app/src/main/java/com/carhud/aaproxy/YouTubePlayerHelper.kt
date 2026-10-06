@@ -2044,8 +2044,7 @@ object YouTubePlayerHelper {
         if (cleanQuery.isEmpty()) return
 
         val generation = searchGeneration.incrementAndGet()
-
-        view.post {
+        val navigate = Runnable {
             try {
                 val encoded = URLEncoder.encode(cleanQuery, "UTF-8")
                 val host = if (view.url?.contains("www.youtube.com") == true) "https://www.youtube.com" else "https://m.youtube.com"
@@ -2073,9 +2072,11 @@ object YouTubePlayerHelper {
                     } catch (_: Exception) {}
                 }
 
-                // Always navigate to the explicit results URL. Submitting YouTube's
-                // live search form can trigger stale SPA selection/voice handlers and
-                // jump directly to /watch before manual-search cancellation settles.
+                // The Android Auto native SearchTemplate destroys/recreates the app
+                // surface as it closes. Start navigation synchronously on the main
+                // thread and keep the target until the recreated Presentation sees
+                // /results; otherwise the host can return to the old YouTube home.
+                if (!autoPlayFirst) CarMediaManager.markPendingYouTubeSearch(targetUrl)
                 view.loadUrl(targetUrl)
 
                 if (autoPlayFirst) {
@@ -2084,6 +2085,12 @@ object YouTubePlayerHelper {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            navigate.run()
+        } else {
+            view.post(navigate)
         }
     }
 
