@@ -21,7 +21,7 @@ assert.doesNotMatch(screen, /Action\.BACK/);
 assert.doesNotMatch(screen, /PlaceListNavigationTemplate/);
 assert.doesNotMatch(screen, /ItemList\.Builder/);
 assert.match(screen, /CarColor\.createCustom\(0x00000000, 0x00000000\)/);
-assert.match(screen, /ActionStrip\.Builder\(\)[\s\S]*?setTitle\("\\u200B"\)[\s\S]*?setBackgroundColor\(transparent\)/);
+assert.match(screen, /ActionStrip\.Builder\(\)[\s\S]*?setTitle\("\\u200B"\)[\s\S]*?setFlags\(Action\.FLAG_PRIMARY\)[\s\S]*?setBackgroundColor\(transparent\)/);
 assert.match(screen, /NavigationTemplate\.Builder\(\)[\s\S]*?setActionStrip\(hiddenActionStrip\)/);
 
 // Keep the existing weather-card bounds, but render weather with vector icons.
