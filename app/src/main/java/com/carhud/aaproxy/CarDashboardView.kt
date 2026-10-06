@@ -983,7 +983,12 @@ class CarDashboardView(
                 ivDayNightToggle?.setImageResource(R.drawable.ic_mode_day)
                 ivDayNightToggle?.setColorFilter(Color.parseColor("#F59E0B"))
                 dashboardScrim.setBackgroundColor(Color.parseColor("#15000000"))
-                weatherCard.background = rounded(Color.parseColor("#D9F8FAFC"), 18f)
+                weatherCard.background = rounded(
+                    Color.parseColor("#66F8FAFC"),
+                    18f,
+                    Color.parseColor("#80FFFFFF"),
+                    1
+                )
                 weatherTemp.setTextColor(Color.parseColor("#0F172A"))
                 weatherCondition.setTextColor(Color.parseColor("#334155"))
                 weatherLocation.setTextColor(Color.parseColor("#0369A1"))
@@ -992,7 +997,12 @@ class CarDashboardView(
                 ivDayNightToggle?.setImageResource(R.drawable.ic_mode_night)
                 ivDayNightToggle?.setColorFilter(Color.parseColor("#38BDF8"))
                 dashboardScrim.setBackgroundColor(Color.parseColor("#42000000"))
-                weatherCard.background = rounded(Color.parseColor("#CC101A24"), 18f)
+                weatherCard.background = rounded(
+                    Color.parseColor("#66101A24"),
+                    18f,
+                    Color.parseColor("#4DFFFFFF"),
+                    1
+                )
                 weatherTemp.setTextColor(Color.WHITE)
                 weatherCondition.setTextColor(Color.parseColor("#E2E8F0"))
                 weatherLocation.setTextColor(Color.parseColor("#67E8F9"))
@@ -1002,12 +1012,22 @@ class CarDashboardView(
                 ivDayNightToggle?.setColorFilter(Color.parseColor("#00E5FF"))
                 dashboardScrim.setBackgroundColor(if (isDay) Color.parseColor("#18000000") else Color.parseColor("#35000000"))
                 if (isDay) {
-                    weatherCard.background = rounded(Color.parseColor("#DDF8FAFC"), 18f)
+                    weatherCard.background = rounded(
+                        Color.parseColor("#66F8FAFC"),
+                        18f,
+                        Color.parseColor("#80FFFFFF"),
+                        1
+                    )
                     weatherTemp.setTextColor(Color.parseColor("#0F172A"))
                     weatherCondition.setTextColor(Color.parseColor("#334155"))
                     weatherLocation.setTextColor(Color.parseColor("#0369A1"))
                 } else {
-                    weatherCard.background = rounded(Color.parseColor("#CC101A24"), 18f)
+                    weatherCard.background = rounded(
+                        Color.parseColor("#66101A24"),
+                        18f,
+                        Color.parseColor("#4DFFFFFF"),
+                        1
+                    )
                     weatherTemp.setTextColor(Color.WHITE)
                     weatherCondition.setTextColor(Color.parseColor("#E2E8F0"))
                     weatherLocation.setTextColor(Color.parseColor("#67E8F9"))
