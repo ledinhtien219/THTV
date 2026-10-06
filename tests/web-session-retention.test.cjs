@@ -21,6 +21,7 @@ assert.match(media, /videoPositionSec = if \(appId == "youtube"\) currentPositio
 
 assert.match(media, /fun restoreWebAppSession\(appId: String, web: WebView\?\): Boolean/);
 assert.match(media, /web\.restoreState\(android\.os\.Bundle\(session\.state\)\)/);
+assert.match(media, /activeAppId != appId \|\| getPersistentWebView\(\) !== web/);
 assert.match(media, /web\.scrollTo\(session\.scrollX, session\.scrollY\)/);
 assert.match(media, /YouTubePlayerHelper\.seekTo\(web, session\.videoPositionSec\.toLong\(\)\)/);
 
