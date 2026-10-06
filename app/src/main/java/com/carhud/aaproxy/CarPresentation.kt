@@ -1860,8 +1860,18 @@ class CarPresentation(
     fun switchWebApp(app: WebAppItem, embedded: Boolean = false, startUrl: String? = null) {
         hideVideoQualityMenu()
         cancelSystemVoiceRequest()
-        if (currentActiveAppId != app.id) CarMediaManager.cancelPendingSteeringNext()
-        if (currentActiveAppId != app.id) browserNeedsHistoryReset = app.id == "web"
+        val previousAppId = currentActiveAppId
+        val isChangingApp = previousAppId != app.id
+        if (isChangingApp) {
+            CarMediaManager.cancelPendingSteeringNext()
+            CarMediaManager.saveWebAppSession(previousAppId, web)
+        }
+        val canRestoreSession = isChangingApp &&
+            startUrl == null &&
+            CarMediaManager.hasWebAppSession(app.id)
+        if (isChangingApp) {
+            browserNeedsHistoryReset = app.id == "web" && !canRestoreSession
+        }
         val currentUrl = web.url ?: ""
         val isYouTubeApp = (app.id == "youtube" || app.url.contains("youtube.com") || app.url.contains("youtu.be"))
         val isAlreadyLoaded = if (isYouTubeApp) {
@@ -1907,7 +1917,14 @@ class CarPresentation(
         } else {
             app.url
         }
-        if (!isAlreadyLoaded || startUrl != null) {
+
+        val restoredSession = if (canRestoreSession) {
+            CarMediaManager.restoreWebAppSession(app.id, web)
+        } else {
+            false
+        }
+
+        if (!restoredSession && (!isAlreadyLoaded || startUrl != null)) {
             web.loadUrl(homeUrl)
         }
 
@@ -4010,6 +4027,10 @@ class CarPresentation(
 
     override fun onStop() {
         autoHideHandler.removeCallbacks(hideBarsRunnable)
+        // Snapshot the current browser/YouTube session before Android Auto hides
+        // this app. The live WebView is still kept running below, while this
+        // snapshot is a fallback if the host recreates the surface/renderer.
+        CarMediaManager.saveWebAppSession(currentActiveAppId, web)
         // Keep the persistent WebView attached to the Presentation window while Android Auto
         // temporarily hides our surface (for example when switching to Maps/Waze). Detaching it
         // makes Chromium treat the page as background/off-screen and can suspend YouTube/HLS audio.
@@ -4030,6 +4051,7 @@ class CarPresentation(
 
 
     override fun dismiss() {
+        CarMediaManager.saveWebAppSession(currentActiveAppId, web)
         cancelSystemVoiceRequest()
         SystemVoiceModule.detach(systemVoiceReceiver)
         detachInputCallbacks()
