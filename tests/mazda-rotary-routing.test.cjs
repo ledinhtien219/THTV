@@ -33,11 +33,11 @@ assert.match(presentation, /dispatchTouch\(x, y\)/);
 assert.match(presentation, /dy < 0f[\s\S]*?dispatchScroll\(0f, -140f\)/);
 assert.match(presentation, /dy > 0f[\s\S]*?dispatchScroll\(0f, 140f\)/);
 assert.match(screen, /panModeEnabled[\s\S]*?moveCommanderCursorFromSurface/);
-assert.match(screen, /panModeEnabled[\s\S]*?clickCommanderCursor\("HOST SELECT"\)/);
+assert.match(screen, /panModeEnabled[\s\S]*?clickCommanderTarget\("HOST SELECT"\)/);
 
 // Diagnostics stay enabled in the test build so a real Mazda can reveal which
 // path delivered each Commander event.
 assert.match(presentation, /fun showRotaryDiagnostic\(message: String\)/);
 assert.match(presentation, /Mazda test:/);
 
-console.log('PASS Mazda Commander cursor: host PAN + raw rotary/DPAD -> pointer + click + edge scroll');
+console.log('PASS Mazda Commander routing: host PAN + raw rotary/DPAD -> smart focus or cursor fallback');
