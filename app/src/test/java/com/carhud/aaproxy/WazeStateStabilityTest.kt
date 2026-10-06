@@ -99,6 +99,13 @@ class WazeStateStabilityTest {
                     roadName = "QL2"
                 ),
                 WazeAlertItem(
+                    code = 2,
+                    warningType = VietmapWarningType.SPEED_CAMERA,
+                    title = "Camera tốc độ",
+                    distanceMeters = 900,
+                    roadName = "QL2"
+                ),
+                WazeAlertItem(
                     code = 5,
                     warningType = VietmapWarningType.ACCIDENT,
                     title = "Tai nạn",
@@ -108,8 +115,9 @@ class WazeStateStabilityTest {
             )
         )
 
-        assertEquals(2, result.size)
+        assertEquals(3, result.size)
         assertEquals(330, result[0].distanceMeters)
-        assertEquals(VietmapWarningType.ACCIDENT, result[1].warningType)
+        assertEquals(900, result[1].distanceMeters)
+        assertEquals(VietmapWarningType.ACCIDENT, result[2].warningType)
     }
 }
