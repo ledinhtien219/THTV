@@ -81,6 +81,20 @@
       margin: 0 auto;
     }
 
+    /* Android WebView can paint its own oversized start/play affordance before
+       the first HLS frame arrives. IPTV already has a dedicated car-safe toolbar,
+       so keep Chromium's native media chrome completely out of the video layer. */
+    video#videoPlayer::-webkit-media-controls,
+    video#videoPlayer::-webkit-media-controls-enclosure,
+    video#videoPlayer::-webkit-media-controls-panel,
+    video#videoPlayer::-webkit-media-controls-overlay-play-button,
+    video#videoPlayer::-webkit-media-controls-start-playback-button {
+      display: none !important;
+      -webkit-appearance: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
     /* Transparent touch catcher above the hardware video layer.
        Android Auto/WebView can route touches directly to <video>, skipping
        parent DOM listeners. This layer guarantees taps reach our UI logic. */
