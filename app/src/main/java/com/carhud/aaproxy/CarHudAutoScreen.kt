@@ -12,9 +12,11 @@ import androidx.car.app.CarContext
 import androidx.car.app.Screen
 import androidx.car.app.SurfaceCallback
 import androidx.car.app.SurfaceContainer
-import androidx.car.app.model.ItemList
+import androidx.car.app.model.Action
+import androidx.car.app.model.ActionStrip
+import androidx.car.app.model.CarColor
+import androidx.car.app.navigation.model.NavigationTemplate
 import androidx.car.app.model.Template
-import androidx.car.app.navigation.model.PlaceListNavigationTemplate
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 
@@ -195,11 +197,23 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
     }
 
     override fun onGetTemplate(): Template {
-        // This navigation template can expose the app drawing surface without
-        // requiring a host action strip. An empty item list keeps the host chrome
-        // hidden so the dashboard owns the full top-right corner.
-        return PlaceListNavigationTemplate.Builder()
-            .setItemList(ItemList.Builder().build())
+        // NavigationTemplate keeps the custom Surface behavior used by the
+        // original v1.0.39 dashboard. Android Auto requires one action in the
+        // strip, so provide a zero-width action with a fully transparent
+        // background instead of BACK. This avoids both the host BACK button and
+        // the "No items" content overlay from list-based templates.
+        val transparent = CarColor.createCustom(0x00000000, 0x00000000)
+        val hiddenActionStrip = ActionStrip.Builder()
+            .addAction(
+                Action.Builder()
+                    .setTitle("\u200B")
+                    .setBackgroundColor(transparent)
+                    .build()
+            )
+            .build()
+
+        return NavigationTemplate.Builder()
+            .setActionStrip(hiddenActionStrip)
             .build()
     }
 }
