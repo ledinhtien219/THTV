@@ -1593,6 +1593,10 @@ class CarPresentation(
     fun moveCommanderCursor(dx: Float, dy: Float, source: String = "DPAD") {
         mainHandler.post {
             if (!::root.isInitialized || root.width <= 0 || root.height <= 0) return@post
+            if (commanderCursorX <= 0f || commanderCursorY <= 0f) {
+                commanderCursorX = root.width / 2f
+                commanderCursorY = root.height / 2f
+            }
             showCommanderCursor(source)
 
             val now = SystemClock.uptimeMillis()
@@ -4177,6 +4181,29 @@ class CarPresentation(
                     goBack()
                     return true
                 }
+            }
+        }
+
+        if (event.action == KeyEvent.ACTION_UP) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP,
+                KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_LEFT,
+                KeyEvent.KEYCODE_DPAD_RIGHT,
+                KeyEvent.KEYCODE_DPAD_UP_LEFT,
+                KeyEvent.KEYCODE_DPAD_UP_RIGHT,
+                KeyEvent.KEYCODE_DPAD_DOWN_LEFT,
+                KeyEvent.KEYCODE_DPAD_DOWN_RIGHT,
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT,
+                KeyEvent.KEYCODE_NAVIGATE_PREVIOUS,
+                KeyEvent.KEYCODE_NAVIGATE_NEXT,
+                KeyEvent.KEYCODE_BACK -> return true
             }
         }
 
