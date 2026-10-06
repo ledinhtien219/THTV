@@ -632,6 +632,7 @@ class CarPresentation(
                 applyUniversalWebTheme(view, isDay)
                 val isYouTube = currentActiveAppId == "youtube" && (url.contains("youtube.com") || url.contains("youtu.be"))
                 if (isYouTube) {
+                    CarMediaManager.confirmPendingYouTubeSearch(url)
                     YouTubePlayerHelper.inject(view, isUltrawide, isPortrait, carWidth, carHeight, carDpi, phoneDpi.toInt(), aspectRatio)
                     YouTubePlayerHelper.applyCarSearchHome(view)
                     updateYouTubeHomeObstacles()
@@ -776,6 +777,19 @@ class CarPresentation(
             }
 
         }
+
+        val pendingSearchUrl = if (currentActiveAppId == "youtube") {
+            CarMediaManager.pendingYouTubeSearchUrl()
+        } else {
+            null
+        }
+        if (!pendingSearchUrl.isNullOrBlank() && web.url != pendingSearchUrl) {
+            // SearchTemplate temporarily removes the custom Surface. If its submit
+            // races WebView.loadUrl(), the recreated Presentation can still report
+            // the old YouTube home URL here. Re-issue only the pending manual target.
+            web.loadUrl(pendingSearchUrl)
+        }
+
         CarMediaManager.registerCarWebView(web, context)
 
         val dash = CarDashboardView(
@@ -1877,6 +1891,9 @@ class CarPresentation(
         if (isChangingApp) {
             CarMediaManager.cancelPendingSteeringNext()
             CarMediaManager.saveWebAppSession(previousAppId, web)
+            if (previousAppId == "youtube" && app.id != "youtube") {
+                CarMediaManager.clearPendingYouTubeSearch()
+            }
         }
         val canRestoreSession = isChangingApp &&
             startUrl == null &&
@@ -2861,7 +2878,11 @@ class CarPresentation(
         CarMediaManager.setPlaybackState(false)
     }
 
-    private fun executeSearch(query: String, broadcast: Boolean = false) {
+    private fun executeSearch(
+        query: String,
+        broadcast: Boolean = false,
+        notifySearchDismiss: Boolean = true
+    ) {
         if (searchOverlayMode == "address") {
             if (isBrowserApp()) navigateBrowser(query)
             return
@@ -2880,7 +2901,7 @@ class CarPresentation(
         }
         YouTubePlayerHelper.search(web, q, autoPlayFirst = false)
         if (broadcast) CarMediaManager.submitSearchQuery(q)
-        hideSearchOverlay()
+        hideSearchOverlay(notifyPhone = notifySearchDismiss)
     }
 
     private fun submitWebKeyboardText(
@@ -3540,12 +3561,21 @@ class CarPresentation(
                         CarMediaManager.editorDraft = null
                         current.searchInput.setText(value)
                         current.searchInput.setSelection(value.length)
-                        current.executeSearch(value, broadcast = false)
+                        current.executeSearch(
+                            value,
+                            broadcast = false,
+                            notifySearchDismiss = false
+                        )
+                        current.activeCarInput = null
                         complete(true)
                     }
                 }
             },
-            onCancel = { value -> searchInput.setText(value); searchInput.setSelection(value.length) }
+            onCancel = { value ->
+                searchInput.setText(value)
+                searchInput.setSelection(value.length)
+                activeCarInput = null
+            }
         )
     }
 
