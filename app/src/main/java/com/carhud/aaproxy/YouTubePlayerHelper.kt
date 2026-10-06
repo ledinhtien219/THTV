@@ -2134,6 +2134,153 @@ object YouTubePlayerHelper {
         }
     }
 
+    private fun isYouTubeResults(view: WebView?): Boolean {
+        val url = view?.url.orEmpty()
+        return url.contains("youtube.com/results") || url.contains("youtu.be/results")
+    }
+
+    fun clearCommanderSelection(view: WebView?) {
+        try {
+            view?.evaluateJavascript(
+                """
+                (function() {
+                    try {
+                        document.querySelectorAll('.carhud-commander-selected').forEach(function(el) {
+                            el.classList.remove('carhud-commander-selected');
+                        });
+                        window.__carhudCommanderIndex = -1;
+                    } catch(e) {}
+                })();
+                """.trimIndent(),
+                null
+            )
+        } catch (_: Exception) {}
+    }
+
+    fun moveCommanderSelection(view: WebView?, step: Int): Boolean {
+        if (view == null || !isYouTubeResults(view)) return false
+        val normalizedStep = if (step < 0) -1 else 1
+        view.post {
+            try {
+                view.evaluateJavascript(
+                    """
+                    (function(step) {
+                        try {
+                            if (!location || location.pathname.indexOf('/results') !== 0) return false;
+
+                            var style = document.getElementById('carhud-commander-style');
+                            if (!style) {
+                                style = document.createElement('style');
+                                style.id = 'carhud-commander-style';
+                                style.textContent =
+                                    '.carhud-commander-selected {' +
+                                    ' outline: 4px solid #38BDF8 !important;' +
+                                    ' outline-offset: 3px !important;' +
+                                    ' border-radius: 14px !important;' +
+                                    ' background: rgba(56,189,248,.12) !important;' +
+                                    ' box-shadow: 0 0 0 3px rgba(15,23,42,.75), 0 0 22px rgba(56,189,248,.55) !important;' +
+                                    ' }';
+                                (document.head || document.documentElement).appendChild(style);
+                            }
+
+                            function visible(el) {
+                                if (!el) return false;
+                                var r = el.getBoundingClientRect();
+                                var s = getComputedStyle(el);
+                                return r.width > 30 && r.height > 24 &&
+                                    s.display !== 'none' && s.visibility !== 'hidden' &&
+                                    el.getAttribute('aria-hidden') !== 'true';
+                            }
+
+                            var links = Array.prototype.slice.call(document.querySelectorAll('a[href*="/watch"]'));
+                            var seen = new Set();
+                            var cards = [];
+                            links.forEach(function(link) {
+                                if (!visible(link)) return;
+                                var href = link.href || link.getAttribute('href') || '';
+                                if (!href || href.indexOf('/watch') === -1 || href.indexOf('/shorts/') !== -1) return;
+                                var card = link.closest(
+                                    'ytm-video-with-context-renderer, ytm-compact-video-renderer, ' +
+                                    'ytm-rich-item-renderer, ytm-media-item, ytm-video-renderer, ' +
+                                    'ytd-video-renderer, ytd-rich-item-renderer, ytd-compact-video-renderer'
+                                ) || link;
+                                if (!visible(card)) return;
+                                if (seen.has(card)) return;
+                                seen.add(card);
+                                cards.push(card);
+                            });
+
+                            if (!cards.length) return false;
+
+                            cards.forEach(function(el) { el.classList.remove('carhud-commander-selected'); });
+                            var idx = Number(window.__carhudCommanderIndex);
+                            if (!Number.isFinite(idx) || idx < 0 || idx >= cards.length) {
+                                idx = step < 0 ? cards.length - 1 : 0;
+                            } else {
+                                idx = (idx + step + cards.length) % cards.length;
+                            }
+                            window.__carhudCommanderIndex = idx;
+
+                            var selected = cards[idx];
+                            selected.classList.add('carhud-commander-selected');
+                            try {
+                                selected.scrollIntoView({block:'center', inline:'nearest', behavior:'smooth'});
+                            } catch(e) {
+                                selected.scrollIntoView(false);
+                            }
+                            return true;
+                        } catch(e) {
+                            return false;
+                        }
+                    })($normalizedStep);
+                    """.trimIndent(),
+                    null
+                )
+            } catch (_: Exception) {}
+        }
+        return true
+    }
+
+    fun clickCommanderSelection(view: WebView?): Boolean {
+        if (view == null || !isYouTubeResults(view)) return false
+        view.post {
+            try {
+                view.evaluateJavascript(
+                    """
+                    (function() {
+                        try {
+                            if (!location || location.pathname.indexOf('/results') !== 0) return false;
+                            var selected = document.querySelector('.carhud-commander-selected');
+                            if (!selected) return false;
+                            var link = selected.matches && selected.matches('a[href*="/watch"]')
+                                ? selected
+                                : selected.querySelector('a[href*="/watch"]');
+                            if (!link) return false;
+                            try { sessionStorage.removeItem('carhud_auto_play'); } catch(e) {}
+                            window.__carhudVoiceAutoPlay = false;
+                            if (window.__carhudAutoPlayInterval) {
+                                clearInterval(window.__carhudAutoPlayInterval);
+                                window.__carhudAutoPlayInterval = null;
+                            }
+                            if (typeof link.click === 'function') link.click();
+                            if (location.pathname.indexOf('/watch') === -1 && link.href) {
+                                setTimeout(function() {
+                                    if (location.pathname.indexOf('/watch') === -1) location.href = link.href;
+                                }, 180);
+                            }
+                            return true;
+                        } catch(e) {
+                            return false;
+                        }
+                    })();
+                    """.trimIndent(),
+                    null
+                )
+            } catch (_: Exception) {}
+        }
+        return true
+    }
+
     fun setDuckingVolume(view: WebView?, volume: Float) {
         try {
             view?.evaluateJavascript(
