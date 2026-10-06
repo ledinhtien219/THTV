@@ -196,7 +196,19 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
     }
 
     override fun onGetTemplate(): Template {
+        // NavigationTemplate requires a non-empty ActionStrip at runtime.
+        // Use a zero-width title action so the host has a valid strip without
+        // drawing the old BACK arrow button over the dashboard.
+        val hiddenActionStrip = ActionStrip.Builder()
+            .addAction(
+                Action.Builder()
+                    .setTitle("\u200B")
+                    .build()
+            )
+            .build()
+
         return NavigationTemplate.Builder()
+            .setActionStrip(hiddenActionStrip)
             .build()
     }
 }
