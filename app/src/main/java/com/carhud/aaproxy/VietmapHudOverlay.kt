@@ -1068,7 +1068,6 @@ class VietmapHudOverlay @JvmOverloads constructor(
 
     override fun onInterceptTouchEvent(ev: android.view.MotionEvent): Boolean {
         if (isPreviewMode) return super.onInterceptTouchEvent(ev)
-        if (isTouchOnCloseLocal(ev.x, ev.y)) return false
         if (isTouchOnLockLocal(ev.x, ev.y)) {
             return false
         }
