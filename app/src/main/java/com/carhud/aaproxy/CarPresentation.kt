@@ -596,6 +596,7 @@ class CarPresentation(
 
             override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
                 super.onPageStarted(view, url, favicon)
+                revealWebSurfaceIfReady(view, url)
                 browserLoading = true
                 updateBrowserToolbar(url)
                 val isDay = isDayMode()
@@ -619,6 +620,7 @@ class CarPresentation(
 
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
+                revealWebSurfaceIfReady(view, url)
                 if (currentActiveAppId == "web" && browserNeedsHistoryReset && view.url == url) {
                     view.clearHistory()
                     browserNeedsHistoryReset = false
@@ -1869,6 +1871,31 @@ class CarPresentation(
         }
     }
 
+    private var pendingWebSurfaceAppId: String? = null
+
+    private fun urlMatchesWebApp(appId: String, url: String): Boolean {
+        if (url.isBlank() || url == "about:blank") return false
+        return when (appId) {
+            "youtube" -> {
+                val host = try { android.net.Uri.parse(url).host.orEmpty().lowercase() } catch (_: Throwable) { "" }
+                host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtu.be"
+            }
+            "iptv" -> url.contains("iptv_player.html", true)
+            "web" -> !url.contains("iptv_player.html", true) &&
+                !url.contains("youtube.com", true) &&
+                !url.contains("youtu.be", true)
+            else -> true
+        }
+    }
+
+    private fun revealWebSurfaceIfReady(view: WebView, url: String) {
+        val target = pendingWebSurfaceAppId ?: return
+        if (target != currentActiveAppId || !urlMatchesWebApp(target, url)) return
+        pendingWebSurfaceAppId = null
+        view.animate().cancel()
+        view.alpha = 1f
+    }
+
     private fun isBrowserApp(): Boolean {
         if (currentActiveAppId != "youtube" && currentActiveAppId != "iptv") return true
 
@@ -1903,6 +1930,18 @@ class CarPresentation(
         }
         val currentUrl = web.url ?: ""
         val isYouTubeApp = (app.id == "youtube" || app.url.contains("youtube.com") || app.url.contains("youtu.be"))
+        val visiblePageMatchesTarget = urlMatchesWebApp(app.id, currentUrl)
+        if (!visiblePageMatchesTarget && app.id in setOf("youtube", "web", "iptv")) {
+            // Do not leave the previous app painted under the new app's toolbar.
+            // The video test showed Google remaining visible while app state already
+            // said YouTube. Keep the WebView black until the target navigation starts.
+            pendingWebSurfaceAppId = app.id
+            web.animate().cancel()
+            web.alpha = 0f
+        } else {
+            pendingWebSurfaceAppId = null
+            web.alpha = 1f
+        }
         val isAlreadyLoaded = if (isYouTubeApp) {
             currentUrl.contains("youtube.com") || currentUrl.contains("youtu.be")
         } else {
