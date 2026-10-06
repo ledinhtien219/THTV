@@ -990,7 +990,7 @@ class CarDashboardView(
             it.foreground = null
             it.scaleX = 1f
             it.scaleY = 1f
-            it.elevation = maxOf(0f, it.elevation - dp(8))
+            it.elevation = maxOf(0f, it.elevation - dp(8).toFloat())
         }
         commanderFocusedView = view
         view?.let {
@@ -998,7 +998,7 @@ class CarDashboardView(
             it.foregroundGravity = Gravity.FILL
             it.scaleX = 1.04f
             it.scaleY = 1.04f
-            it.elevation = it.elevation + dp(8)
+            it.elevation = it.elevation + dp(8).toFloat()
             it.requestFocus()
             it.parent?.let { parent ->
                 if (parent is android.widget.HorizontalScrollView) {
