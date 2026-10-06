@@ -2251,7 +2251,25 @@ object YouTubePlayerHelper {
                         try {
                             if (!location || location.pathname.indexOf('/results') !== 0) return false;
                             var selected = document.querySelector('.carhud-commander-selected');
-                            if (!selected) return false;
+                            if (!selected) {
+                                var firstLink = document.querySelector(
+                                    'ytm-video-with-context-renderer a[href*="/watch"], ' +
+                                    'ytm-compact-video-renderer a[href*="/watch"], ' +
+                                    'ytd-video-renderer a[href*="/watch"], ' +
+                                    'ytd-rich-item-renderer a[href*="/watch"], ' +
+                                    'a[href*="/watch"]'
+                                );
+                                if (!firstLink) return false;
+                                selected = firstLink.closest(
+                                    'ytm-video-with-context-renderer, ytm-compact-video-renderer, ' +
+                                    'ytm-rich-item-renderer, ytm-media-item, ytm-video-renderer, ' +
+                                    'ytd-video-renderer, ytd-rich-item-renderer, ytd-compact-video-renderer'
+                                ) || firstLink;
+                                selected.classList.add('carhud-commander-selected');
+                                window.__carhudCommanderIndex = 0;
+                                try { selected.scrollIntoView({block:'center', inline:'nearest'}); } catch(e) {}
+                                return true;
+                            }
                             var link = selected.matches && selected.matches('a[href*="/watch"]')
                                 ? selected
                                 : selected.querySelector('a[href*="/watch"]');
