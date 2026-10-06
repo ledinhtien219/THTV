@@ -1406,6 +1406,12 @@ class CarPresentation(
 
             addView(toolButton(R.drawable.ic_bar_home, "Trang chủ") { showDashboard() })
 
+            val youtubeMicButton = toolButton(R.drawable.ic_bar_mic, "Giọng nói") {
+                startVoiceSearch()
+            }
+            micBtn = youtubeMicButton.getChildAt(0) as? ImageView
+            addView(youtubeMicButton)
+
             addView(toolButton(R.drawable.ic_bar_back, "Quay lại") {
                 if (currentActiveAppId == "youtube") YouTubePlayerHelper.goBackInYouTube(web)
             })
@@ -1415,12 +1421,6 @@ class CarPresentation(
             addView(toolButton(R.drawable.ic_bar_setting, "Chất lượng") {
                 showVideoQualityMenu()
             })
-
-            val youtubeMicButton = toolButton(R.drawable.ic_bar_mic, "Giọng nói") {
-                startVoiceSearch()
-            }
-            micBtn = youtubeMicButton.getChildAt(0) as? ImageView
-            addView(youtubeMicButton)
         }
 
         sidebarView = panel
