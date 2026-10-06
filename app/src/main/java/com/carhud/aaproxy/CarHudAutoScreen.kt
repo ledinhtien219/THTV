@@ -115,9 +115,10 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
     }
 
     override fun onClick(x: Float, y: Float) {
-        val action = {
+        val action: () -> Unit = {
             reportSurfaceInput("CLICK x=${"%.0f".format(x)} y=${"%.0f".format(y)}")
             presentation?.dispatchTouch(x, y)
+            Unit
         }
         if (Looper.myLooper() == handler.looper) action() else handler.post(action)
     }
