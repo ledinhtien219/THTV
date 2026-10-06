@@ -596,12 +596,19 @@ class CarPresentation(
 
             override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
                 super.onPageStarted(view, url, favicon)
-                revealWebSurfaceIfReady(view, url)
                 browserLoading = true
                 updateBrowserToolbar(url)
                 val isDay = isDayMode()
                 applyUniversalWebTheme(view, isDay)
                 applyWebScaleForUrl(url)
+            }
+
+            override fun onPageCommitVisible(view: WebView, url: String) {
+                super.onPageCommitVisible(view, url)
+                // This callback means Chromium has committed pixels for the NEW
+                // document. Revealing earlier in onPageStarted can briefly expose
+                // the old Browser framebuffer under YouTube chrome.
+                revealWebSurfaceIfReady(view, url)
             }
 
             override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
