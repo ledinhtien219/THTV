@@ -28,7 +28,14 @@ class CarHudAutoService : CarAppService() {
             CarTtsManager.init(applicationContext)
             CarTtsManager.startListeningToRepository()
             GpsSpeedManager.start(applicationContext)
-            WazeHlpWebSocketManager.start()
+            HudSourceManager.init(applicationContext)
+            if (HudSourceManager.isWaze(applicationContext)) {
+                WazeHlpWebSocketManager.start()
+                GofaHudManager.stop()
+            } else {
+                WazeHlpWebSocketManager.stop()
+                GofaHudManager.start(applicationContext)
+            }
 
             // Listen for cable unplug / USB disconnection
             val filter = IntentFilter().apply {
