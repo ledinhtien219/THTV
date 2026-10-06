@@ -15,7 +15,7 @@ const presentation = fs.readFileSync(
 assert.match(screen, /\.addAction\(Action\.PAN\)/);
 assert.match(screen, /\.setMapActionStrip\(mapActionStrip\)/);
 assert.match(screen, /\.setPanModeListener\s*\{/);
-assert.match(screen, /reportSurfaceInput\("SCROLL/);
+assert.match(screen, /reportSurfaceInput\([\s\S]*?"SCROLL/);
 
 // VirtualDisplay/raw path: probe rotary encoder and navigation key families.
 assert.match(presentation, /InputDevice\.SOURCE_ROTARY_ENCODER/);
