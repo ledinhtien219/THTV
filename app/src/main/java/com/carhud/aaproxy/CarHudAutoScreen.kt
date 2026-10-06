@@ -12,10 +12,9 @@ import androidx.car.app.CarContext
 import androidx.car.app.Screen
 import androidx.car.app.SurfaceCallback
 import androidx.car.app.SurfaceContainer
-import androidx.car.app.model.Action
-import androidx.car.app.model.ActionStrip
+import androidx.car.app.model.ItemList
 import androidx.car.app.model.Template
-import androidx.car.app.navigation.model.NavigationTemplate
+import androidx.car.app.navigation.model.PlaceListNavigationTemplate
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 
@@ -196,19 +195,11 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
     }
 
     override fun onGetTemplate(): Template {
-        // NavigationTemplate requires a non-empty ActionStrip at runtime.
-        // Use a zero-width title action so the host has a valid strip without
-        // drawing the old BACK arrow button over the dashboard.
-        val hiddenActionStrip = ActionStrip.Builder()
-            .addAction(
-                Action.Builder()
-                    .setTitle("\u200B")
-                    .build()
-            )
-            .build()
-
-        return NavigationTemplate.Builder()
-            .setActionStrip(hiddenActionStrip)
+        // This navigation template can expose the app drawing surface without
+        // requiring a host action strip. An empty item list keeps the host chrome
+        // hidden so the dashboard owns the full top-right corner.
+        return PlaceListNavigationTemplate.Builder()
+            .setItemList(ItemList.Builder().build())
             .build()
     }
 }
