@@ -63,6 +63,52 @@ assert.match(
   /cancelSearchAutoPlay\(view: WebView\?\)[\s\S]*?clearInterval\(window\.__carhudAutoPlayInterval\)/
 );
 
+// Native Android Auto SearchTemplate can tear down/recreate the custom Surface
+// immediately after submit. Manual search must queue loadUrl synchronously on the
+// main thread and keep the target until /results really commits.
+const searchFn = helper.match(
+  /fun search\(view: WebView\?, query: String, autoPlayFirst: Boolean = false\) \{[\s\S]*?\n    \}/
+)?.[0] || '';
+assert.notEqual(searchFn, '');
+assert.match(searchFn, /CarMediaManager\.markPendingYouTubeSearch\(targetUrl\)/);
+assert.match(
+  searchFn,
+  /android\.os\.Looper\.myLooper\(\) == android\.os\.Looper\.getMainLooper\(\)[\s\S]*?navigate\.run\(\)/
+);
+assert.match(searchFn, /else \{[\s\S]*?view\.post\(navigate\)/);
+
+assert.match(
+  mediaManager,
+  /fun markPendingYouTubeSearch\(url: String\)[\s\S]*?30_000L/
+);
+assert.match(
+  mediaManager,
+  /fun confirmPendingYouTubeSearch\(url: String\?\)[\s\S]*?getQueryParameter\("search_query"\)/
+);
+assert.match(
+  presentation,
+  /val pendingSearchUrl = if \(currentActiveAppId == "youtube"\)[\s\S]*?web\.loadUrl\(pendingSearchUrl\)/
+);
+assert.match(
+  presentation,
+  /CarMediaManager\.confirmPendingYouTubeSearch\(url\)/
+);
+assert.match(
+  presentation,
+  /previousAppId == "youtube" && app\.id != "youtube"[\s\S]*?CarMediaManager\.clearPendingYouTubeSearch\(\)/
+);
+
+// The native SearchTemplate owns its pop. Do not broadcast a second search-dismiss
+// while its submit callback is already closing the host screen.
+assert.match(
+  presentation,
+  /notifySearchDismiss: Boolean = true[\s\S]*?hideSearchOverlay\(notifyPhone = notifySearchDismiss\)/
+);
+assert.match(
+  presentation,
+  /notifySearchDismiss = false[\s\S]*?current\.activeCarInput = null[\s\S]*?complete\(true\)/
+);
+
 // Voice keeps the deliberate Google-Assistant-like direct play behavior.
 assert.match(
   presentation,
@@ -108,11 +154,11 @@ assert.doesNotMatch(
 // Host/native keyboard submission is a final action, not a draft handoff.
 assert.match(
   presentation,
-  /private fun executeSearch\(query: String, broadcast: Boolean = false\)/
+  /private fun executeSearch\([\s\S]*?broadcast: Boolean = false,[\s\S]*?notifySearchDismiss: Boolean = true/
 );
 assert.match(
   presentation,
-  /current\.executeSearch\(value, broadcast = false\)/
+  /current\.executeSearch\([\s\S]*?value,[\s\S]*?broadcast = false,[\s\S]*?notifySearchDismiss = false/
 );
 assert.match(
   presentation,
