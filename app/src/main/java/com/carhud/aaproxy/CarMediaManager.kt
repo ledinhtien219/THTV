@@ -148,11 +148,26 @@ object CarMediaManager {
         webAppSessions.containsKey(appId)
     }
 
+    private fun sessionUrlMatchesApp(appId: String, url: String): Boolean {
+        if (url.isBlank() || url == "about:blank") return false
+        return when (appId) {
+            "youtube" -> {
+                val host = try { android.net.Uri.parse(url).host.orEmpty().lowercase() } catch (_: Throwable) { "" }
+                host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtu.be"
+            }
+            "web" -> !url.startsWith("file:///android_asset/iptv_player.html", ignoreCase = true)
+            else -> true
+        }
+    }
+
     fun saveWebAppSession(appId: String, web: WebView?) {
         if (web == null || appId !in setOf("web", "youtube")) return
         try {
             val url = web.url.orEmpty()
-            if (url.isBlank() || url == "about:blank") return
+            // The app id can change before WebView commits its navigation. Never
+            // poison the YouTube snapshot with the Browser page that is still on
+            // screen during that handoff.
+            if (!sessionUrlMatchesApp(appId, url)) return
 
             val state = android.os.Bundle()
             web.saveState(state)
@@ -185,11 +200,28 @@ object CarMediaManager {
         if (web == null || appId !in setOf("web", "youtube")) return false
         val session = synchronized(webAppSessions) { webAppSessions[appId] } ?: return false
 
+        if (!sessionUrlMatchesApp(appId, session.url)) {
+            synchronized(webAppSessions) { webAppSessions.remove(appId) }
+            return false
+        }
+
         return try {
             web.stopLoading()
-            val restored = web.restoreState(android.os.Bundle(session.state)) != null
-            if (!restored && session.url.isNotBlank()) {
+
+            val restored = if (appId == "youtube") {
+                // restoreState() is unreliable when the SAME persistent WebView is
+                // currently displaying Browser content: it can return non-null while
+                // leaving the old Google page visible. Navigate to the saved YouTube
+                // URL explicitly; cookies/storage remain in the persistent WebView and
+                // the delayed block below restores scroll/video position.
                 web.loadUrl(session.url)
+                true
+            } else {
+                val stateRestored = web.restoreState(android.os.Bundle(session.state)) != null
+                if (!stateRestored && session.url.isNotBlank()) {
+                    web.loadUrl(session.url)
+                }
+                stateRestored || session.url.isNotBlank()
             }
 
             val restoreViewport = Runnable {
@@ -198,6 +230,7 @@ object CarMediaManager {
                     // asynchronously. Do not let an old callback mutate the page after
                     // the driver has already switched to another app.
                     if (activeAppId != appId || getPersistentWebView() !== web) return@Runnable
+                    if (!sessionUrlMatchesApp(appId, web.url.orEmpty())) return@Runnable
                     web.scrollTo(session.scrollX, session.scrollY)
                     if (appId == "youtube" && session.videoPositionSec > 0) {
                         YouTubePlayerHelper.seekTo(web, session.videoPositionSec.toLong())
@@ -211,7 +244,7 @@ object CarMediaManager {
             web.postDelayed(restoreViewport, 450L)
             web.postDelayed(restoreViewport, 1200L)
             web.postDelayed(restoreViewport, 2400L)
-            true
+            restored
         } catch (_: Throwable) {
             false
         }
