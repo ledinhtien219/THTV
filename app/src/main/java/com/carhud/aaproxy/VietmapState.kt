@@ -1,5 +1,11 @@
 package com.carhud.aaproxy
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -99,8 +105,55 @@ object VietmapStateRepository {
     private val _alertState = MutableStateFlow(VietmapAlertData())
     val alertState: StateFlow<VietmapAlertData> = _alertState.asStateFlow()
 
+    private val alertExpiryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var alertExpiryJob: Job? = null
+
+    private fun scheduleAlertExpiry() {
+        alertExpiryJob?.cancel()
+        alertExpiryJob = null
+
+        val snapshot = _alertState.value
+        if (snapshot.alertTimestamp <= 0L || snapshot.warningType == VietmapWarningType.NONE) return
+
+        val snapshotTimestamp = snapshot.alertTimestamp
+        val snapshotKey = WazeAlertPolicy.alertKey(
+            snapshot.warningType,
+            snapshot.alertTitle,
+            snapshot.roadName
+        )
+        val expiresAt = snapshotTimestamp + WazeAlertPolicy.alertTtlMs(snapshot)
+        val waitMs = (expiresAt - System.currentTimeMillis()).coerceAtLeast(250L) + 150L
+
+        alertExpiryJob = alertExpiryScope.launch {
+            delay(waitMs)
+            val current = _alertState.value
+            val currentKey = WazeAlertPolicy.alertKey(
+                current.warningType,
+                current.alertTitle,
+                current.roadName
+            )
+            if (
+                current.alertTimestamp == snapshotTimestamp &&
+                currentKey == snapshotKey &&
+                !WazeAlertPolicy.isAlertFresh(current)
+            ) {
+                _alertState.value = current.copy(
+                    alertDescription = null,
+                    distanceText = null,
+                    distanceMeters = null,
+                    warningType = VietmapWarningType.NONE,
+                    alertTitle = null,
+                    upcomingAlerts = emptyList(),
+                    alertSource = "UNKNOWN",
+                    alertTimestamp = 0L
+                )
+            }
+        }
+    }
+
     fun updateState(newState: VietmapAlertData) {
         _alertState.value = newState
+        scheduleAlertExpiry()
     }
 
     fun updateConnection(connected: Boolean) {
@@ -368,6 +421,7 @@ object VietmapStateRepository {
             alertSource = newAlertSource,
             alertTimestamp = newAlertTs
         )
+        scheduleAlertExpiry()
     }
 
     fun beginHlpSession() {
@@ -387,6 +441,7 @@ object VietmapStateRepository {
             alertSource = if (hlpOwnedAlert) "UNKNOWN" else cur.alertSource,
             alertTimestamp = if (hlpOwnedAlert) 0L else cur.alertTimestamp
         )
+        scheduleAlertExpiry()
     }
 
     fun clearHlpAlerts() {
@@ -407,6 +462,7 @@ object VietmapStateRepository {
             alertSource = if (hlpOwnedAlert) "UNKNOWN" else cur.alertSource,
             alertTimestamp = if (hlpOwnedAlert) 0L else cur.alertTimestamp
         )
+        scheduleAlertExpiry()
     }
 
     fun clearAlertFromSource(source: String) {
@@ -421,6 +477,7 @@ object VietmapStateRepository {
             alertSource = "UNKNOWN",
             alertTimestamp = 0L
         )
+        scheduleAlertExpiry()
     }
 
     fun updateSpeed(speed: Int) {
