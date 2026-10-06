@@ -22,6 +22,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.Display
 import android.view.Gravity
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -95,6 +96,10 @@ class CarPresentation(
     private var isDashboardShowing = true
     private var currentActiveAppId: String = "youtube"
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var rotaryDebugBanner: TextView? = null
+    private val hideRotaryDebugRunnable = Runnable {
+        rotaryDebugBanner?.visibility = View.GONE
+    }
 
     // Prevent repeated play/resume commands when Android Auto recreates the surface
     // or YouTube briefly reports a paused/buffering state.
@@ -1500,6 +1505,41 @@ class CarPresentation(
         if (::searchOverlay.isInitialized && searchOverlay.visibility == View.VISIBLE) return
         mainHandler.post {
             showBars()
+        }
+    }
+
+    fun showRotaryDiagnostic(message: String) {
+        mainHandler.post {
+            if (!::root.isInitialized) return@post
+            val banner = rotaryDebugBanner ?: TextView(context).apply {
+                textSize = 13f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+                setPadding(dp(14), dp(8), dp(14), dp(8))
+                background = rounded(
+                    Color.parseColor("#E61E293B"),
+                    10f,
+                    Color.parseColor("#38BDF8"),
+                    1
+                )
+                isClickable = false
+                isFocusable = false
+                root.addView(
+                    this,
+                    FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                    ).apply { topMargin = dp(68) }
+                )
+                rotaryDebugBanner = this
+            }
+            banner.text = "🎛 Mazda test: $message"
+            banner.visibility = View.VISIBLE
+            banner.bringToFront()
+            mainHandler.removeCallbacks(hideRotaryDebugRunnable)
+            mainHandler.postDelayed(hideRotaryDebugRunnable, 4500L)
         }
     }
 
@@ -3925,7 +3965,74 @@ class CarPresentation(
         showDashboard()
     }
 
+    override fun dispatchGenericMotionEvent(ev: MotionEvent): Boolean {
+        val isRotary =
+            (ev.source and InputDevice.SOURCE_ROTARY_ENCODER) == InputDevice.SOURCE_ROTARY_ENCODER
+        if (isRotary && ev.action == MotionEvent.ACTION_SCROLL) {
+            val scroll = ev.getAxisValue(MotionEvent.AXIS_SCROLL)
+            val vertical = ev.getAxisValue(MotionEvent.AXIS_VSCROLL)
+            val horizontal = ev.getAxisValue(MotionEvent.AXIS_HSCROLL)
+            showRotaryDiagnostic(
+                "RAW ROTARY scroll=${"%.2f".format(scroll)} v=${"%.2f".format(vertical)} h=${"%.2f".format(horizontal)}"
+            )
+            val primary = when {
+                kotlin.math.abs(scroll) > 0.01f -> scroll
+                kotlin.math.abs(vertical) > 0.01f -> vertical
+                else -> 0f
+            }
+            if (primary != 0f) dispatchScroll(0f, -primary * 120f)
+            return true
+        }
+        return super.dispatchGenericMotionEvent(ev)
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP,
+                KeyEvent.KEYCODE_NAVIGATE_PREVIOUS -> {
+                    showRotaryDiagnostic("RAW KEY UP/PREV code=${event.keyCode}")
+                    dispatchScroll(0f, -120f)
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN,
+                KeyEvent.KEYCODE_NAVIGATE_NEXT -> {
+                    showRotaryDiagnostic("RAW KEY DOWN/NEXT code=${event.keyCode}")
+                    dispatchScroll(0f, 120f)
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_LEFT,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT -> {
+                    showRotaryDiagnostic("RAW KEY LEFT code=${event.keyCode}")
+                    dispatchScroll(-120f, 0f)
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_RIGHT,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT -> {
+                    showRotaryDiagnostic("RAW KEY RIGHT code=${event.keyCode}")
+                    dispatchScroll(120f, 0f)
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                    val focused = if (::root.isInitialized) root.findFocus() else null
+                    val clicked = focused?.performClick() == true
+                    showRotaryDiagnostic(
+                        "RAW KEY SELECT code=${event.keyCode} focus=${focused?.javaClass?.simpleName ?: "none"} click=$clicked"
+                    )
+                    return true
+                }
+                KeyEvent.KEYCODE_BACK -> {
+                    showRotaryDiagnostic("RAW KEY BACK")
+                    goBack()
+                    return true
+                }
+            }
+        }
+
         if (event.keyCode == KeyEvent.KEYCODE_MEDIA_NEXT) {
             if (event.action == KeyEvent.ACTION_DOWN) CarMediaManager.handleSteeringNext(context, event)
             return true
