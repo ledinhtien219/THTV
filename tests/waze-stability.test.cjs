@@ -36,6 +36,7 @@ assert.match(overlay, /fun hitTestLock\(/);
 
 // Alert stream stability.
 assert.match(policy, /fun dedupeAlerts\(alerts: List<WazeAlertItem>\)/);
+assert.match(policy, /kotlin\.math\.abs\(da - db\) <= 80/);
 assert.match(state, /val currentTelemetryFresh = cur\.isConnected/);
 assert.match(state, /val distanceSaysPassed =/);
 assert.match(state, /currentDistance != null[\s\S]*?currentDistance > 0/);
@@ -46,7 +47,7 @@ assert.match(state, /WazeAlertPolicy\.alertTtlMs\(snapshot\)/);
 assert.match(state, /!WazeAlertPolicy\.isAlertFresh\(current\)/);
 
 assert.match(hlp, /lastStateReceivedAtMs/);
-assert.match(hlp, /likelySessionReset = rollback > 30_000L \|\| receiveGap > 2_000L/);
+assert.match(hlp, /rollback > 30_000L \|\| \(receiveGap > 2_000L && rollback > 1_000L\)/);
 assert.match(hlp, /HLP timestamp reset detected/);
 assert.match(hlp, /VietmapStateRepository\.beginHlpSession\(\)/);
 assert.match(hlp, /WazeAlertPolicy\.dedupeAlerts\(parsed\)/);
