@@ -3799,11 +3799,6 @@ class CarPresentation(
         // 1. Check HUD interactions if HUD overlay is present
         val hud = hudOverlay
         if (hud != null && hud.visibility == View.VISIBLE) {
-            // Close has priority over the lock's expanded touch region.
-            if (hud.hitTestClose(x, y)) {
-                hud.closeHud()
-                return
-            }
             // Priority 1: Direct hit on lock button toggles lock state (locked <-> unlocked)
             if (hud.hitTestLock(x, y)) {
                 hud.toggleLock()
