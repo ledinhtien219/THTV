@@ -504,7 +504,6 @@ class CarDashboardView(
             val iptvApp = appList.find { it.id == "iptv" }
                 ?: WebAppItem("iptv", "IPTV M3U", "file:///android_asset/iptv_player.html", R.drawable.ic_app_iptv)
             onAppClick(iptvApp)
-            onFullscreenRequested?.invoke(iptvApp)
         }
 
         // App 2: YouTube
