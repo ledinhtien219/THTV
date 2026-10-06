@@ -223,24 +223,40 @@ object WazeAlertPolicy {
      */
     fun dedupeAlerts(alerts: List<WazeAlertItem>): List<WazeAlertItem> {
         if (alerts.size < 2) return alerts
-        val ordered = linkedMapOf<String, WazeAlertItem>()
-        for (item in alerts) {
-            val road = item.roadName.orEmpty()
+
+        fun normalizedRoad(item: WazeAlertItem): String =
+            item.roadName.orEmpty()
                 .lowercase(Locale.ROOT)
                 .replace(Regex("""\s+"""), " ")
                 .trim()
-            val key = if (item.code > 0) {
-                "code:${item.code}|road:$road"
-            } else {
-                alertKey(item.warningType, item.title, item.roadName)
-            }
 
-            val previous = ordered[key]
-            if (previous == null) {
-                ordered[key] = item
+        fun sameIdentity(a: WazeAlertItem, b: WazeAlertItem): Boolean {
+            val sameType = if (a.code > 0 && b.code > 0) {
+                a.code == b.code
+            } else {
+                a.warningType == b.warningType &&
+                    a.title.orEmpty().trim().equals(b.title.orEmpty().trim(), ignoreCase = true)
+            }
+            if (!sameType || normalizedRoad(a) != normalizedRoad(b)) return false
+
+            val da = a.distanceMeters?.takeIf { it > 0 }
+            val db = b.distanceMeters?.takeIf { it > 0 }
+            return when {
+                da != null && db != null -> kotlin.math.abs(da - db) <= 80
+                da == null && db == null -> true
+                else -> true
+            }
+        }
+
+        val result = mutableListOf<WazeAlertItem>()
+        for (item in alerts) {
+            val duplicateIndex = result.indexOfFirst { sameIdentity(it, item) }
+            if (duplicateIndex < 0) {
+                result += item
                 continue
             }
 
+            val previous = result[duplicateIndex]
             val previousDistance = previous.distanceMeters?.takeIf { it > 0 }
             val incomingDistance = item.distanceMeters?.takeIf { it > 0 }
             val preferIncoming = when {
@@ -249,9 +265,9 @@ object WazeAlertPolicy {
                 previous.title.isNullOrBlank() && !item.title.isNullOrBlank() -> true
                 else -> false
             }
-            if (preferIncoming) ordered[key] = item
+            if (preferIncoming) result[duplicateIndex] = item
         }
-        return ordered.values.toList()
+        return result
     }
 
     fun sourcePriority(source: String): Int = when (source.uppercase(Locale.ROOT)) {
