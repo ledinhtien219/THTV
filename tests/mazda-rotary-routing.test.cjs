@@ -24,8 +24,20 @@ assert.match(presentation, /KEYCODE_SYSTEM_NAVIGATION_UP/);
 assert.match(presentation, /KEYCODE_NAVIGATE_NEXT/);
 assert.match(presentation, /KEYCODE_DPAD_CENTER/);
 
-// All probe paths must report visibly on the car display.
+// Cursor emulator: D-pad/PAN moves a visible pointer and center/select clicks
+// through the app's existing touch dispatcher (including WebView synthetic touch).
+assert.match(presentation, /fun showCommanderCursor\(source: String = "DPAD"\)/);
+assert.match(presentation, /fun moveCommanderCursor\(dx: Float, dy: Float/);
+assert.match(presentation, /fun clickCommanderCursor\(source: String = "DPAD"\): Boolean/);
+assert.match(presentation, /dispatchTouch\(x, y\)/);
+assert.match(presentation, /dy < 0f[\s\S]*?dispatchScroll\(0f, -140f\)/);
+assert.match(presentation, /dy > 0f[\s\S]*?dispatchScroll\(0f, 140f\)/);
+assert.match(screen, /panModeEnabled[\s\S]*?moveCommanderCursorFromSurface/);
+assert.match(screen, /panModeEnabled[\s\S]*?clickCommanderCursor\("HOST SELECT"\)/);
+
+// Diagnostics stay enabled in the test build so a real Mazda can reveal which
+// path delivered each Commander event.
 assert.match(presentation, /fun showRotaryDiagnostic\(message: String\)/);
 assert.match(presentation, /Mazda test:/);
 
-console.log('PASS Mazda Commander probe: host PAN + raw rotary/DPAD diagnostics enabled');
+console.log('PASS Mazda Commander cursor: host PAN + raw rotary/DPAD -> pointer + click + edge scroll');
