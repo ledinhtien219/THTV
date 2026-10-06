@@ -92,6 +92,42 @@ object CarMediaManager {
     var activeAppId: String = "youtube"
     data class EditorDraft(val appId: String, val page: String?, val mode: String, val text: String)
     var editorDraft: EditorDraft? = null
+
+    private data class PendingYouTubeSearch(val url: String, val startedAtMs: Long)
+    @Volatile private var pendingYouTubeSearch: PendingYouTubeSearch? = null
+
+    fun markPendingYouTubeSearch(url: String) {
+        pendingYouTubeSearch = PendingYouTubeSearch(url, android.os.SystemClock.elapsedRealtime())
+    }
+
+    fun pendingYouTubeSearchUrl(): String? {
+        val pending = pendingYouTubeSearch ?: return null
+        if (android.os.SystemClock.elapsedRealtime() - pending.startedAtMs > 30_000L) {
+            if (pendingYouTubeSearch === pending) pendingYouTubeSearch = null
+            return null
+        }
+        return pending.url
+    }
+
+    fun confirmPendingYouTubeSearch(url: String?) {
+        val pending = pendingYouTubeSearch ?: return
+        if (url.isNullOrBlank()) return
+        val matches = try {
+            val expected = android.net.Uri.parse(pending.url)
+            val actual = android.net.Uri.parse(url)
+            expected.path == "/results" &&
+                actual.path == "/results" &&
+                expected.getQueryParameter("search_query") == actual.getQueryParameter("search_query")
+        } catch (_: Throwable) {
+            url == pending.url
+        }
+        if (matches && pendingYouTubeSearch === pending) pendingYouTubeSearch = null
+    }
+
+    fun clearPendingYouTubeSearch() {
+        pendingYouTubeSearch = null
+    }
+
     private var phoneEditor: Pair<String, CarInputSession>? = null
     fun phoneInput(id: String): CarInputSession? = phoneEditor?.takeIf { it.first == id }?.second
 
