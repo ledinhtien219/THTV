@@ -66,6 +66,7 @@ jobs:
           node tests/youtube-quality.test.cjs
           node tests/youtube-search-routing.test.cjs
           node tests/mazda-rotary-routing.test.cjs
+          node tests/commander-focus-navigation.test.cjs
 
       - name: Build Debug APK
         run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --stacktrace
