@@ -82,7 +82,9 @@ class VietmapNotificationListenerService : NotificationListenerService() {
             return
         }
         activeWazeAlertNotificationKeys.remove(key)
-        if (activeWazeAlertNotificationKeys.isEmpty() && !WazeHlpWebSocketManager.isConnected.value) {
+        if (activeWazeAlertNotificationKeys.isEmpty()) {
+            // Source-specific clear is safe even while HLP is connected: it only
+            // removes the active warning when notification fallback owns it.
             VietmapStateRepository.clearAlertFromSource("WAZE_NOTIFICATION")
         }
     }
