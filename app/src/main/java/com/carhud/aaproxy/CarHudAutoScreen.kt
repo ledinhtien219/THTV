@@ -196,12 +196,7 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
     }
 
     override fun onGetTemplate(): Template {
-        val actionStrip = ActionStrip.Builder()
-            .addAction(Action.BACK)
-            .build()
-
         return NavigationTemplate.Builder()
-            .setActionStrip(actionStrip)
             .build()
     }
 }
