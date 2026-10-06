@@ -435,7 +435,6 @@ class CarDashboardView(
 
         for (channel in channelsToShow) {
             val name = channel.name
-            val chId = channel.id
             val iconRes = fallbackIcon(channel)
             val chip = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -481,11 +480,9 @@ class CarDashboardView(
                     val appList = WebAppManager.getAllApps(context)
                     val iptvApp = appList.find { it.id == "iptv" }
                         ?: WebAppItem("iptv", "IPTV", "file:///android_asset/iptv_player.html", R.drawable.ic_app_iptv)
-                    onAppClick(iptvApp)
-                    onFullscreenRequested?.invoke(iptvApp)
-                    postDelayed({
-                        currentEmbeddedWeb?.evaluateJavascript("if (typeof window.selectChannelById === 'function') window.selectChannelById('$chId')", null)
-                    }, 500)
+                    val quickUrl = "file:///android_asset/iptv_player.html#channel=" +
+                        android.net.Uri.encode(name)
+                    onAppClick(iptvApp.copy(url = quickUrl))
                 }
             }
             row.addView(chip)
@@ -499,7 +496,6 @@ class CarDashboardView(
             val iptvApp = appList.find { it.id == "iptv" }
                 ?: WebAppItem("iptv", "IPTV", "file:///android_asset/iptv_player.html", R.drawable.ic_app_iptv)
             onAppClick(iptvApp)
-            onFullscreenRequested?.invoke(iptvApp)
         }
 
         // App M3U: Direct M3U Playlist
@@ -517,7 +513,6 @@ class CarDashboardView(
             val ytApp = appList.find { it.id == "youtube" }
                 ?: WebAppItem("youtube", "YouTube", "https://m.youtube.com", R.drawable.ic_app_youtube)
             onAppClick(ytApp)
-            onFullscreenRequested?.invoke(ytApp)
         }
 
         // Use the same browser as the application center, including its toolbar/history.
@@ -565,7 +560,6 @@ class CarDashboardView(
                 ?: appList.firstOrNull { it.id == "youtube" }
                 ?: WebAppManager.DEFAULT_APPS.first()
             onAppClick(targetApp)
-            onFullscreenRequested?.invoke(targetApp)
         }
 
         // Player Controls
