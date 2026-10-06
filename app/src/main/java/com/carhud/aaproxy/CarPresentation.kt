@@ -209,6 +209,10 @@ class CarPresentation(
         autoResumePending = true
         target.postDelayed({
             autoResumePending = false
+            if (currentActiveAppId != "youtube" ||
+                CarMediaManager.activeAppId != "youtube" ||
+                CarMediaManager.getPersistentWebView() !== target
+            ) return@postDelayed
 
             val currentUrl = target.url.orEmpty()
             val isYouTubeWatch = currentUrl.contains("youtube.com/watch") ||
@@ -776,7 +780,12 @@ class CarPresentation(
 
         val dash = CarDashboardView(
             context,
-            onAppClick = { app -> switchWebApp(app, embedded = false) },
+            onAppClick = { app ->
+                val explicitUrl = app.url.takeIf {
+                    app.id == "iptv" && it.contains("iptv_player.html#channel=")
+                }
+                switchWebApp(app, embedded = false, startUrl = explicitUrl)
+            },
             onAddAppClick = { showAddAppDialog() },
             onAllAppsClick = { showAppGridOverlay() },
             onFullscreenRequested = { app -> showWebFullscreen(app) },
@@ -947,11 +956,8 @@ class CarPresentation(
         val overlay = VietmapHudOverlay(context).apply {
             // bringToFront alone cannot draw over the browser toolbar's 150dp Z.
             // Keep warnings above browser chrome, below launcher/input dialogs.
+            // HUD visibility is controlled only from the phone app settings.
             elevation = dp(170).toFloat()
-            onCloseRequested = {
-                WazeHudManager.setFloatingOverlayEnabled(context, false)
-                visibility = View.GONE
-            }
         }
         hudOverlay = overlay
         root.addView(overlay)
@@ -1405,6 +1411,12 @@ class CarPresentation(
             elevation = 60f
 
             addView(toolButton(R.drawable.ic_bar_home, "Trang chủ") { showDashboard() })
+
+            val youtubeMicButton = toolButton(R.drawable.ic_bar_mic, "Giọng nói") {
+                startVoiceSearch()
+            }
+            micBtn = youtubeMicButton.getChildAt(0) as? ImageView
+            addView(youtubeMicButton)
 
             addView(toolButton(R.drawable.ic_bar_back, "Quay lại") {
                 if (currentActiveAppId == "youtube") YouTubePlayerHelper.goBackInYouTube(web)
@@ -1860,8 +1872,18 @@ class CarPresentation(
     fun switchWebApp(app: WebAppItem, embedded: Boolean = false, startUrl: String? = null) {
         hideVideoQualityMenu()
         cancelSystemVoiceRequest()
-        if (currentActiveAppId != app.id) CarMediaManager.cancelPendingSteeringNext()
-        if (currentActiveAppId != app.id) browserNeedsHistoryReset = app.id == "web"
+        val previousAppId = currentActiveAppId
+        val isChangingApp = previousAppId != app.id
+        if (isChangingApp) {
+            CarMediaManager.cancelPendingSteeringNext()
+            CarMediaManager.saveWebAppSession(previousAppId, web)
+        }
+        val canRestoreSession = isChangingApp &&
+            startUrl == null &&
+            CarMediaManager.hasWebAppSession(app.id)
+        if (isChangingApp) {
+            browserNeedsHistoryReset = app.id == "web" && !canRestoreSession
+        }
         val currentUrl = web.url ?: ""
         val isYouTubeApp = (app.id == "youtube" || app.url.contains("youtube.com") || app.url.contains("youtu.be"))
         val isAlreadyLoaded = if (isYouTubeApp) {
@@ -1907,17 +1929,21 @@ class CarPresentation(
         } else {
             app.url
         }
-        if (!isAlreadyLoaded || startUrl != null) {
+
+        val restoredSession = if (canRestoreSession) {
+            CarMediaManager.restoreWebAppSession(app.id, web)
+        } else {
+            false
+        }
+
+        if (!restoredSession && (!isAlreadyLoaded || startUrl != null)) {
             web.loadUrl(homeUrl)
         }
 
         // Dashboard's showEmbeddedApp is a placeholder, not a visible browser.
+        // showWebFullscreen() owns the visible transition. The app grid is rebuilt
+        // lazily next time it is opened, so switching apps does no hidden UI work.
         showWebFullscreen(app)
-
-        rebuildTopToolbar()
-        rebuildAppGrid()
-        dashboardView?.refreshAppsList()
-        resetAutoHideTimer()
     }
 
     val isShowingDashboard: Boolean
@@ -1958,29 +1984,37 @@ class CarPresentation(
         showBars()
         resetAutoHideTimer()
 
-        // Restore dimensions and force rendering resume when entering fullscreen
-        try { 
+        // Restore dimensions and rendering state when entering fullscreen.
+        // Do not blindly play every <video>: that made a deliberately paused
+        // YouTube/browser video start again merely because the user switched apps.
+        try {
             web.layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             updateBrowserViewport()
             web.requestLayout()
+            val expectedAppId = currentActiveAppId
             root.post {
+                if (currentActiveAppId != expectedAppId || CarMediaManager.activeAppId != expectedAppId) {
+                    return@post
+                }
                 try {
-                    web.onResume() 
+                    web.onResume()
+                    web.resumeTimers()
                     web.evaluateJavascript(
-                        """
-                        (function() {
-                            if (window.restoreVideoAspectRatio) window.restoreVideoAspectRatio();
-                            if (window.__iptvUserPaused) return;
-                            var v = document.querySelector('video');
-                            if (v && v.paused) { try { if (v.muted) v.muted = false; v.play(); } catch(e){} }
-                            var p = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
-                            if (p && typeof p.playVideo === 'function' && p.getPlayerState && p.getPlayerState() !== 1) { try { p.playVideo(); } catch(e){} }
-                        })();
-                        """.trimIndent(), null
+                        "if (window.restoreVideoAspectRatio) window.restoreVideoAspectRatio();",
+                        null
                     )
-                } catch (e: Exception) {}
+                    when (expectedAppId) {
+                        "youtube" -> scheduleSafeResume(web, 450L)
+                        "iptv" -> if (CarMediaManager.userWantsPlayback) {
+                            web.evaluateJavascript(
+                                "if (!window.__iptvUserPaused && window.setIptvPlaying) window.setIptvPlaying(true);",
+                                null
+                            )
+                        }
+                    }
+                } catch (_: Exception) {}
             }
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
     }
 
     fun showDashboard() {
@@ -3779,11 +3813,6 @@ class CarPresentation(
         // 1. Check HUD interactions if HUD overlay is present
         val hud = hudOverlay
         if (hud != null && hud.visibility == View.VISIBLE) {
-            // Close has priority over the lock's expanded touch region.
-            if (hud.hitTestClose(x, y)) {
-                hud.closeHud()
-                return
-            }
             // Priority 1: Direct hit on lock button toggles lock state (locked <-> unlocked)
             if (hud.hitTestLock(x, y)) {
                 hud.toggleLock()
@@ -4010,6 +4039,10 @@ class CarPresentation(
 
     override fun onStop() {
         autoHideHandler.removeCallbacks(hideBarsRunnable)
+        // Snapshot the current browser/YouTube session before Android Auto hides
+        // this app. The live WebView is still kept running below, while this
+        // snapshot is a fallback if the host recreates the surface/renderer.
+        CarMediaManager.saveWebAppSession(currentActiveAppId, web)
         // Keep the persistent WebView attached to the Presentation window while Android Auto
         // temporarily hides our surface (for example when switching to Maps/Waze). Detaching it
         // makes Chromium treat the page as background/off-screen and can suspend YouTube/HLS audio.
@@ -4030,6 +4063,7 @@ class CarPresentation(
 
 
     override fun dismiss() {
+        CarMediaManager.saveWebAppSession(currentActiveAppId, web)
         cancelSystemVoiceRequest()
         SystemVoiceModule.detach(systemVoiceReceiver)
         detachInputCallbacks()

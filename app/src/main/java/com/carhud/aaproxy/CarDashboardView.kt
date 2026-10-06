@@ -140,7 +140,7 @@ class CarDashboardView(
 
     // Weather card (phone GPS + Open-Meteo)
     private lateinit var weatherCard: LinearLayout
-    private lateinit var weatherIcon: TextView
+    private lateinit var weatherIcon: ImageView
     private lateinit var weatherTemp: TextView
     private lateinit var weatherCondition: TextView
     private lateinit var weatherLocation: TextView
@@ -435,7 +435,6 @@ class CarDashboardView(
 
         for (channel in channelsToShow) {
             val name = channel.name
-            val chId = channel.id
             val iconRes = fallbackIcon(channel)
             val chip = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -481,11 +480,9 @@ class CarDashboardView(
                     val appList = WebAppManager.getAllApps(context)
                     val iptvApp = appList.find { it.id == "iptv" }
                         ?: WebAppItem("iptv", "IPTV", "file:///android_asset/iptv_player.html", R.drawable.ic_app_iptv)
-                    onAppClick(iptvApp)
-                    onFullscreenRequested?.invoke(iptvApp)
-                    postDelayed({
-                        currentEmbeddedWeb?.evaluateJavascript("if (typeof window.selectChannelById === 'function') window.selectChannelById('$chId')", null)
-                    }, 500)
+                    val quickUrl = "file:///android_asset/iptv_player.html#channel=" +
+                        android.net.Uri.encode(name)
+                    onAppClick(iptvApp.copy(url = quickUrl))
                 }
             }
             row.addView(chip)
@@ -499,7 +496,6 @@ class CarDashboardView(
             val iptvApp = appList.find { it.id == "iptv" }
                 ?: WebAppItem("iptv", "IPTV", "file:///android_asset/iptv_player.html", R.drawable.ic_app_iptv)
             onAppClick(iptvApp)
-            onFullscreenRequested?.invoke(iptvApp)
         }
 
         // App M3U: Direct M3U Playlist
@@ -508,7 +504,6 @@ class CarDashboardView(
             val iptvApp = appList.find { it.id == "iptv" }
                 ?: WebAppItem("iptv", "IPTV M3U", "file:///android_asset/iptv_player.html", R.drawable.ic_app_iptv)
             onAppClick(iptvApp)
-            onFullscreenRequested?.invoke(iptvApp)
         }
 
         // App 2: YouTube
@@ -517,7 +512,6 @@ class CarDashboardView(
             val ytApp = appList.find { it.id == "youtube" }
                 ?: WebAppItem("youtube", "YouTube", "https://m.youtube.com", R.drawable.ic_app_youtube)
             onAppClick(ytApp)
-            onFullscreenRequested?.invoke(ytApp)
         }
 
         // Use the same browser as the application center, including its toolbar/history.
@@ -565,7 +559,6 @@ class CarDashboardView(
                 ?: appList.firstOrNull { it.id == "youtube" }
                 ?: WebAppManager.DEFAULT_APPS.first()
             onAppClick(targetApp)
-            onFullscreenRequested?.invoke(targetApp)
         }
 
         // Player Controls
@@ -857,6 +850,17 @@ class CarDashboardView(
         showStaticWallpaper(R.drawable.bg_wallpaper_bugatti)
     }
 
+    private fun weatherIconRes(iconEmoji: String): Int {
+        return when (iconEmoji) {
+            "☀️", "☀" -> R.drawable.ic_weather_sunny
+            "🌤️", "🌤", "⛅" -> R.drawable.ic_weather_partly_cloudy
+            "🌫️", "🌫" -> R.drawable.ic_weather_fog
+            "🌦️", "🌦", "🌧️", "🌧" -> R.drawable.ic_weather_rain
+            "⛈️", "⛈" -> R.drawable.ic_weather_storm
+            else -> R.drawable.ic_weather_partly_cloudy
+        }
+    }
+
     private fun startLiveStreams() {
         // 1. Clock, Greeting, Solar Date & Vietnamese Lunar Calendar
         val timeRunnable = object : Runnable {
@@ -888,7 +892,7 @@ class CarDashboardView(
         GpsSpeedManager.start(context.applicationContext)
         coroutineScope.launch {
             WeatherManager.weatherState.collectLatest { weather ->
-                weatherIcon.text = weather.iconEmoji
+                weatherIcon.setImageResource(weatherIconRes(weather.iconEmoji))
                 weatherTemp.text = if (weather.isLoaded) "${weather.tempC}°C" else "—°C"
                 weatherCondition.text = if (weather.isLoaded) weather.conditionText else "Đang cập nhật"
                 weatherLocation.text = if (weather.isLoaded) "📍 ${weather.location}" else "📍 Vị trí điện thoại"
@@ -979,7 +983,12 @@ class CarDashboardView(
                 ivDayNightToggle?.setImageResource(R.drawable.ic_mode_day)
                 ivDayNightToggle?.setColorFilter(Color.parseColor("#F59E0B"))
                 dashboardScrim.setBackgroundColor(Color.parseColor("#15000000"))
-                weatherCard.background = rounded(Color.parseColor("#D9F8FAFC"), 18f)
+                weatherCard.background = rounded(
+                    Color.parseColor("#66F8FAFC"),
+                    18f,
+                    Color.parseColor("#80FFFFFF"),
+                    1
+                )
                 weatherTemp.setTextColor(Color.parseColor("#0F172A"))
                 weatherCondition.setTextColor(Color.parseColor("#334155"))
                 weatherLocation.setTextColor(Color.parseColor("#0369A1"))
@@ -988,7 +997,12 @@ class CarDashboardView(
                 ivDayNightToggle?.setImageResource(R.drawable.ic_mode_night)
                 ivDayNightToggle?.setColorFilter(Color.parseColor("#38BDF8"))
                 dashboardScrim.setBackgroundColor(Color.parseColor("#42000000"))
-                weatherCard.background = rounded(Color.parseColor("#CC101A24"), 18f)
+                weatherCard.background = rounded(
+                    Color.parseColor("#66101A24"),
+                    18f,
+                    Color.parseColor("#4DFFFFFF"),
+                    1
+                )
                 weatherTemp.setTextColor(Color.WHITE)
                 weatherCondition.setTextColor(Color.parseColor("#E2E8F0"))
                 weatherLocation.setTextColor(Color.parseColor("#67E8F9"))
@@ -998,12 +1012,22 @@ class CarDashboardView(
                 ivDayNightToggle?.setColorFilter(Color.parseColor("#00E5FF"))
                 dashboardScrim.setBackgroundColor(if (isDay) Color.parseColor("#18000000") else Color.parseColor("#35000000"))
                 if (isDay) {
-                    weatherCard.background = rounded(Color.parseColor("#DDF8FAFC"), 18f)
+                    weatherCard.background = rounded(
+                        Color.parseColor("#66F8FAFC"),
+                        18f,
+                        Color.parseColor("#80FFFFFF"),
+                        1
+                    )
                     weatherTemp.setTextColor(Color.parseColor("#0F172A"))
                     weatherCondition.setTextColor(Color.parseColor("#334155"))
                     weatherLocation.setTextColor(Color.parseColor("#0369A1"))
                 } else {
-                    weatherCard.background = rounded(Color.parseColor("#CC101A24"), 18f)
+                    weatherCard.background = rounded(
+                        Color.parseColor("#66101A24"),
+                        18f,
+                        Color.parseColor("#4DFFFFFF"),
+                        1
+                    )
                     weatherTemp.setTextColor(Color.WHITE)
                     weatherCondition.setTextColor(Color.parseColor("#E2E8F0"))
                     weatherLocation.setTextColor(Color.parseColor("#67E8F9"))

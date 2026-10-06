@@ -216,6 +216,60 @@ object WazeAlertPolicy {
         return "${type.name}|$cleanTitle|$cleanRoad"
     }
 
+    /**
+     * WazeMod may repeat the same report in alrs with slightly different payload
+     * richness. Keep the original near-to-far ordering, but collapse duplicates
+     * and retain the closest/richest copy.
+     */
+    fun dedupeAlerts(alerts: List<WazeAlertItem>): List<WazeAlertItem> {
+        if (alerts.size < 2) return alerts
+
+        fun normalizedRoad(item: WazeAlertItem): String =
+            item.roadName.orEmpty()
+                .lowercase(Locale.ROOT)
+                .replace(Regex("""\s+"""), " ")
+                .trim()
+
+        fun sameIdentity(a: WazeAlertItem, b: WazeAlertItem): Boolean {
+            val sameType = if (a.code > 0 && b.code > 0) {
+                a.code == b.code
+            } else {
+                a.warningType == b.warningType &&
+                    a.title.orEmpty().trim().equals(b.title.orEmpty().trim(), ignoreCase = true)
+            }
+            if (!sameType || normalizedRoad(a) != normalizedRoad(b)) return false
+
+            val da = a.distanceMeters?.takeIf { it > 0 }
+            val db = b.distanceMeters?.takeIf { it > 0 }
+            return when {
+                da != null && db != null -> kotlin.math.abs(da - db) <= 80
+                da == null && db == null -> true
+                else -> true
+            }
+        }
+
+        val result = mutableListOf<WazeAlertItem>()
+        for (item in alerts) {
+            val duplicateIndex = result.indexOfFirst { sameIdentity(it, item) }
+            if (duplicateIndex < 0) {
+                result += item
+                continue
+            }
+
+            val previous = result[duplicateIndex]
+            val previousDistance = previous.distanceMeters?.takeIf { it > 0 }
+            val incomingDistance = item.distanceMeters?.takeIf { it > 0 }
+            val preferIncoming = when {
+                previousDistance == null && incomingDistance != null -> true
+                previousDistance != null && incomingDistance != null && incomingDistance < previousDistance -> true
+                previous.title.isNullOrBlank() && !item.title.isNullOrBlank() -> true
+                else -> false
+            }
+            if (preferIncoming) result[duplicateIndex] = item
+        }
+        return result
+    }
+
     fun sourcePriority(source: String): Int = when (source.uppercase(Locale.ROOT)) {
         "MANUAL_TEST" -> 5
         "WAZE_HLP", "HLP" -> 4

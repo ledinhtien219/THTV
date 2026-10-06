@@ -44,8 +44,12 @@ object WazeHlpWebSocketManager {
     private var clientJob: Job? = null
     private var webSocketClient: WebSocket? = null
     private var server: WazeHlpServer? = null
+    @Volatile private var serverStarted = false
+    @Volatile private var serverStarting = false
+    private var restartJob: Job? = null
     @Volatile private var currentSession: Long? = null
     @Volatile private var lastStateTs: Long = -1L
+    @Volatile private var lastStateReceivedAtMs: Long = 0L
 
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
@@ -86,6 +90,10 @@ object WazeHlpWebSocketManager {
         }
 
         override fun onStart() {
+            serverStarting = false
+            serverStarted = true
+            restartJob?.cancel()
+            restartJob = null
             Log.i(TAG, "Waze HLP WebSocket Server started on 0.0.0.0:$WS_PORT")
             if (!_isConnected.value) {
                 _statusText.value = "Server đang lắng nghe cổng $WS_PORT (Sẵn sàng)"
@@ -100,6 +108,8 @@ object WazeHlpWebSocketManager {
             _statusText.value = "Đã kết nối Waze Mod ($remoteAddr)"
             currentSession = null
             lastStateTs = -1L
+            lastStateReceivedAtMs = 0L
+            VietmapStateRepository.beginHlpSession()
             VietmapStateRepository.updateConnection(true)
 
             // HLP/1: alrs and lan are opt-in fields. Without a dev declaration,
@@ -114,6 +124,7 @@ object WazeHlpWebSocketManager {
                 _statusText.value = "Chờ Waze Mod kết nối (Cổng $WS_PORT)..."
                 currentSession = null
                 lastStateTs = -1L
+                lastStateReceivedAtMs = 0L
                 VietmapStateRepository.clearHlpAlerts()
                 VietmapStateRepository.updateConnection(false)
             }
@@ -127,9 +138,19 @@ object WazeHlpWebSocketManager {
 
         override fun onError(conn: JvmWebSocket?, ex: Exception?) {
             Log.w(TAG, "Waze Mod server error: ${ex?.message}")
-            if (conn == null && ex is java.net.BindException) {
-                Log.e(TAG, "Port $WS_PORT already bound; WazeMod needs this app to be the WebSocket server")
-                _statusText.value = "Cổng $WS_PORT đang bị ứng dụng khác sử dụng"
+            if (conn == null) {
+                serverStarting = false
+                serverStarted = false
+                _isConnected.value = false
+                VietmapStateRepository.updateConnection(false)
+                val bindError = ex is java.net.BindException
+                if (bindError) {
+                    Log.e(TAG, "Port $WS_PORT already bound; retrying listener after backoff")
+                    _statusText.value = "Cổng $WS_PORT đang bận - đang thử lại..."
+                } else {
+                    _statusText.value = "Listener Waze lỗi - đang tự khôi phục..."
+                }
+                scheduleServerRestart(if (bindError) 5_000L else 1_500L)
             }
         }
     }
@@ -137,7 +158,7 @@ object WazeHlpWebSocketManager {
     private var keepAliveJob: Job? = null
 
     fun start() {
-        if (server == null) {
+        if (server == null || (!serverStarted && !serverStarting)) {
             startServer()
         }
         // WazeMod is the WebSocket client. Do not connect this process back to
@@ -148,10 +169,15 @@ object WazeHlpWebSocketManager {
 
     fun stop() {
         stopKeepAliveMonitor()
+        restartJob?.cancel()
+        restartJob = null
         stopClientFallback()
         stopServer()
         currentSession = null
         lastStateTs = -1L
+        lastStateReceivedAtMs = 0L
+        VietmapStateRepository.clearHlpAlerts()
+        VietmapStateRepository.updateConnection(false)
         _isConnected.value = false
         _statusText.value = "Đã dừng Server"
     }
@@ -162,8 +188,8 @@ object WazeHlpWebSocketManager {
             while (isActive) {
                 delay(3000)
                 try {
-                    if (server == null) {
-                        Log.i(TAG, "KeepAlive: Server is null, auto-restarting Waze Mod listener...")
+                    if (server == null || (!serverStarted && !serverStarting)) {
+                        Log.i(TAG, "KeepAlive: listener unavailable, auto-restarting Waze Mod server...")
                         startServer()
                     }
                 } catch (e: Exception) {
@@ -178,24 +204,35 @@ object WazeHlpWebSocketManager {
         keepAliveJob = null
     }
 
+    @Synchronized
     private fun startServer() {
+        if (serverStarted || serverStarting) return
         try {
             stopServer()
+            serverStarting = true
             _statusText.value = "Đang kết nối Waze Mod (Cổng $WS_PORT)..."
             val s = WazeHlpServer(WS_PORT)
-            s.start()
             server = s
+            s.start()
         } catch (e: Exception) {
+            serverStarting = false
+            serverStarted = false
+            server = null
             Log.e(TAG, "Failed to start WazeHlpServer", e)
-            _statusText.value = if (e is java.net.BindException) {
-                "Cổng $WS_PORT đang bị ứng dụng khác sử dụng"
+            val bindError = e is java.net.BindException
+            _statusText.value = if (bindError) {
+                "Cổng $WS_PORT đang bận - đang thử lại..."
             } else {
                 "Lỗi Server: ${e.message}"
             }
+            scheduleServerRestart(if (bindError) 5_000L else 1_500L)
         }
     }
 
+    @Synchronized
     private fun stopServer() {
+        serverStarting = false
+        serverStarted = false
         try {
             server?.stop(500)
         } catch (e: Exception) {
@@ -204,18 +241,31 @@ object WazeHlpWebSocketManager {
         server = null
     }
 
+    private fun scheduleServerRestart(delayMs: Long) {
+        if (restartJob?.isActive == true) return
+        restartJob = scope.launch {
+            delay(delayMs)
+            restartJob = null
+            if (!serverStarted && !serverStarting) {
+                startServer()
+            }
+        }
+    }
+
     fun restartConnection() {
         Log.i(TAG, "Restarting Waze Mod connection...")
         _isConnected.value = false
         _statusText.value = "Đang khởi động lại..."
         stopClientFallback()
+        restartJob?.cancel()
+        restartJob = null
         stopServer()
         currentSession = null
         lastStateTs = -1L
-        scope.launch {
-            delay(500)
-            startServer()
-        }
+        lastStateReceivedAtMs = 0L
+        VietmapStateRepository.clearHlpAlerts()
+        VietmapStateRepository.updateConnection(false)
+        scheduleServerRestart(500L)
     }
 
     private fun startClientFallback() {
@@ -356,6 +406,7 @@ object WazeHlpWebSocketManager {
                     if (sess >= 0L && sess != previousSession) {
                         currentSession = sess
                         lastStateTs = -1L
+                        lastStateReceivedAtMs = 0L
                         VietmapStateRepository.beginHlpSession()
 
                         // If WazeMod restarts while the WebSocket stays alive, HLP requires
@@ -366,22 +417,43 @@ object WazeHlpWebSocketManager {
                             reply(buildDeviceDeclarationPayload())
                         }
                     }
+                    _isConnected.value = true
+                    VietmapStateRepository.updateConnection(true)
                     val fields = root.opt("fields")?.toString().orEmpty()
                     Log.i(TAG, "HLP_HI sess=$sess fields=$fields")
                     return
                 }
                 "bye" -> {
+                    currentSession = null
                     lastStateTs = -1L
+                    lastStateReceivedAtMs = 0L
+                    _isConnected.value = false
+                    _statusText.value = "Waze Mod đã kết thúc phiên dẫn đường"
                     VietmapStateRepository.clearHlpAlerts()
+                    VietmapStateRepository.updateConnection(false)
                     return
                 }
                 "s" -> {
                     val ts = if (root.has("ts")) root.optLong("ts", -1L) else -1L
+                    val now = System.currentTimeMillis()
                     if (ts >= 0L && lastStateTs >= 0L && ts < lastStateTs) {
-                        Log.d(TAG, "Ignoring stale HLP state ts=$ts < $lastStateTs sess=$currentSession")
-                        return
+                        val rollback = lastStateTs - ts
+                        val receiveGap = if (lastStateReceivedAtMs > 0L) now - lastStateReceivedAtMs else Long.MAX_VALUE
+                        val likelySessionReset =
+                            rollback > 30_000L || (receiveGap > 2_000L && rollback > 1_000L)
+                        if (likelySessionReset) {
+                            Log.i(TAG, "HLP timestamp reset detected: ts=$ts last=$lastStateTs gap=$receiveGap; accepting new stream")
+                            lastStateTs = -1L
+                            VietmapStateRepository.beginHlpSession()
+                        } else {
+                            Log.d(TAG, "Ignoring stale HLP state ts=$ts < $lastStateTs sess=$currentSession")
+                            return
+                        }
                     }
                     if (ts >= 0L) lastStateTs = ts
+                    lastStateReceivedAtMs = now
+                    _isConnected.value = true
+                    VietmapStateRepository.updateConnection(true)
                     handleJsonMessage(jsonStr)
                 }
                 else -> return
@@ -866,14 +938,15 @@ object WazeHlpWebSocketManager {
                         roadName = itemRoad
                     )
                 }
-                upcomingAlerts = parsed.take(4)
+                val deduped = WazeAlertPolicy.dedupeAlerts(parsed)
+                upcomingAlerts = deduped.take(4)
                 if (secondaryLimit == null) {
-                    secondaryLimit = parsed.firstOrNull { it.code in setOf(8, 22) && (it.value ?: 0) > 0 }?.value
+                    secondaryLimit = deduped.firstOrNull { it.code in setOf(8, 22) && (it.value ?: 0) > 0 }?.value
                 }
 
-                // Official alrs is already sorted near -> far and alr mirrors alrs[0].
-                // Keep that ordering instead of inventing our own priority score.
-                parsed.firstOrNull()?.let { first ->
+                // Official alrs is already sorted near -> far. Keep that ordering
+                // after removing duplicate copies of the same report.
+                deduped.firstOrNull()?.let { first ->
                     alertCode = first.code
                     alertValue = first.value
                     alertJamSeverity = first.jamSeverity

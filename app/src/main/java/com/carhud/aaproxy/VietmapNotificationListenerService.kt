@@ -73,6 +73,21 @@ class VietmapNotificationListenerService : NotificationListenerService() {
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private var isReceiverRegistered = false
+    private val activeWazeAlertNotificationKeys =
+        java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
+    private fun updateWazeAlertNotificationKey(key: String, hasAlert: Boolean) {
+        if (hasAlert) {
+            activeWazeAlertNotificationKeys.add(key)
+            return
+        }
+        activeWazeAlertNotificationKeys.remove(key)
+        if (activeWazeAlertNotificationKeys.isEmpty()) {
+            // Source-specific clear is safe even while HLP is connected: it only
+            // removes the active warning when notification fallback owns it.
+            VietmapStateRepository.clearAlertFromSource("WAZE_NOTIFICATION")
+        }
+    }
 
     private val wazeBroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -243,7 +258,8 @@ class VietmapNotificationListenerService : NotificationListenerService() {
         sbn ?: return
         val pkg = sbn.packageName ?: return
         if (isWazePackage(pkg)) {
-            Log.d(TAG, "Waze notification removed from: $pkg")
+            Log.d(TAG, "Waze notification removed from: $pkg key=${sbn.key}")
+            mainHandler.post { updateWazeAlertNotificationKey(sbn.key, false) }
         } else if (isGoogleMapsPackage(pkg, sbn.notification)) {
             Log.d(TAG, "Google Maps notification removed from: $pkg")
             GoogleMapsStateRepository.clearNavigation()
@@ -392,6 +408,7 @@ class VietmapNotificationListenerService : NotificationListenerService() {
         // Filter out pure status/background notifications
         if (isIgnoredNotificationText(title) && isIgnoredNotificationText(text)) {
             Log.d(TAG, "Ignoring Waze status notification: $combined")
+            mainHandler.post { updateWazeAlertNotificationKey(sbn.key, false) }
             return
         }
 
@@ -486,6 +503,7 @@ class VietmapNotificationListenerService : NotificationListenerService() {
         // erase turn/ETA/lane/alert data received from HLP/1.
         mainHandler.post {
             val hasNewAlert = (parsedWarningType != VietmapWarningType.NONE)
+            updateWazeAlertNotificationKey(sbn.key, hasNewAlert)
             Log.d(TAG, "WAZE_NOTIF_PARSED speed=$parsedSpeed limit=$parsedLimit alert=$parsedWarningType title=$parsedAlertTitle dist=$parsedDistanceStr road=$parsedRoadName")
 
             VietmapStateRepository.mergeUpdate(

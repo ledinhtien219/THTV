@@ -1,5 +1,11 @@
 package com.carhud.aaproxy
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -99,12 +105,68 @@ object VietmapStateRepository {
     private val _alertState = MutableStateFlow(VietmapAlertData())
     val alertState: StateFlow<VietmapAlertData> = _alertState.asStateFlow()
 
+    private val alertExpiryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var alertExpiryJob: Job? = null
+
+    private fun scheduleAlertExpiry() {
+        alertExpiryJob?.cancel()
+        alertExpiryJob = null
+
+        val snapshot = _alertState.value
+        if (snapshot.alertTimestamp <= 0L || snapshot.warningType == VietmapWarningType.NONE) return
+
+        val snapshotTimestamp = snapshot.alertTimestamp
+        val snapshotKey = WazeAlertPolicy.alertKey(
+            snapshot.warningType,
+            snapshot.alertTitle,
+            snapshot.roadName
+        )
+        val expiresAt = snapshotTimestamp + WazeAlertPolicy.alertTtlMs(snapshot)
+        val waitMs = (expiresAt - System.currentTimeMillis()).coerceAtLeast(250L) + 150L
+
+        alertExpiryJob = alertExpiryScope.launch {
+            delay(waitMs)
+            val current = _alertState.value
+            val currentKey = WazeAlertPolicy.alertKey(
+                current.warningType,
+                current.alertTitle,
+                current.roadName
+            )
+            if (
+                current.alertTimestamp == snapshotTimestamp &&
+                currentKey == snapshotKey &&
+                !WazeAlertPolicy.isAlertFresh(current)
+            ) {
+                _alertState.value = current.copy(
+                    alertDescription = null,
+                    distanceText = null,
+                    distanceMeters = null,
+                    warningType = VietmapWarningType.NONE,
+                    alertTitle = null,
+                    upcomingAlerts = emptyList(),
+                    alertSource = "UNKNOWN",
+                    alertTimestamp = 0L
+                )
+            }
+        }
+    }
+
     fun updateState(newState: VietmapAlertData) {
         _alertState.value = newState
+        scheduleAlertExpiry()
     }
 
     fun updateConnection(connected: Boolean) {
-        _alertState.value = _alertState.value.copy(isConnected = connected)
+        val cur = _alertState.value
+        _alertState.value = if (!connected && cur.source == "WAZE_HLP") {
+            cur.copy(
+                isConnected = false,
+                source = "UNKNOWN",
+                sourceUpdatedAt = 0L
+            )
+        } else {
+            cur.copy(isConnected = connected)
+        }
     }
 
     /**
@@ -146,7 +208,9 @@ object VietmapStateRepository {
         val incomingSourcePriority = WazeAlertPolicy.sourcePriority(source)
         val currentSourcePriority = WazeAlertPolicy.sourcePriority(cur.source)
         val currentAlertSourcePriority = WazeAlertPolicy.sourcePriority(cur.alertSource)
-        val currentTelemetryFresh = cur.sourceUpdatedAt > 0L && now - cur.sourceUpdatedAt < 3_000L
+        val currentTelemetryFresh = cur.isConnected &&
+            cur.sourceUpdatedAt > 0L &&
+            now - cur.sourceUpdatedAt < 3_000L
         val protectHigherQualityTelemetry = currentTelemetryFresh && incomingSourcePriority < currentSourcePriority
 
         val acceptedSpeed = if (protectHigherQualityTelemetry && cur.currentSpeed > 0) null else speed
@@ -200,10 +264,6 @@ object VietmapStateRepository {
 
         val isOver = WazeAlertPolicy.isOverspeed(newSpeed, newLimit, cur.isOverSpeed)
 
-        val isPassed = (distanceMeters != null && distanceMeters <= 0) ||
-            (distanceText != null && WazeAlertPolicy.parseDistanceMeters(distanceText) == 0)
-        val isExplicitClear = clearAlert || isPassed
-
         val incomingWarning = warningType?.takeIf { it != VietmapWarningType.NONE }
         val incomingHasAlert = incomingWarning != null || !alertTitle.isNullOrBlank() || !alertDescription.isNullOrBlank()
         val currentAlertFresh = cur.hasActiveAlert
@@ -217,6 +277,18 @@ object VietmapStateRepository {
 
         val incomingDistance = distanceMeters ?: WazeAlertPolicy.parseDistanceMeters(distanceText)
         val currentDistance = WazeAlertPolicy.effectiveAlertDistanceMeters(cur)
+
+        // Some Waze builds use distance=0 for "unknown/current" while the alert is
+        // still active. Only treat zero as passed when this is the same alert from
+        // the same source and we previously observed a positive distance.
+        val distanceSaysPassed =
+            incomingDistance == 0 &&
+            currentDistance != null &&
+            currentDistance > 0 &&
+            inferredIncomingType != VietmapWarningType.NONE &&
+            inferredIncomingType == cur.warningType &&
+            source == cur.alertSource
+        val isExplicitClear = clearAlert || distanceSaysPassed
 
         val incomingAlertScore = WazeAlertPolicy.score(inferredIncomingType, incomingDistance)
         val currentAlertScore = WazeAlertPolicy.score(cur.warningType, currentDistance)
@@ -313,7 +385,8 @@ object VietmapStateRepository {
 
         val newUpcomingAlerts = when {
             canClearAlert -> emptyList()
-            upcomingAlerts != null && (!protectHigherQualityTelemetry || incomingSourcePriority >= currentSourcePriority || source == "WAZE_HLP") -> upcomingAlerts
+            upcomingAlerts != null && (!protectHigherQualityTelemetry || incomingSourcePriority >= currentSourcePriority || source == "WAZE_HLP") ->
+                WazeAlertPolicy.dedupeAlerts(upcomingAlerts)
             else -> cur.upcomingAlerts
         }
 
@@ -348,37 +421,63 @@ object VietmapStateRepository {
             alertSource = newAlertSource,
             alertTimestamp = newAlertTs
         )
+        scheduleAlertExpiry()
     }
 
     fun beginHlpSession() {
         val cur = _alertState.value
+        val hlpOwnedAlert = cur.alertSource == "WAZE_HLP"
+        val hlpOwnedTelemetry = cur.source == "WAZE_HLP"
         _alertState.value = cur.copy(
             isConnected = true,
+            alertDescription = if (hlpOwnedAlert) null else cur.alertDescription,
+            distanceText = if (hlpOwnedAlert) null else cur.distanceText,
+            distanceMeters = if (hlpOwnedAlert) null else cur.distanceMeters,
+            warningType = if (hlpOwnedAlert) VietmapWarningType.NONE else cur.warningType,
+            alertTitle = if (hlpOwnedAlert) null else cur.alertTitle,
+            upcomingAlerts = emptyList(),
+            source = if (hlpOwnedTelemetry) "UNKNOWN" else cur.source,
+            sourceUpdatedAt = if (hlpOwnedTelemetry) 0L else cur.sourceUpdatedAt,
+            alertSource = if (hlpOwnedAlert) "UNKNOWN" else cur.alertSource,
+            alertTimestamp = if (hlpOwnedAlert) 0L else cur.alertTimestamp
+        )
+        scheduleAlertExpiry()
+    }
+
+    fun clearHlpAlerts() {
+        val cur = _alertState.value
+        val hlpOwnedAlert = cur.alertSource == "WAZE_HLP"
+        val hlpOwnedTelemetry = cur.source == "WAZE_HLP"
+        if (!hlpOwnedAlert && !hlpOwnedTelemetry && cur.upcomingAlerts.isEmpty()) return
+
+        _alertState.value = cur.copy(
+            alertDescription = if (hlpOwnedAlert) null else cur.alertDescription,
+            distanceText = if (hlpOwnedAlert) null else cur.distanceText,
+            distanceMeters = if (hlpOwnedAlert) null else cur.distanceMeters,
+            warningType = if (hlpOwnedAlert) VietmapWarningType.NONE else cur.warningType,
+            alertTitle = if (hlpOwnedAlert) null else cur.alertTitle,
+            upcomingAlerts = emptyList(),
+            source = if (hlpOwnedTelemetry) "UNKNOWN" else cur.source,
+            sourceUpdatedAt = if (hlpOwnedTelemetry) 0L else cur.sourceUpdatedAt,
+            alertSource = if (hlpOwnedAlert) "UNKNOWN" else cur.alertSource,
+            alertTimestamp = if (hlpOwnedAlert) 0L else cur.alertTimestamp
+        )
+        scheduleAlertExpiry()
+    }
+
+    fun clearAlertFromSource(source: String) {
+        val cur = _alertState.value
+        if (cur.alertSource != source) return
+        _alertState.value = cur.copy(
             alertDescription = null,
             distanceText = null,
             distanceMeters = null,
             warningType = VietmapWarningType.NONE,
             alertTitle = null,
-            upcomingAlerts = emptyList(),
             alertSource = "UNKNOWN",
             alertTimestamp = 0L
         )
-    }
-
-    fun clearHlpAlerts() {
-        val cur = _alertState.value
-        if (cur.alertSource == "WAZE_HLP" || cur.upcomingAlerts.isNotEmpty()) {
-            _alertState.value = cur.copy(
-                alertDescription = null,
-                distanceText = null,
-                distanceMeters = null,
-                warningType = VietmapWarningType.NONE,
-                alertTitle = null,
-                upcomingAlerts = emptyList(),
-                alertSource = "UNKNOWN",
-                alertTimestamp = 0L
-            )
-        }
+        scheduleAlertExpiry()
     }
 
     fun updateSpeed(speed: Int) {

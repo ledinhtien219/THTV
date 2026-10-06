@@ -65,15 +65,6 @@ class VietmapHudOverlay @JvmOverloads constructor(
     // Dragging & Locking
     private var isLocked = false
     private var lockButton: TextView? = null
-    private var closeButton: TextView? = null
-    var onCloseRequested: (() -> Unit)? = null
-        set(value) { field = value; updateCloseButtonVisibility() }
-
-    fun closeHud() { if (!isPreviewMode) onCloseRequested?.invoke() }
-
-    private fun updateCloseButtonVisibility() {
-        closeButton?.visibility = if (!isPreviewMode && onCloseRequested != null) View.VISIBLE else View.GONE
-    }
     private var dX = 0f
     private var dY = 0f
     private var isDragging = false
@@ -105,7 +96,6 @@ class VietmapHudOverlay @JvmOverloads constructor(
 
     fun setPreviewMode(preview: Boolean) {
         this.isPreviewMode = preview
-        updateCloseButtonVisibility()
     }
 
     fun applyHudConfig(styleIdOverride: Int? = null) {
@@ -156,7 +146,6 @@ class VietmapHudOverlay @JvmOverloads constructor(
         alertDistanceText = null
         alertUpcomingText = null
         lockButton = null
-        closeButton = null
 
         val defaultBorder = Color.parseColor("#00E5FF")
         background = rounded(Color.parseColor("#F50B132B"), 18f, defaultBorder, 2)
@@ -169,21 +158,6 @@ class VietmapHudOverlay @JvmOverloads constructor(
             5 -> buildStyle5SieuTinhGon()
             else -> buildStyle1BubbleNgangTieuChuan()
         }
-        closeButton = TextView(context).apply {
-            text = "×"
-            textSize = 23f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            contentDescription = "Tắt bong bóng cảnh báo"
-            background = rounded(Color.parseColor("#40EF4444"), 8f, Color.parseColor("#EF4444"), 1)
-            layoutParams = LayoutParams(dp(36), dp(36)).apply {
-                if (orientation == HORIZONTAL) marginStart = dp(6)
-                else { topMargin = dp(6); gravity = Gravity.CENTER_HORIZONTAL }
-            }
-            setOnClickListener { closeHud() }
-        }
-        addView(closeButton)
-        updateCloseButtonVisibility()
     }
 
     // -------------------------------------------------------------
@@ -937,23 +911,6 @@ class VietmapHudOverlay @JvmOverloads constructor(
                localY >= btnT - pad && localY <= btnT + btnH + pad
     }
 
-    private fun isTouchOnCloseLocal(x: Float, y: Float): Boolean {
-        val button = closeButton ?: return false
-        if (isPreviewMode || button.visibility != View.VISIBLE) return false
-        val padding = dp(4)
-        return x >= button.left - padding && x <= button.right + padding &&
-            y >= button.top - padding && y <= button.bottom + padding
-    }
-
-    fun hitTestClose(rootX: Float, rootY: Float): Boolean {
-        if (visibility != View.VISIBLE) return false
-        val lp = layoutParams as? FrameLayout.LayoutParams
-        val points = floatArrayOf(rootX - (lp?.leftMargin ?: left), rootY - (lp?.topMargin ?: top))
-        val inverse = android.graphics.Matrix()
-        if (matrix.invert(inverse)) inverse.mapPoints(points)
-        return isTouchOnCloseLocal(points[0], points[1])
-    }
-
     fun hitTestLock(rootX: Float, rootY: Float): Boolean {
         val btn = lockButton ?: return false
         if (btn.visibility != View.VISIBLE || visibility != View.VISIBLE) return false
@@ -1111,7 +1068,6 @@ class VietmapHudOverlay @JvmOverloads constructor(
 
     override fun onInterceptTouchEvent(ev: android.view.MotionEvent): Boolean {
         if (isPreviewMode) return super.onInterceptTouchEvent(ev)
-        if (isTouchOnCloseLocal(ev.x, ev.y)) return false
         if (isTouchOnLockLocal(ev.x, ev.y)) {
             return false
         }
@@ -1139,10 +1095,6 @@ class VietmapHudOverlay @JvmOverloads constructor(
     override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
         if (isPreviewMode) return super.onTouchEvent(event)
 
-        if (isTouchOnCloseLocal(event.x, event.y)) {
-            if (event.actionMasked == android.view.MotionEvent.ACTION_UP) closeHud()
-            return true
-        }
         if (isTouchOnLockLocal(event.x, event.y)) {
             if (event.actionMasked == android.view.MotionEvent.ACTION_UP) {
                 toggleLock()
