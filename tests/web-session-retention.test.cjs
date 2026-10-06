@@ -20,8 +20,14 @@ assert.match(media, /scrollY = web\.scrollY/);
 assert.match(media, /videoPositionSec = if \(appId == "youtube"\) currentPositionSec else 0/);
 
 assert.match(media, /fun restoreWebAppSession\(appId: String, web: WebView\?\): Boolean/);
-assert.match(media, /web\.restoreState\(android\.os\.Bundle\(session\.state\)\)/);
+assert.match(media, /private fun sessionUrlMatchesApp\(appId: String, url: String\): Boolean/);
+assert.match(media, /if \(!sessionUrlMatchesApp\(appId, url\)\) return/);
+assert.match(
+  media,
+  /if \(appId == "youtube"\)[\s\S]*?web\.loadUrl\(session\.url\)[\s\S]*?else \{[\s\S]*?web\.restoreState/
+);
 assert.match(media, /activeAppId != appId \|\| getPersistentWebView\(\) !== web/);
+assert.match(media, /if \(!sessionUrlMatchesApp\(appId, web\.url\.orEmpty\(\)\)\) return@Runnable/);
 assert.match(media, /web\.scrollTo\(session\.scrollX, session\.scrollY\)/);
 assert.match(media, /YouTubePlayerHelper\.seekTo\(web, session\.videoPositionSec\.toLong\(\)\)/);
 
@@ -30,6 +36,14 @@ assert.match(presentation, /CarMediaManager\.saveWebAppSession\(previousAppId, w
 assert.match(presentation, /CarMediaManager\.hasWebAppSession\(app\.id\)/);
 assert.match(presentation, /CarMediaManager\.restoreWebAppSession\(app\.id, web\)/);
 assert.match(presentation, /if \(!restoredSession && \(!isAlreadyLoaded \|\| startUrl != null\)\)/);
+
+assert.match(presentation, /private var pendingWebSurfaceAppId: String\? = null/);
+assert.match(presentation, /private fun urlMatchesWebApp\(appId: String, url: String\): Boolean/);
+assert.match(
+  presentation,
+  /if \(!visiblePageMatchesTarget && app\.id in setOf\("youtube", "web", "iptv"\)\)[\s\S]*?web\.alpha = 0f/
+);
+assert.match(presentation, /revealWebSurfaceIfReady\(view, url\)/);
 
 // Switching to another Android Auto app also captures the current state.
 assert.match(presentation, /override fun onStop\(\)[\s\S]*?saveWebAppSession\(currentActiveAppId, web\)/);
