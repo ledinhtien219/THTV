@@ -439,7 +439,8 @@ object WazeHlpWebSocketManager {
                     if (ts >= 0L && lastStateTs >= 0L && ts < lastStateTs) {
                         val rollback = lastStateTs - ts
                         val receiveGap = if (lastStateReceivedAtMs > 0L) now - lastStateReceivedAtMs else Long.MAX_VALUE
-                        val likelySessionReset = rollback > 30_000L || receiveGap > 2_000L
+                        val likelySessionReset =
+                            rollback > 30_000L || (receiveGap > 2_000L && rollback > 1_000L)
                         if (likelySessionReset) {
                             Log.i(TAG, "HLP timestamp reset detected: ts=$ts last=$lastStateTs gap=$receiveGap; accepting new stream")
                             lastStateTs = -1L
