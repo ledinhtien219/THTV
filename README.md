@@ -1,158 +1,257 @@
-# 🚘 THTV PRO - Trình Giải Trí Multi-Media & HUD Cảnh Báo Giao Thông Cho Ô Tô (v1.0.13)
+# 🚘 THTV PRO - Android Auto Multimedia Dashboard & Waze/Vietmap HUD
 
-[![Build & Release Android APK](https://github.com/ledinhtien219/THTV/actions/workflows/build-apk.yml/badge.svg)](https://github.com/ledinhtien219/THTV/actions/workflows/build-apk.yml)
+[![Build Internal Test APK](https://github.com/ledinhtien219/THTV/actions/workflows/build-apk.yml/badge.svg)](https://github.com/ledinhtien219/THTV/actions/workflows/build-apk.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/ledinhtien219/THTV?color=blue)](https://github.com/ledinhtien219/THTV/releases)
 [![Android SDK](https://img.shields.io/badge/Android%20SDK-29%2B-brightgreen)](https://developer.android.com)
 
-**THTV PRO** là ứng dụng buồng lái ô tô đa phương tiện và cảnh báo giao thông an toàn cao cấp dành cho **Android Auto** và màn hình xe hơi ô tô (Android Box / Head Unit / Screen Projection).
+**THTV PRO** là ứng dụng dashboard đa phương tiện dành cho **Android Auto / màn hình xe**, kết hợp YouTube, IPTV, trình duyệt WebApp, điều khiển giọng nói và HUD cảnh báo giao thông từ Waze/Vietmap.
+
+## ✅ Phiên bản stable hiện tại trong source
+
+- **Version:** `v1.0.39`
+- **Build:** `226`
+- **Branch:** `main`
+- **Application ID:** `com.tcar.auto`
+- **Min SDK:** Android 10 / API 29
+- **Target SDK:** API 35
+- **Stable source merge:** `ee453b286c24823ae5109e23454290938bbaf13c`
+
+> Lưu ý: source trên `main` và bản public OTA/Release là hai bước tách biệt. Bản public chỉ được đổi sau khi chạy workflow **Approve Stable Update**, workflow này sẽ xác minh đúng commit/version đã test trước khi cập nhật `update.json`.
 
 ---
 
-## 📸 Giao Diện Ứng Dụng (Screenshots)
+## 📸 Giao diện
 
-### 🏎️ 1. Màn Hình Xe Hơi (Android Auto / Projected Screen)
+### 🏎️ Android Auto / màn hình xe
 
 <div align="center">
 
-| 🖥️ Dashboard Buồng Lái Multi-Cards | 🚗 Hiển Thị Trực Tiếp Trên Màn Xe Ô Tô |
+| 🖥️ Dashboard buồng lái | 🚗 Hiển thị thực tế trên xe |
 | :---: | :---: |
 | <img src="docs/images/thtv_aa_dashboard.png" width="450" alt="Android Auto Dashboard" /> | <img src="docs/images/thtv_aa_real_car.jpg" width="450" alt="Real Car Screen" /> |
-| *Giao diện Dashboard Cockpit Bugatti, GPS Speed, YouTube/IPTV* | *Trải nghiệm thực tế trên màn hình Android Auto / Screen Projection* |
+| *Dashboard đa phương tiện, GPS speed, YouTube, IPTV, WebApp, HUD cảnh báo* | *THTV chạy trên Android Auto / Screen Projection* |
 
 </div>
 
-### 📱 2. Màn Hình Điện Thoại (Phone Controls & Settings)
+### 📱 Ứng dụng điện thoại
 
 <div align="center">
 
-| 🏠 Trang Chính Điều Khiển | 📺 Danh Sách Kênh IPTV | ⚙️ Cài Đặt Hệ Thống |
+| 🏠 Điều khiển chính | 📺 IPTV | ⚙️ Cài đặt |
 | :---: | :---: | :---: |
 | <img src="docs/images/thtv_phone_main.png" width="280" alt="Phone Main Screen" /> | <img src="docs/images/thtv_phone_iptv.png" width="280" alt="Phone IPTV Screen" /> | <img src="docs/images/thtv_phone_settings.png" width="280" alt="Phone Settings Screen" /> |
-| *Bàn điều khiển & Trình phát* | *Danh sách Kênh TV & WebApp* | *Tùy chỉnh HUD, Media & Âm thanh* |
 
 </div>
 
 ---
 
-## 🌟 Tính Năng Nổi Bật
+## 🌟 Tính năng nổi bật
 
-### 📺 1. Trình Phát YouTube Không Quảng Cáo & SponsorBlock
-* **Chặn quảng cáo tự động (`YouTubeAdBlocker.kt`)**: Lọc chặn cấp mạng (`doubleclick.net`, `googleadservices.com`, `/pagead/`, `/ptracking/`), tự động gia tốc x16 và tắt tiếng khi gặp quảng cáo.
-* **Bỏ qua phân đoạn tài trợ (`SponsorBlockManager.kt`)**: Tự động gọi API SponsorBlock để tua qua các đoạn giới thiệu (intro), quảng cáo nhà tài trợ trong video.
-* **Chất lượng linh hoạt & Phát ẩn**: Hỗ trợ tùy chỉnh độ phân giải, tự động phát tiếp video, chạy nền âm thanh khi chuyển tab.
+### 📺 YouTube trên Android Auto
 
-### 📺 2. Truyền Hình IPTV & Web Application Hub
-* **Tự lưu kênh IPTV gần nhất (`IptvModel.kt`)**: Quản lý danh sách kênh M3U/M3U8 chuẩn HLS, tự động nhớ và phát lại kênh truyền hình vừa xem (VTV1, VTV3, VTV6/VTV-Cần Thơ, HTV, K+...).
-* **Trình duyệt WebApp đa năng (`WebAppModel.kt`)**: Tích hợp sẵn các nền tảng giải trí phổ biến như TV360, VTV Go, Zing MP3, Spotify, TikTok, Chrome...
+- Chặn nhiều nguồn quảng cáo và hỗ trợ SponsorBlock.
+- Tìm kiếm bằng bàn phím hoặc giọng nói tiếng Việt.
+- Nút **Mic/Giọng nói** nằm ngay dưới nút **Trang chủ** trên thanh công cụ YouTube.
+- Hỗ trợ Phát/Dừng, Tiếp theo và chọn chất lượng.
+- **Giữ session YouTube** khi chuyển qua app khác:
+  - giữ trang/video đang xem,
+  - giữ history,
+  - giữ vị trí phát,
+  - tránh callback restore cũ chạy nhầm sau khi đã chuyển app.
 
-### 🛡️ 3. Trạm Cảnh Báo Giao Thông HUD & Tốc Độ GPS
-* **Đồng bộ cảnh báo Vietmap (`VietmapHudOverlay.kt`)**: Đọc thông báo trực tiếp từ Vietmap Live / Vietmap S2, hiển thị tốc độ giới hạn, camera phạt nguội, camera tốc độ với giao diện HUD tương phản cao 100%.
-* **Đồng bộ cảnh báo Waze HLP (`WazeHudManager.kt`)**: Kết nối WebSocket thời gian thực nhận dữ liệu kẹt xe, tai nạn, cảnh báo chướng ngại vật từ Waze.
-* **Đồng hồ tốc độ GPS thực tế (`GpsSpeedManager.kt`)**: Đo tốc độ di chuyển theo thời gian thực với độ chính xác cao.
+### 📺 IPTV / M3U
 
-### 🎙️ 4. Tìm Kiếm Giọng Nói Tiếng Việt 0ms & Phím Vô Lăng
-* **Ultra-Low Latency Engine (`VoiceSearchManager.kt`)**: Nhận diện giọng nói tiếng Việt siêu tốc, tự động ngắt câu sau 350ms để trả về kết quả ngay lập tức.
-* **Tích hợp phím vô lăng thông minh**: Tương thích hoàn toàn với nút bấm giọng nói và phím chuyển bài trên vô lăng (`KEYCODE_VOICE_ASSIST` / `KEYCODE_MEDIA_NEXT` / `MediaSession`).
-* **Bộ gõ Telex màn hình xe (`VietnameseTelexEngine.kt`)**: Bộ gõ tiếng Việt tối ưu riêng cho thao tác chạm trên màn hình ô tô.
+- Phát danh sách M3U/M3U8 và HLS.
+- Hỗ trợ chọn nhanh kênh từ Dashboard.
+- Ghi nhớ trạng thái/kênh phù hợp trong luồng sử dụng.
+- Tối ưu chuyển Dashboard ↔ IPTV để tránh rebuild/fullscreen lặp.
+- Hỗ trợ điều chỉnh tỷ lệ video.
 
-### 🎛️ 5. Giao Diện Buồng Lái Cockpit & Đồng Bộ Thanh Viên Thuốc (Capsule Toolbars)
-* **Thanh Capsule viên thuốc đồng bộ**: Dock bên trái và thanh điều hướng dưới được tạo dáng capsule với viền Neon rực rỡ, tự động ẩn sau 10s để giữ không gian hiển thị tối đa.
-* **Chế độ Ngày / Đêm thông minh**: Tự động hoặc thủ công chuyển đổi giao diện sáng/tối tối ưu cho tầm nhìn lái xe ban ngày và ban đêm.
-* **Lịch Âm Dương & Thời tiết**: Đồng hồ kỹ thuật số kết hợp thời tiết động và lịch âm Việt Nam (`VietnameseLunarHelper.kt`).
+### 🌐 Trình duyệt & WebApp
 
-### 🔐 6. Quản Lý Bản Quyền Tự Động Qua Telegram Bot
-* **Kích hoạt mã thiết bị (`LicenseManager.kt`)**: Hệ thống mã hóa khóa bản quyền bảo mật.
-* **Tích hợp Telegram Bot**: Cung cấp kịch bản Google Apps Script tự động duyệt và cấp key kích hoạt từ xa thông qua ứng dụng Telegram.
+- WebView dùng chung cho trải nghiệm trên màn hình xe nhưng **Browser và YouTube có session riêng**.
+- Khi chuyển Browser → YouTube → Browser, trang cũ, history và vị trí scroll được khôi phục.
+- App Grid cho phép mở WebApp tùy chỉnh và thêm URL mới.
+- Hỗ trợ Desktop User-Agent cho WebApp cần giao diện máy tính.
+
+### 🛡️ Waze / Vietmap HUD
+
+- Nhận cảnh báo Waze HLP qua WebSocket thời gian thực.
+- Fallback từ notification/broadcast khi HLP không có dữ liệu phù hợp.
+- Priority nguồn dữ liệu: **HLP > broadcast > notification > GPS**.
+- Đã harden các tình huống:
+  - reconnect / Waze Mod restart,
+  - timestamp rollback,
+  - cảnh báo stale theo TTL,
+  - cảnh báo trùng,
+  - không gộp nhầm 2 camera cùng loại nhưng ở xa nhau,
+  - `distance = 0` không làm clear cảnh báo quá sớm,
+  - notification bị remove sẽ dọn đúng alert thuộc nguồn đó.
+- HUD trên Android Auto **không còn nút X**; bật/tắt HUD được quản lý từ app điện thoại.
+- Vẫn giữ nút khóa vị trí HUD.
+
+### 🎙️ Giọng nói & phím vô lăng
+
+- Tìm kiếm giọng nói tiếng Việt.
+- Điều khiển MediaSession / phím Next / Play-Pause.
+- Bộ gõ Telex tiếng Việt trên màn hình xe.
+- Voice query có thể mở YouTube hoặc kênh IPTV phù hợp.
+
+### 🎛️ Dashboard buồng lái
+
+- Đồng hồ lớn, ngày dương + âm lịch Việt Nam.
+- Weather card dùng **vector weather icon**.
+- Weather card stable mới dùng hiệu ứng **glass nhẹ / bán trong suốt**, giữ dễ đọc trên wallpaper sáng và tối.
+- Wallpaper tĩnh / ảnh tùy chỉnh / GIF / video.
+- Chế độ ngày / đêm / tự động.
+- Mini player giữ điều khiển media ngay trên Dashboard.
+
+### 🧩 Ổn định & chẩn đoán
+
+- `AppCrashHandler.kt` lưu crash report theo version/build để kiểm tra lỗi cũ và mới.
+- Android Auto NavigationTemplate đã được sửa các lỗi runtime từng xuất hiện ở Build 216/219.
+- Session Browser/YouTube được snapshot khi Android Auto đưa THTV xuống nền.
+- Stable signing dùng cùng debug certificate trong CI để tránh lỗi cài đè giữa các build nội bộ.
 
 ---
 
-## 📂 Cấu Trúc Mã Nguồn Dự Án
+## 📂 Cấu trúc chính
 
-```
-THTV PRO/
-├── .github/
-│   └── workflows/
-│       └── build-apk.yml                      # CI/CD tự động build & tạo GitHub Release khi push Tag
+```text
+THTV/
+├── .github/workflows/
+│   ├── build-apk.yml                  # Build nội bộ + regression/unit/androidTest compile
+│   └── approve-stable-update.yml      # Promote đúng bản đã test thành public stable
 ├── app/
-│   ├── build.gradle.kts                       # Cấu hình v1.0.13 (Build 186), namespace com.carhud.app
-│   ├── src/main/
-│   │   ├── AndroidManifest.xml                # Khai báo dịch vụ Android Auto & Quyền hạn
-│   │   ├── assets/                            # Trình phát IPTV HTML5, Leaflet Map, M3U Playlist
-│   │   ├── java/com/carhud/aaproxy/
-│   │   │   ├── MainActivity.kt                # Màn hình chính trên điện thoại
-│   │   │   ├── SettingsActivity.kt            # Giao diện Cài đặt hệ thống
-│   │   │   ├── ActivationActivity.kt          # Màn hình kích hoạt bản quyền thiết bị
-│   │   │   ├── CarPresentation.kt             # Render màn hình phụ (Display 2 / Car Screen) & Capsule Toolbar
-│   │   │   ├── CarHudAutoService.kt           # Dịch vụ CarAppService cho Android Auto
-│   │   │   ├── CarHudAutoScreen.kt            # Xử lý tương tác màn hình Android Auto
-│   │   │   ├── CarMediaBrowserService.kt      # Dịch vụ MediaBrowser & MediaSession điều khiển nút vô lăng
-│   │   │   ├── CarMediaManager.kt             # Quản lý luồng phát âm thanh & video
-│   │   │   ├── CarDashboardView.kt            # Bộ hiển thị các Card Dashboard Cockpit
-│   │   │   ├── YouTubeAdBlocker.kt            # Engine chặn quảng cáo YouTube cấp mạng
-│   │   │   ├── SponsorBlockManager.kt         # Tích hợp API SponsorBlock tự động tua intro/tài trợ
-│   │   │   ├── YouTubePlayerHelper.kt         # Điều khiển trình phát YouTube WebView
-│   │   │   ├── IptvModel.kt                   # Quản lý danh sách kênh IPTV M3U & nhớ kênh vừa xem
-│   │   │   ├── WebAppModel.kt                 # Quản lý các ứng dụng Web/OTT tích hợp
-│   │   │   ├── VietmapHudOverlay.kt           # Bảng cảnh báo tốc độ & camera Vietmap HUD
-│   │   │   ├── VietmapNotificationListenerService.kt # Đọc thông báo Vietmap Live/S2
-│   │   │   ├── WazeHlpWebSocketManager.kt     # Kết nối WebSocket Waze HLP cảnh báo giao thông
-│   │   │   ├── WazeHudManager.kt              # Quản lý hiển thị HUD Waze
-│   │   │   ├── VoiceSearchManager.kt          # Engine giọng nói 0ms
-│   │   │   ├── VietnameseTelexEngine.kt       # Bộ gõ Telex tiếng Việt
-│   │   │   ├── VietnameseLunarHelper.kt       # Tra cứu Lịch Âm Dương
-│   │   │   ├── WeatherManager.kt              # Cập nhật thời tiết động
-│   │   │   ├── LicenseManager.kt              # Quản lý và xác thực bản quyền
-│   │   │   └── AppCrashHandler.kt             # Bộ bắt lỗi crash ứng dụng
-│   │   └── res/                               # Drawable, Layout, Layouts HUD, Strings (VI/EN)
-├── docs/
-│   └── images/                                # Hình ảnh chụp màn hình giao diện ứng dụng
-├── telegram_bot_apps_script.js                # Code Google Apps Script cho Bot Telegram cấp key
-├── HUONG_DAN_TAO_BOT_TELEGRAM.md             # Hướng dẫn tạo Bot Telegram kích hoạt bản quyền
-├── build.gradle.kts
-└── settings.gradle.kts                        # Module đơn :app
+│   ├── build.gradle.kts               # v1.0.39 / Build 226 trên main
+│   └── src/main/
+│       ├── AndroidManifest.xml
+│       ├── assets/                    # IPTV player, web assets...
+│       ├── java/com/carhud/aaproxy/
+│       │   ├── MainActivity.kt
+│       │   ├── SettingsActivity.kt
+│       │   ├── CarPresentation.kt
+│       │   ├── CarDashboardView.kt
+│       │   ├── CarHudAutoService.kt
+│       │   ├── CarHudAutoScreen.kt
+│       │   ├── CarMediaBrowserService.kt
+│       │   ├── CarMediaManager.kt
+│       │   ├── YouTubePlayerHelper.kt
+│       │   ├── YouTubeAdBlocker.kt
+│       │   ├── SponsorBlockManager.kt
+│       │   ├── IptvModel.kt
+│       │   ├── WebAppModel.kt
+│       │   ├── WazeHlpWebSocketManager.kt
+│       │   ├── WazeAlertPolicy.kt
+│       │   ├── WazeHudManager.kt
+│       │   ├── VietmapHudOverlay.kt
+│       │   ├── VietmapNotificationListenerService.kt
+│       │   ├── VietmapState.kt
+│       │   ├── VoiceSearchManager.kt
+│       │   ├── VoiceQueryResolver.kt
+│       │   ├── WeatherManager.kt
+│       │   ├── VietnameseLunarHelper.kt
+│       │   ├── GpsSpeedManager.kt
+│       │   └── AppCrashHandler.kt
+│       └── res/
+├── tests/                              # Static regression tests
+├── docs/images/
+├── update.json                         # Manifest public stable đã được duyệt
+└── settings.gradle.kts
 ```
 
 ---
 
-## 🛠️ Hướng Dẫn Biên Dịch & Lấy File APK
+## 🛠️ Build APK
 
-### 1. Biên Dịch Bằng Gradle Wrapper
+Yêu cầu: **JDK 17**.
 
-Mở Terminal / PowerShell tại thư mục gốc của dự án:
-
-* **Biên dịch bản Release (Khuyên dùng):**
-  ```powershell
-  .\gradlew.bat assembleRelease
-  ```
-  **File APK đầu ra:**
-  👉 `app/build/outputs/apk/release/THTV_v1.0.13_release.apk`
-
-* **Biên dịch bản Debug:**
-  ```powershell
-  .\gradlew.bat assembleDebug
-  ```
-  👉 `app/build/outputs/apk/debug/THTV_v1.0.13_debug.apk`
-
-### 2. Cài Đặt Trực Tiếp Qua ADB
-
-```powershell
-adb install -r app/build/outputs/apk/release/THTV_v1.0.13_release.apk
-```
-
----
-
-## 🚀 Quy Trình Tự Động Tạo GitHub Release (CI/CD)
-
-Mỗi khi bạn đẩy một Tag phiên bản mới lên GitHub, GitHub Actions sẽ tự động biên dịch và tạo một bản **Release** kèm sẵn 2 file APK:
+### Debug
 
 ```bash
-git tag -a v1.0.13 -m "Release THTV PRO v1.0.13"
-git push origin v1.0.13
+./gradlew testDebugUnitTest assembleDebug
 ```
 
-Trạng thái biên dịch và danh sách APK phát hành sẽ tự động cập nhật tại mục [Releases](https://github.com/ledinhtien219/THTV/releases).
+APK:
+
+```text
+app/build/outputs/apk/debug/THTV_v1.0.39_debug.apk
+```
+
+### Release
+
+```bash
+./gradlew assembleRelease
+```
+
+APK:
+
+```text
+app/build/outputs/apk/release/THTV_v1.0.39_release.apk
+```
+
+### Cài qua ADB
+
+```bash
+adb install -r app/build/outputs/apk/debug/THTV_v1.0.39_debug.apk
+```
 
 ---
 
-## 📄 Bản Quyền
-Dự án được xây dựng và tối ưu riêng cho hệ sinh thái màn hình ô tô Android & Android Auto. Mọi quyền được bảo lưu.
+## 🧪 CI nội bộ
+
+Workflow **Build Internal Test APK** chạy:
+
+- regression IPTV aspect,
+- page input,
+- YouTube quality/search,
+- home UI cleanup,
+- Browser/YouTube session retention,
+- app switching,
+- YouTube voice toolbar,
+- Waze stability,
+- `testDebugUnitTest`,
+- `assembleDebug`,
+- `assembleDebugAndroidTest`.
+
+Workflow này **không tự cập nhật OTA stable** và **không tự tạo public release**.
+
+---
+
+## 🚀 Duyệt một bản đã test thành Stable
+
+Vào **Actions → Approve Stable Update → Run workflow**.
+
+Các trường:
+
+- **Commit SHA/tag/branch của đúng bản đã test:** commit SHA chính xác của APK đã test.
+- **Version dự kiến:** ví dụ `1.0.39`.
+- **Release notes:** mỗi dòng là một thay đổi chính.
+- **Gõ chính xác:** `DUYET STABLE`.
+
+Workflow sẽ:
+
+1. checkout đúng commit đã test;
+2. xác minh `versionName` / `versionCode`;
+3. chạy lại test + build;
+4. xác minh hoặc tạo GitHub Release;
+5. cập nhật `update.json` trên `main`;
+6. chỉ sau bước này người dùng mới nhận bản stable qua feed cập nhật.
+
+---
+
+## 📦 Releases
+
+Bản phát hành public:
+
+https://github.com/ledinhtien219/THTV/releases
+
+Manifest OTA stable:
+
+`update.json`
+
+---
+
+## 📄 Bản quyền
+
+Dự án được xây dựng và tối ưu cho hệ sinh thái Android / Android Auto trên màn hình ô tô. Mọi quyền được bảo lưu.
