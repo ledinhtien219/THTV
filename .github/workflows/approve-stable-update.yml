@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       release_notes:
-        description: "Nội dung cập nhật, mỗi dòng là một mục"
+        description: "update bàn phím android"
         required: true
         type: string
       approval:
