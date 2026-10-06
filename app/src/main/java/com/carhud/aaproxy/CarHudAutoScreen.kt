@@ -118,7 +118,7 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
         val action: () -> Unit = {
             reportSurfaceInput("CLICK x=${"%.0f".format(x)} y=${"%.0f".format(y)}")
             if (panModeEnabled) {
-                presentation?.clickCommanderCursor("HOST SELECT")
+                presentation?.clickCommanderTarget("HOST SELECT")
             } else {
                 presentation?.dispatchTouch(x, y)
             }
@@ -156,7 +156,7 @@ class CarHudAutoScreen(carContext: CarContext) : Screen(carContext), SurfaceCall
                     velocityY < -50f -> -2f
                     else -> 0f
                 }
-                if (dx != 0f || dy != 0f) presentation?.moveCommanderCursor(dx, dy, "HOST FLING")
+                if (dx != 0f || dy != 0f) presentation?.moveCommanderTarget(dx, dy, "HOST FLING")
             } else {
                 presentation?.dispatchFling(velocityX, velocityY)
             }
