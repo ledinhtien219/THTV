@@ -46,6 +46,7 @@ object WazeHlpWebSocketManager {
     private var server: WazeHlpServer? = null
     @Volatile private var currentSession: Long? = null
     @Volatile private var lastStateTs: Long = -1L
+    @Volatile private var lastStateReceivedAtMs: Long = 0L
 
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
@@ -100,6 +101,8 @@ object WazeHlpWebSocketManager {
             _statusText.value = "Đã kết nối Waze Mod ($remoteAddr)"
             currentSession = null
             lastStateTs = -1L
+            lastStateReceivedAtMs = 0L
+            VietmapStateRepository.beginHlpSession()
             VietmapStateRepository.updateConnection(true)
 
             // HLP/1: alrs and lan are opt-in fields. Without a dev declaration,
@@ -114,6 +117,7 @@ object WazeHlpWebSocketManager {
                 _statusText.value = "Chờ Waze Mod kết nối (Cổng $WS_PORT)..."
                 currentSession = null
                 lastStateTs = -1L
+                lastStateReceivedAtMs = 0L
                 VietmapStateRepository.clearHlpAlerts()
                 VietmapStateRepository.updateConnection(false)
             }
@@ -152,6 +156,9 @@ object WazeHlpWebSocketManager {
         stopServer()
         currentSession = null
         lastStateTs = -1L
+        lastStateReceivedAtMs = 0L
+        VietmapStateRepository.clearHlpAlerts()
+        VietmapStateRepository.updateConnection(false)
         _isConnected.value = false
         _statusText.value = "Đã dừng Server"
     }
@@ -212,6 +219,9 @@ object WazeHlpWebSocketManager {
         stopServer()
         currentSession = null
         lastStateTs = -1L
+        lastStateReceivedAtMs = 0L
+        VietmapStateRepository.clearHlpAlerts()
+        VietmapStateRepository.updateConnection(false)
         scope.launch {
             delay(500)
             startServer()
@@ -356,6 +366,7 @@ object WazeHlpWebSocketManager {
                     if (sess >= 0L && sess != previousSession) {
                         currentSession = sess
                         lastStateTs = -1L
+                        lastStateReceivedAtMs = 0L
                         VietmapStateRepository.beginHlpSession()
 
                         // If WazeMod restarts while the WebSocket stays alive, HLP requires
@@ -366,22 +377,42 @@ object WazeHlpWebSocketManager {
                             reply(buildDeviceDeclarationPayload())
                         }
                     }
+                    _isConnected.value = true
+                    VietmapStateRepository.updateConnection(true)
                     val fields = root.opt("fields")?.toString().orEmpty()
                     Log.i(TAG, "HLP_HI sess=$sess fields=$fields")
                     return
                 }
                 "bye" -> {
+                    currentSession = null
                     lastStateTs = -1L
+                    lastStateReceivedAtMs = 0L
+                    _isConnected.value = false
+                    _statusText.value = "Waze Mod đã kết thúc phiên dẫn đường"
                     VietmapStateRepository.clearHlpAlerts()
+                    VietmapStateRepository.updateConnection(false)
                     return
                 }
                 "s" -> {
                     val ts = if (root.has("ts")) root.optLong("ts", -1L) else -1L
+                    val now = System.currentTimeMillis()
                     if (ts >= 0L && lastStateTs >= 0L && ts < lastStateTs) {
-                        Log.d(TAG, "Ignoring stale HLP state ts=$ts < $lastStateTs sess=$currentSession")
-                        return
+                        val rollback = lastStateTs - ts
+                        val receiveGap = if (lastStateReceivedAtMs > 0L) now - lastStateReceivedAtMs else Long.MAX_VALUE
+                        val likelySessionReset = rollback > 30_000L || receiveGap > 2_000L
+                        if (likelySessionReset) {
+                            Log.i(TAG, "HLP timestamp reset detected: ts=$ts last=$lastStateTs gap=$receiveGap; accepting new stream")
+                            lastStateTs = -1L
+                            VietmapStateRepository.beginHlpSession()
+                        } else {
+                            Log.d(TAG, "Ignoring stale HLP state ts=$ts < $lastStateTs sess=$currentSession")
+                            return
+                        }
                     }
                     if (ts >= 0L) lastStateTs = ts
+                    lastStateReceivedAtMs = now
+                    _isConnected.value = true
+                    VietmapStateRepository.updateConnection(true)
                     handleJsonMessage(jsonStr)
                 }
                 else -> return
@@ -866,14 +897,15 @@ object WazeHlpWebSocketManager {
                         roadName = itemRoad
                     )
                 }
-                upcomingAlerts = parsed.take(4)
+                val deduped = WazeAlertPolicy.dedupeAlerts(parsed)
+                upcomingAlerts = deduped.take(4)
                 if (secondaryLimit == null) {
-                    secondaryLimit = parsed.firstOrNull { it.code in setOf(8, 22) && (it.value ?: 0) > 0 }?.value
+                    secondaryLimit = deduped.firstOrNull { it.code in setOf(8, 22) && (it.value ?: 0) > 0 }?.value
                 }
 
-                // Official alrs is already sorted near -> far and alr mirrors alrs[0].
-                // Keep that ordering instead of inventing our own priority score.
-                parsed.firstOrNull()?.let { first ->
+                // Official alrs is already sorted near -> far. Keep that ordering
+                // after removing duplicate copies of the same report.
+                deduped.firstOrNull()?.let { first ->
                     alertCode = first.code
                     alertValue = first.value
                     alertJamSeverity = first.jamSeverity
