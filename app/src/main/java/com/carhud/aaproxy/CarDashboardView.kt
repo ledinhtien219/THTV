@@ -140,7 +140,7 @@ class CarDashboardView(
 
     // Weather card (phone GPS + Open-Meteo)
     private lateinit var weatherCard: LinearLayout
-    private lateinit var weatherIcon: TextView
+    private lateinit var weatherIcon: ImageView
     private lateinit var weatherTemp: TextView
     private lateinit var weatherCondition: TextView
     private lateinit var weatherLocation: TextView
@@ -857,6 +857,17 @@ class CarDashboardView(
         showStaticWallpaper(R.drawable.bg_wallpaper_bugatti)
     }
 
+    private fun weatherIconRes(iconEmoji: String): Int {
+        return when (iconEmoji) {
+            "☀️", "☀" -> R.drawable.ic_weather_sunny
+            "🌤️", "🌤", "⛅" -> R.drawable.ic_weather_partly_cloudy
+            "🌫️", "🌫" -> R.drawable.ic_weather_fog
+            "🌦️", "🌦", "🌧️", "🌧" -> R.drawable.ic_weather_rain
+            "⛈️", "⛈" -> R.drawable.ic_weather_storm
+            else -> R.drawable.ic_weather_partly_cloudy
+        }
+    }
+
     private fun startLiveStreams() {
         // 1. Clock, Greeting, Solar Date & Vietnamese Lunar Calendar
         val timeRunnable = object : Runnable {
@@ -888,7 +899,7 @@ class CarDashboardView(
         GpsSpeedManager.start(context.applicationContext)
         coroutineScope.launch {
             WeatherManager.weatherState.collectLatest { weather ->
-                weatherIcon.text = weather.iconEmoji
+                weatherIcon.setImageResource(weatherIconRes(weather.iconEmoji))
                 weatherTemp.text = if (weather.isLoaded) "${weather.tempC}°C" else "—°C"
                 weatherCondition.text = if (weather.isLoaded) weather.conditionText else "Đang cập nhật"
                 weatherLocation.text = if (weather.isLoaded) "📍 ${weather.location}" else "📍 Vị trí điện thoại"
