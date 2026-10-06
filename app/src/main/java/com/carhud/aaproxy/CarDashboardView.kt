@@ -117,6 +117,7 @@ class CarDashboardView(
     private val coroutineScope = CoroutineScope(Dispatchers.Main + Job())
     private val timeHandler = Handler(Looper.getMainLooper())
     private var isFavorite = false
+    private var commanderFocusedView: View? = null
 
     // Views
     private lateinit var dashboardVideoBackground: TextureView
@@ -951,6 +952,126 @@ class CarDashboardView(
                 }
             }
         }
+    }
+
+    private fun commanderTargets(): List<View> {
+        val targets = mutableListOf<View>()
+        fun add(view: View?) {
+            if (view != null && view.visibility == View.VISIBLE && view.isShown && view.isEnabled && view.isClickable) {
+                targets += view
+            }
+        }
+
+        add(searchBarPill)
+        add(btnVoiceSearchCockpit)
+        add(btnNotification)
+        add(btnSettings)
+
+        add(cardVtv)
+        add(cardM3u)
+        add(cardYoutube)
+        add(cardBrowser)
+        add(cardBookmark)
+
+        favChannelsRow?.let { row ->
+            for (i in 0 until row.childCount) add(row.getChildAt(i))
+        }
+
+        add(miniPlayerCard)
+        return targets
+    }
+
+    private fun commanderOutline(): android.graphics.drawable.Drawable =
+        rounded(Color.TRANSPARENT, 16f, Color.parseColor("#38BDF8"), 3)
+
+    private fun setCommanderFocusedView(view: View?) {
+        if (commanderFocusedView === view) return
+        commanderFocusedView?.let {
+            it.foreground = null
+            it.scaleX = 1f
+            it.scaleY = 1f
+            it.elevation = maxOf(0f, it.elevation - dp(8).toFloat())
+        }
+        commanderFocusedView = view
+        view?.let {
+            it.foreground = commanderOutline()
+            it.foregroundGravity = Gravity.FILL
+            it.scaleX = 1.04f
+            it.scaleY = 1.04f
+            it.elevation = it.elevation + dp(8).toFloat()
+            it.requestFocus()
+            it.parent?.let { parent ->
+                if (parent is android.widget.HorizontalScrollView) {
+                    parent.smoothScrollTo((it.left - parent.width / 3).coerceAtLeast(0), 0)
+                }
+            }
+        }
+    }
+
+    fun clearCommanderFocus() {
+        setCommanderFocusedView(null)
+    }
+
+    fun moveCommanderFocus(dx: Float, dy: Float): Boolean {
+        val targets = commanderTargets()
+        if (targets.isEmpty()) return false
+
+        val current = commanderFocusedView?.takeIf { targets.contains(it) }
+        if (current == null) {
+            val initial = if (dy < 0f || dx < 0f) targets.last() else targets.first()
+            setCommanderFocusedView(initial)
+            return true
+        }
+
+        val curRect = android.graphics.Rect()
+        if (!current.getGlobalVisibleRect(curRect)) {
+            setCommanderFocusedView(targets.first())
+            return true
+        }
+        val cx = curRect.exactCenterX()
+        val cy = curRect.exactCenterY()
+
+        val horizontal = kotlin.math.abs(dx) > kotlin.math.abs(dy)
+        val candidates = targets.filter { candidate ->
+            if (candidate === current) return@filter false
+            val r = android.graphics.Rect()
+            if (!candidate.getGlobalVisibleRect(r)) return@filter false
+            val tx = r.exactCenterX()
+            val ty = r.exactCenterY()
+            when {
+                horizontal && dx < 0f -> tx < cx - 2f
+                horizontal && dx > 0f -> tx > cx + 2f
+                !horizontal && dy < 0f -> ty < cy - 2f
+                !horizontal && dy > 0f -> ty > cy + 2f
+                else -> false
+            }
+        }
+
+        val next = candidates.minByOrNull { candidate ->
+            val r = android.graphics.Rect()
+            candidate.getGlobalVisibleRect(r)
+            val tx = r.exactCenterX()
+            val ty = r.exactCenterY()
+            val primary = if (horizontal) kotlin.math.abs(tx - cx) else kotlin.math.abs(ty - cy)
+            val secondary = if (horizontal) kotlin.math.abs(ty - cy) else kotlin.math.abs(tx - cx)
+            primary + secondary * 2.2f
+        } ?: run {
+            val index = targets.indexOf(current)
+            if (dy < 0f || dx < 0f) targets[(index - 1 + targets.size) % targets.size]
+            else targets[(index + 1) % targets.size]
+        }
+
+        setCommanderFocusedView(next)
+        return true
+    }
+
+    fun clickCommanderFocus(): Boolean {
+        val target = commanderFocusedView ?: return false
+        if (target.visibility != View.VISIBLE || !target.isShown || !target.isEnabled) {
+            clearCommanderFocus()
+            return false
+        }
+        return target.performClick()
     }
 
     // ==========================================

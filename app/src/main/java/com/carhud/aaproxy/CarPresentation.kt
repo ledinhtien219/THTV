@@ -22,6 +22,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.Display
 import android.view.Gravity
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -95,6 +96,18 @@ class CarPresentation(
     private var isDashboardShowing = true
     private var currentActiveAppId: String = "youtube"
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var rotaryDebugBanner: TextView? = null
+    private val hideRotaryDebugRunnable = Runnable {
+        rotaryDebugBanner?.visibility = View.GONE
+    }
+    private var commanderCursor: TextView? = null
+    private var commanderCursorX = 0f
+    private var commanderCursorY = 0f
+    private var commanderCursorAccel = 1f
+    private var commanderLastMoveAt = 0L
+    private val hideCommanderCursorRunnable = Runnable {
+        commanderCursor?.visibility = View.GONE
+    }
 
     // Prevent repeated play/resume commands when Android Auto recreates the surface
     // or YouTube briefly reports a paused/buffering state.
@@ -1501,6 +1514,243 @@ class CarPresentation(
         mainHandler.post {
             showBars()
         }
+    }
+
+    fun showRotaryDiagnostic(message: String) {
+        mainHandler.post {
+            if (!::root.isInitialized) return@post
+            val banner = rotaryDebugBanner ?: TextView(context).apply {
+                textSize = 13f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+                setPadding(dp(14), dp(8), dp(14), dp(8))
+                background = rounded(
+                    Color.parseColor("#E61E293B"),
+                    10f,
+                    Color.parseColor("#38BDF8"),
+                    1
+                )
+                isClickable = false
+                isFocusable = false
+                root.addView(
+                    this,
+                    FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                    ).apply { topMargin = dp(68) }
+                )
+                rotaryDebugBanner = this
+            }
+            banner.text = "🎛 Mazda test: $message"
+            banner.visibility = View.VISIBLE
+            banner.bringToFront()
+            mainHandler.removeCallbacks(hideRotaryDebugRunnable)
+            mainHandler.postDelayed(hideRotaryDebugRunnable, 4500L)
+        }
+    }
+
+    fun showCommanderCursor(source: String = "DPAD") {
+        mainHandler.post {
+            if (!::root.isInitialized || root.width <= 0 || root.height <= 0) return@post
+            val size = dp(36)
+            val cursor = commanderCursor ?: TextView(context).apply {
+                text = "◎"
+                textSize = 25f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                setTextColor(Color.WHITE)
+                background = rounded(
+                    Color.parseColor("#CC0F172A"),
+                    999f,
+                    Color.parseColor("#38BDF8"),
+                    2
+                )
+                elevation = dp(300).toFloat()
+                isClickable = false
+                isFocusable = false
+                root.addView(this, FrameLayout.LayoutParams(size, size))
+                commanderCursor = this
+            }
+
+            if (commanderCursorX <= 0f || commanderCursorY <= 0f) {
+                commanderCursorX = root.width / 2f
+                commanderCursorY = root.height / 2f
+            }
+            commanderCursorX = commanderCursorX.coerceIn(size / 2f, root.width - size / 2f)
+            commanderCursorY = commanderCursorY.coerceIn(size / 2f, root.height - size / 2f)
+            cursor.x = commanderCursorX - size / 2f
+            cursor.y = commanderCursorY - size / 2f
+            cursor.visibility = View.VISIBLE
+            cursor.bringToFront()
+            mainHandler.removeCallbacks(hideCommanderCursorRunnable)
+            mainHandler.postDelayed(hideCommanderCursorRunnable, 6000L)
+            showRotaryDiagnostic("CURSOR $source x=${commanderCursorX.toInt()} y=${commanderCursorY.toInt()}")
+        }
+    }
+
+    private fun hideCommanderCursorVisual() {
+        commanderCursor?.visibility = View.GONE
+        mainHandler.removeCallbacks(hideCommanderCursorRunnable)
+    }
+
+    fun moveCommanderTarget(dx: Float, dy: Float, source: String) {
+        if (!::root.isInitialized) return
+
+        val nativeOverlayVisible =
+            videoQualityOverlay != null ||
+            (::searchOverlay.isInitialized && searchOverlay.visibility == View.VISIBLE) ||
+            appGridOverlay?.visibility == View.VISIBLE ||
+            addAppOverlay?.visibility == View.VISIBLE
+
+        if (isDashboardShowing && !nativeOverlayVisible) {
+            val handled = dashboardView?.moveCommanderFocus(dx, dy) == true
+            if (handled) {
+                hideCommanderCursorVisual()
+                YouTubePlayerHelper.clearCommanderSelection(web)
+                showRotaryDiagnostic("FOCUS DASHBOARD $source")
+                return
+            }
+        }
+
+        val ytStep = when {
+            kotlin.math.abs(dy) >= kotlin.math.abs(dx) && dy < 0f -> -1
+            kotlin.math.abs(dy) >= kotlin.math.abs(dx) && dy > 0f -> 1
+            dx < 0f -> -1
+            else -> 1
+        }
+        if (currentActiveAppId == "youtube" && !isDashboardShowing &&
+            YouTubePlayerHelper.moveCommanderSelection(web, ytStep)
+        ) {
+            hideCommanderCursorVisual()
+            dashboardView?.clearCommanderFocus()
+            val direction = if (ytStep < 0) "PREV" else "NEXT"
+            showRotaryDiagnostic("FOCUS YOUTUBE $direction $source")
+            return
+        }
+
+        dashboardView?.clearCommanderFocus()
+        YouTubePlayerHelper.clearCommanderSelection(web)
+        moveCommanderCursor(dx, dy, source)
+    }
+
+    fun clickCommanderTarget(source: String): Boolean {
+        val nativeOverlayVisible =
+            videoQualityOverlay != null ||
+            (::searchOverlay.isInitialized && searchOverlay.visibility == View.VISIBLE) ||
+            appGridOverlay?.visibility == View.VISIBLE ||
+            addAppOverlay?.visibility == View.VISIBLE
+
+        if (isDashboardShowing && !nativeOverlayVisible) {
+            if (dashboardView?.clickCommanderFocus() == true) {
+                hideCommanderCursorVisual()
+                showRotaryDiagnostic("SELECT DASHBOARD $source")
+                return true
+            }
+            if (dashboardView?.moveCommanderFocus(1f, 0f) == true) {
+                hideCommanderCursorVisual()
+                showRotaryDiagnostic("FOCUS DASHBOARD $source")
+                return true
+            }
+        }
+
+        if (currentActiveAppId == "youtube" && !isDashboardShowing &&
+            YouTubePlayerHelper.clickCommanderSelection(web)
+        ) {
+            hideCommanderCursorVisual()
+            showRotaryDiagnostic("SELECT YOUTUBE $source")
+            return true
+        }
+
+        return clickCommanderCursor(source)
+    }
+    fun moveCommanderCursor(dx: Float, dy: Float, source: String = "DPAD") {
+        mainHandler.post {
+            if (!::root.isInitialized || root.width <= 0 || root.height <= 0) return@post
+            if (commanderCursorX <= 0f || commanderCursorY <= 0f) {
+                commanderCursorX = root.width / 2f
+                commanderCursorY = root.height / 2f
+            }
+            showCommanderCursor(source)
+
+            val now = SystemClock.uptimeMillis()
+            commanderCursorAccel = if (now - commanderLastMoveAt <= 220L) {
+                (commanderCursorAccel + 0.35f).coerceAtMost(3.5f)
+            } else {
+                1f
+            }
+            commanderLastMoveAt = now
+
+            val cursorSize = dp(36).toFloat()
+            val baseStep = (minOf(root.width, root.height) * 0.055f).coerceAtLeast(dp(18).toFloat())
+            val step = baseStep * commanderCursorAccel
+            commanderCursorX = (commanderCursorX + dx * step)
+                .coerceIn(cursorSize / 2f, root.width - cursorSize / 2f)
+            commanderCursorY = (commanderCursorY + dy * step)
+                .coerceIn(cursorSize / 2f, root.height - cursorSize / 2f)
+
+            commanderCursor?.let { cursor ->
+                cursor.x = commanderCursorX - cursorSize / 2f
+                cursor.y = commanderCursorY - cursorSize / 2f
+                cursor.visibility = View.VISIBLE
+                cursor.bringToFront()
+            }
+
+            val edge = cursorSize / 2f + dp(8)
+            when {
+                dy < 0f && commanderCursorY <= edge -> dispatchScroll(0f, -140f)
+                dy > 0f && commanderCursorY >= root.height - edge -> dispatchScroll(0f, 140f)
+            }
+
+            mainHandler.removeCallbacks(hideCommanderCursorRunnable)
+            mainHandler.postDelayed(hideCommanderCursorRunnable, 6000L)
+            showRotaryDiagnostic(
+                "CURSOR $source dx=${"%.1f".format(dx)} dy=${"%.1f".format(dy)} " +
+                    "x=${commanderCursorX.toInt()} y=${commanderCursorY.toInt()} a=${"%.1f".format(commanderCursorAccel)}"
+            )
+        }
+    }
+
+    fun moveCommanderCursorFromSurface(distanceX: Float, distanceY: Float) {
+        val ax = kotlin.math.abs(distanceX)
+        val ay = kotlin.math.abs(distanceY)
+        if (ax < 0.01f && ay < 0.01f) return
+        val dx = when {
+            ax < 0.01f -> 0f
+            distanceX > 0f -> 1f
+            else -> -1f
+        }
+        val dy = when {
+            ay < 0.01f -> 0f
+            distanceY > 0f -> 1f
+            else -> -1f
+        }
+        moveCommanderTarget(dx, dy, "HOST")
+    }
+
+    fun clickCommanderCursor(source: String = "DPAD"): Boolean {
+        if (!::root.isInitialized) return false
+        val cursor = commanderCursor
+        if (cursor == null || cursor.visibility != View.VISIBLE) {
+            showCommanderCursor(source)
+            return true
+        }
+
+        val x = commanderCursorX
+        val y = commanderCursorY
+        cursor.visibility = View.INVISIBLE
+        showRotaryDiagnostic("CURSOR CLICK $source x=${x.toInt()} y=${y.toInt()}")
+        dispatchTouch(x, y)
+        mainHandler.postDelayed({
+            if (::root.isInitialized) {
+                commanderCursor?.visibility = View.VISIBLE
+                commanderCursor?.bringToFront()
+                mainHandler.removeCallbacks(hideCommanderCursorRunnable)
+                mainHandler.postDelayed(hideCommanderCursorRunnable, 6000L)
+            }
+        }, 120L)
+        return true
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
@@ -3925,7 +4175,113 @@ class CarPresentation(
         showDashboard()
     }
 
+    override fun dispatchGenericMotionEvent(ev: MotionEvent): Boolean {
+        val isRotary =
+            (ev.source and InputDevice.SOURCE_ROTARY_ENCODER) == InputDevice.SOURCE_ROTARY_ENCODER
+        if (isRotary && ev.action == MotionEvent.ACTION_SCROLL) {
+            val scroll = ev.getAxisValue(MotionEvent.AXIS_SCROLL)
+            val vertical = ev.getAxisValue(MotionEvent.AXIS_VSCROLL)
+            val horizontal = ev.getAxisValue(MotionEvent.AXIS_HSCROLL)
+            showRotaryDiagnostic(
+                "RAW ROTARY scroll=${"%.2f".format(scroll)} v=${"%.2f".format(vertical)} h=${"%.2f".format(horizontal)}"
+            )
+            val primary = when {
+                kotlin.math.abs(scroll) > 0.01f -> scroll
+                kotlin.math.abs(vertical) > 0.01f -> vertical
+                else -> 0f
+            }
+            if (primary != 0f) {
+                moveCommanderTarget(
+                    if (kotlin.math.abs(horizontal) > 0.01f) {
+                        if (horizontal > 0f) 1f else -1f
+                    } else 0f,
+                    if (primary > 0f) -1f else 1f,
+                    "RAW ROTARY"
+                )
+            }
+            return true
+        }
+        return super.dispatchGenericMotionEvent(ev)
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP,
+                KeyEvent.KEYCODE_NAVIGATE_PREVIOUS -> {
+                    moveCommanderTarget(0f, -1f, "RAW UP")
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN,
+                KeyEvent.KEYCODE_NAVIGATE_NEXT -> {
+                    moveCommanderTarget(0f, 1f, "RAW DOWN")
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_LEFT,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT -> {
+                    moveCommanderTarget(-1f, 0f, "RAW LEFT")
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_RIGHT,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT -> {
+                    moveCommanderTarget(1f, 0f, "RAW RIGHT")
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_UP_LEFT -> {
+                    moveCommanderTarget(-1f, -1f, "RAW UP_LEFT")
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_UP_RIGHT -> {
+                    moveCommanderTarget(1f, -1f, "RAW UP_RIGHT")
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN_LEFT -> {
+                    moveCommanderTarget(-1f, 1f, "RAW DOWN_LEFT")
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN_RIGHT -> {
+                    moveCommanderTarget(1f, 1f, "RAW DOWN_RIGHT")
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                    clickCommanderTarget("RAW SELECT")
+                    return true
+                }
+                KeyEvent.KEYCODE_BACK -> {
+                    showRotaryDiagnostic("RAW KEY BACK")
+                    goBack()
+                    return true
+                }
+            }
+        }
+
+        if (event.action == KeyEvent.ACTION_UP) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP,
+                KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_LEFT,
+                KeyEvent.KEYCODE_DPAD_RIGHT,
+                KeyEvent.KEYCODE_DPAD_UP_LEFT,
+                KeyEvent.KEYCODE_DPAD_UP_RIGHT,
+                KeyEvent.KEYCODE_DPAD_DOWN_LEFT,
+                KeyEvent.KEYCODE_DPAD_DOWN_RIGHT,
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT,
+                KeyEvent.KEYCODE_NAVIGATE_PREVIOUS,
+                KeyEvent.KEYCODE_NAVIGATE_NEXT,
+                KeyEvent.KEYCODE_BACK -> return true
+            }
+        }
+
         if (event.keyCode == KeyEvent.KEYCODE_MEDIA_NEXT) {
             if (event.action == KeyEvent.ACTION_DOWN) CarMediaManager.handleSteeringNext(context, event)
             return true
