@@ -137,6 +137,11 @@ object WazeHlpWebSocketManager {
     private var keepAliveJob: Job? = null
 
     fun start() {
+        if (!HudSourceManager.isWazeActive()) {
+            _isConnected.value = false
+            _statusText.value = "Waze đang tắt • Nguồn HUD hiện tại là GOFA"
+            return
+        }
         if (server == null) {
             startServer()
         }
@@ -205,6 +210,11 @@ object WazeHlpWebSocketManager {
     }
 
     fun restartConnection() {
+        if (!HudSourceManager.isWazeActive()) {
+            _isConnected.value = false
+            _statusText.value = "Waze đang tắt • Hãy chọn nguồn Waze trước"
+            return
+        }
         Log.i(TAG, "Restarting Waze Mod connection...")
         _isConnected.value = false
         _statusText.value = "Đang khởi động lại..."
@@ -341,6 +351,7 @@ object WazeHlpWebSocketManager {
 
     /** Handles HLP envelope before the state parser. */
     private fun handleIncomingMessage(jsonStr: String, reply: (String) -> Unit = {}) {
+        if (!HudSourceManager.isWazeActive()) return
         try {
             val root = JSONObject(jsonStr)
             if (root.optInt("v", 1) != 1) return
