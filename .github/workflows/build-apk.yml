@@ -66,6 +66,7 @@ jobs:
           node tests/youtube-quality.test.cjs
           node tests/youtube-search-routing.test.cjs
           node tests/home-ui-cleanup.test.cjs
+          node tests/web-session-retention.test.cjs
 
       - name: Build Debug APK
         run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest --stacktrace
