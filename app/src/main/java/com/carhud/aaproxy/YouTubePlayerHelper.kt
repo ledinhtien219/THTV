@@ -1372,18 +1372,21 @@ object YouTubePlayerHelper {
                 userAgentString = ua.replace("; wv", "").replace(Regex("Version/\\d+\\.\\d+\\s?"), "")
             }
 
-            val isDay = SettingsActivity.resolveIsDay(context)
+            // Keep the persistent WebView neutral by default. It is shared by
+            // YouTube, Browser and IPTV, so forcing WebView darkening here can
+            // partially recolor arbitrary sites (dark background + dark text).
+            // YouTube enables its own theme later; IPTV owns its CSS theme.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 try {
-                    settings.isAlgorithmicDarkeningAllowed = !isDay
+                    settings.isAlgorithmicDarkeningAllowed = false
                 } catch (e: Exception) {}
             } else {
                 @Suppress("DEPRECATION")
                 try {
-                    settings.forceDark = if (isDay) WebSettings.FORCE_DARK_OFF else WebSettings.FORCE_DARK_ON
+                    settings.forceDark = WebSettings.FORCE_DARK_OFF
                 } catch (e: Exception) {}
             }
-            setBackgroundColor(if (isDay) Color.WHITE else Color.BLACK)
+            setBackgroundColor(Color.WHITE)
 
             val cm = CookieManager.getInstance()
             cm.setAcceptCookie(true)
@@ -1403,39 +1406,57 @@ object YouTubePlayerHelper {
         val effectiveIsDay = isDay ?: SettingsActivity.resolveIsDay(view.context)
         view.post {
             try {
+                val url = view.url.orEmpty()
+                val host = try {
+                    android.net.Uri.parse(url).host.orEmpty().lowercase()
+                } catch (_: Throwable) {
+                    ""
+                }
+                val isYouTube = host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtu.be"
+                val isIptv = url.contains("file:///android_asset/iptv_player.html", ignoreCase = true)
+
+                if (isYouTube) {
+                    // YouTube has a controlled, tested theme implementation below.
+                    applyTheme(view, effectiveIsDay)
+                    return@post
+                }
+
+                // Never algorithmically darken arbitrary Browser pages. Sites such
+                // as 24h.com.vn can end up with a dark/transparent background while
+                // retaining their original dark text, making headlines unreadable.
+                // Let each website render its own light/dark CSS instead.
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     try {
-                        view.settings.isAlgorithmicDarkeningAllowed = !effectiveIsDay
-                    } catch (e: Exception) {}
+                        view.settings.isAlgorithmicDarkeningAllowed = false
+                    } catch (_: Exception) {}
                 } else {
                     @Suppress("DEPRECATION")
                     try {
-                        view.settings.forceDark = if (effectiveIsDay) WebSettings.FORCE_DARK_OFF else WebSettings.FORCE_DARK_ON
-                    } catch (e: Exception) {}
+                        view.settings.forceDark = WebSettings.FORCE_DARK_OFF
+                    } catch (_: Exception) {}
                 }
-                view.setBackgroundColor(if (effectiveIsDay) Color.WHITE else Color.BLACK)
 
-                val js = """
-                    (function() {
-                        try {
-                            window.__carhudCurrentIsDay = $effectiveIsDay;
-                            var style = document.getElementById('carhud-universal-theme');
-                            if (!style) {
-                                style = document.createElement('style');
-                                style.id = 'carhud-universal-theme';
-                                (document.head || document.documentElement).appendChild(style);
-                            }
-                            style.textContent = ':root, html, body { color-scheme: ${if (effectiveIsDay) "light" else "dark"} !important; }';
-                        } catch (e) {}
-                    })();
-                """.trimIndent()
-                view.evaluateJavascript(js, null)
+                view.setBackgroundColor(if (isIptv) Color.BLACK else Color.WHITE)
 
-                val url = view.url ?: ""
-                if (url.contains("youtube.com") || url.contains("youtu.be")) {
-                    applyTheme(view, effectiveIsDay)
+                // Older builds injected color-scheme:dark into every document.
+                // Remove that override when a generic Browser page is active.
+                if (!isIptv) {
+                    view.evaluateJavascript(
+                        """
+                        (function() {
+                            try {
+                                window.__carhudCurrentIsDay = $effectiveIsDay;
+                                var style = document.getElementById('carhud-universal-theme');
+                                if (style && style.parentNode) style.parentNode.removeChild(style);
+                                document.documentElement.style.removeProperty('color-scheme');
+                                if (document.body) document.body.style.removeProperty('color-scheme');
+                            } catch (e) {}
+                        })();
+                        """.trimIndent(),
+                        null
+                    )
                 }
-            } catch (e: Exception) {}
+            } catch (_: Exception) {}
         }
     }
 
