@@ -71,7 +71,7 @@ object IptvRequestProxy {
         incomingHeaders: Map<String, String>
     ): WebResourceResponse? {
         val conn = (URL(url).openConnection() as? HttpURLConnection) ?: return null
-        try {
+        return try {
             conn.requestMethod = method
             conn.connectTimeout = CONNECT_TIMEOUT_MS
             conn.readTimeout = READ_TIMEOUT_MS
