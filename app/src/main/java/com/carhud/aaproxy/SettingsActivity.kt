@@ -49,6 +49,7 @@ class SettingsActivity : AppCompatActivity() {
         const val KEY_DEFAULT_TO_DASHBOARD = "default_to_dashboard"
         const val KEY_LAST_PLAYED_URL = "last_played_url"
         const val KEY_DESKTOP_MODE = "desktop_mode_enabled"
+        const val KEY_BROWSER_ADBLOCK = "browser_adblock_enabled"
 
         // Toolbar Configuration
         const val KEY_TOOLBAR_POSITION = "toolbar_position" // "auto", "left", "right", "bottom"
@@ -894,6 +895,35 @@ class SettingsActivity : AppCompatActivity() {
                     }
                 ))
                 content.addView(createSwitchRow("Nút Tìm kiếm giọng nói (🎙️)", "Kích hoạt micro nói tên bài hát / kênh", KEY_SHOW_VOICE_SEARCH, true))
+            }
+        )
+
+        // ==========================================
+        // CARD: TRÌNH DUYỆT WEB
+        // ==========================================
+        root.addView(
+            createExpandableCard(
+                iconEmoji = "🌐",
+                iconBgColor = if (isDarkTheme) Color.parseColor("#064E3B") else Color.parseColor("#D1FAE5"),
+                title = "TRÌNH DUYỆT WEB",
+                subtitle = "Quảng cáo, quyền riêng tư và tương thích website",
+                initiallyExpanded = false
+            ) { content ->
+                content.addView(createSeparator())
+                content.addView(
+                    createSwitchRow(
+                        title = "Chặn quảng cáo khi duyệt Web",
+                        subtitle = "Chặn domain quảng cáo phổ biến và ẩn khung banner. Tắt nếu một website hiển thị lỗi.",
+                        key = KEY_BROWSER_ADBLOCK,
+                        default = true
+                    )
+                )
+                content.addView(TextView(this).apply {
+                    text = "Chỉ áp dụng cho Trình duyệt Web. YouTube và IPTV dùng bộ lọc riêng để tránh ảnh hưởng phát video."
+                    textSize = 12f
+                    setTextColor(colorTextSecondary)
+                    setPadding(dp(12), dp(4), dp(12), dp(10))
+                })
             }
         )
 
