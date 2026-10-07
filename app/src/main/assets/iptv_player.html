@@ -1713,11 +1713,13 @@
       try {
         const rawName = ((channel && channel.name) || '').toLowerCase().replace(/\s+/g, '');
         const rawId = ((channel && channel.id) || '').toLowerCase().replace(/\s+/g, '');
+        const asciiName = rawName.normalize
+          ? rawName.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          : rawName;
         let key = '';
-        if (rawName.includes('vtv5tâynambo') || rawName.includes('vtv5taynambo') ||
-            rawId.includes('vtv5tnb')) key = 'vtv5tnb';
-        else if (rawName.includes('vtv5tâynguyên') || rawName.includes('vtv5taynguyen') ||
-                 rawId.includes('vtv5tn')) key = 'vtv5tn';
+        if (asciiName.includes('vtv5taynambo') || rawId.includes('tnb')) key = 'vtv5tnb';
+        else if (asciiName.includes('vtv5taynguyen') || rawId.includes('taynguyen') ||
+                 rawId.includes('5tn')) key = 'vtv5tn';
         else {
           const m = (rawName + ' ' + rawId).match(/vtv(10|[1-9])/);
           if (m) key = 'vtv' + m[1];
