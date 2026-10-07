@@ -132,6 +132,7 @@ jobs:
           node tests/youtube-quality.test.cjs
           node tests/youtube-search-routing.test.cjs
           node tests/web-theme-safety.test.cjs
+          node tests/web-adblock.test.cjs
           ./gradlew testDebugUnitTest assembleDebug --stacktrace
 
       - name: Publish or verify immutable GitHub Release
