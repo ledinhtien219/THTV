@@ -585,11 +585,17 @@ class CarPresentation(
             }
 
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
-                YouTubeAdBlocker.shouldIntercept(request)?.let { return it }
-                val url = request?.url?.toString()
-                if (url != null && YouTubePlayerHelper.isAdUrl(url)) {
-                    val origin = request.requestHeaders?.get("Origin") ?: request.requestHeaders?.get("origin")
-                    return YouTubePlayerHelper.createEmptyResponse(origin)
+                if (currentActiveAppId == "web" &&
+                    prefs.getBoolean(SettingsActivity.KEY_BROWSER_ADBLOCK, true)) {
+                    WebAdBlocker.shouldIntercept(request)?.let { return it }
+                }
+                if (currentActiveAppId == "youtube") {
+                    YouTubeAdBlocker.shouldIntercept(request)?.let { return it }
+                    val url = request?.url?.toString()
+                    if (url != null && YouTubePlayerHelper.isAdUrl(url)) {
+                        val origin = request.requestHeaders?.get("Origin") ?: request.requestHeaders?.get("origin")
+                        return YouTubePlayerHelper.createEmptyResponse(origin)
+                    }
                 }
                 return super.shouldInterceptRequest(view, request)
             }
@@ -645,6 +651,11 @@ class CarPresentation(
                     YouTubePlayerHelper.inject(view, isUltrawide, isPortrait, carWidth, carHeight, carDpi, phoneDpi.toInt(), aspectRatio)
                     YouTubePlayerHelper.applyCarSearchHome(view)
                     updateYouTubeHomeObstacles()
+                } else if (currentActiveAppId == "web") {
+                    WebAdBlocker.applyCosmeticFiltering(
+                        view,
+                        prefs.getBoolean(SettingsActivity.KEY_BROWSER_ADBLOCK, true)
+                    )
                 }
                 // Every embedded app uses the same text-only keyboard bridge.
                 view.evaluateJavascript(pageInputScript + "\nwindow.__thtvPageInput.install();", null)
@@ -1081,6 +1092,12 @@ class CarPresentation(
                     if (currentUrl.contains("www.youtube.com")) currentUrl.replace("www.youtube.com", "m.youtube.com") else "https://m.youtube.com"
                 }
                 web.loadUrl(targetUrl)
+            }
+            if (key == SettingsActivity.KEY_BROWSER_ADBLOCK && currentActiveAppId == "web") {
+                WebAdBlocker.applyCosmeticFiltering(
+                    web,
+                    prefs.getBoolean(SettingsActivity.KEY_BROWSER_ADBLOCK, true)
+                )
             }
             if (key == SettingsActivity.KEY_THEME_MODE || key == "carhud_day_mode") {
                 applyCurrentTheme(isDayMode())
