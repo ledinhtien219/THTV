@@ -1388,6 +1388,10 @@ object YouTubePlayerHelper {
             }
             setBackgroundColor(Color.WHITE)
 
+            // YouTube preference cookies can still follow the selected car theme;
+            // they do not affect generic Browser pages.
+            val isDay = SettingsActivity.resolveIsDay(context)
+
             val cm = CookieManager.getInstance()
             cm.setAcceptCookie(true)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
