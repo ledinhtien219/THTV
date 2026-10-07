@@ -585,6 +585,9 @@ class CarPresentation(
             }
 
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+                if (currentActiveAppId == "iptv") {
+                    IptvRequestProxy.shouldIntercept(request)?.let { return it }
+                }
                 if (currentActiveAppId == "web" &&
                     prefs.getBoolean(SettingsActivity.KEY_BROWSER_ADBLOCK, true)) {
                     WebAdBlocker.shouldIntercept(request)?.let { return it }
@@ -1997,6 +2000,28 @@ class CarPresentation(
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
         web.settings.setSupportMultipleWindows(false)
+        if (app.id == "iptv") {
+            // iptv_player.html is a trusted local asset whose Hls.js instance must
+            // fetch remote manifests/segments. Newer WebView versions block this
+            // cross-origin path unless universal file access is explicitly enabled.
+            @Suppress("DEPRECATION")
+            try {
+                web.settings.allowFileAccessFromFileURLs = true
+                web.settings.allowUniversalAccessFromFileURLs = true
+            } catch (_: Throwable) {}
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                web.settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            }
+            web.settings.mediaPlaybackRequiresUserGesture = false
+        } else {
+            @Suppress("DEPRECATION")
+            try {
+                web.settings.allowUniversalAccessFromFileURLs = false
+            } catch (_: Throwable) {}
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                web.settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            }
+        }
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
         web.isFocusable = true
@@ -2044,7 +2069,11 @@ class CarPresentation(
         web.evaluateJavascript("window.isDashboardMode = false;", null)
         
         applyWebScaleForUrl(app?.url ?: web.url)
-        YouTubePlayerHelper.applyTheme(web, isDayMode())
+        if (currentActiveAppId == "youtube") {
+            YouTubePlayerHelper.applyTheme(web, isDayMode())
+        } else {
+            applyUniversalWebTheme(web, isDayMode())
+        }
         dashboardView?.detachEmbeddedWeb()
         dashboardView?.visibility = View.GONE
         web.visibility = View.VISIBLE
