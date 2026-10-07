@@ -68,6 +68,7 @@ jobs:
           node tests/home-ui-cleanup.test.cjs
           node tests/web-session-retention.test.cjs
           node tests/web-theme-safety.test.cjs
+          node tests/web-adblock.test.cjs
           node tests/app-switching.test.cjs
           node tests/youtube-voice-toolbar.test.cjs
           node tests/waze-stability.test.cjs
