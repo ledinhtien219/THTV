@@ -112,6 +112,7 @@ class MainActivity : AppCompatActivity() {
     // WebViews
     private var youtubeWeb: BackgroundAudioWebView? = null
     private var iptvWeb: BackgroundAudioWebView? = null
+    private var phoneWebMode: String = "youtube"
 
     // Wallpaper Badges
     private var wpBadgeBugatti: ImageView? = null
@@ -641,13 +642,18 @@ class MainActivity : AppCompatActivity() {
         }
 
         // 2x2 Services Grid
-        phoneCardYoutube.setOnClickListener { switchTab(TAB_YOUTUBE) }
+        phoneCardYoutube.setOnClickListener {
+            phoneWebMode = "youtube"
+            switchTab(TAB_YOUTUBE)
+            youtubeWeb?.loadUrl("https://m.youtube.com")
+        }
         phoneCardIptv.setOnClickListener { switchTab(TAB_IPTV) }
         phoneCardM3u.setOnClickListener {
             switchTab(TAB_SETTINGS)
             pickM3uFileLauncher.launch("*/*")
         }
         phoneCardBrowser.setOnClickListener {
+            phoneWebMode = "web"
             switchTab(TAB_YOUTUBE)
             youtubeWeb?.loadUrl("https://google.com")
         }
@@ -1190,18 +1196,30 @@ class MainActivity : AppCompatActivity() {
                 if (url != null && (url.contains("accounts.google.com") || url.contains("ssl.gstatic.com/accounts") || url.contains("myaccount.google.com"))) {
                     return super.shouldInterceptRequest(view, request)
                 }
-                YouTubeAdBlocker.shouldIntercept(request)?.let { return it }
-                if (url != null && YouTubePlayerHelper.isAdUrl(url)) {
-                    val origin = request.requestHeaders?.get("Origin") ?: request.requestHeaders?.get("origin")
-                    return YouTubePlayerHelper.createEmptyResponse(origin)
+                if (phoneWebMode == "web" &&
+                    prefs.getBoolean(SettingsActivity.KEY_BROWSER_ADBLOCK, true)) {
+                    WebAdBlocker.shouldIntercept(request)?.let { return it }
+                } else {
+                    YouTubeAdBlocker.shouldIntercept(request)?.let { return it }
+                    if (url != null && YouTubePlayerHelper.isAdUrl(url)) {
+                        val origin = request.requestHeaders?.get("Origin") ?: request.requestHeaders?.get("origin")
+                        return YouTubePlayerHelper.createEmptyResponse(origin)
+                    }
                 }
                 return super.shouldInterceptRequest(view, request)
             }
 
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
-                YouTubeAdBlocker.onPageFinished(view, url)
-                YouTubePlayerHelper.trackVideoHistory(view)
+                if (phoneWebMode == "web") {
+                    WebAdBlocker.applyCosmeticFiltering(
+                        view,
+                        prefs.getBoolean(SettingsActivity.KEY_BROWSER_ADBLOCK, true)
+                    )
+                } else {
+                    YouTubeAdBlocker.onPageFinished(view, url)
+                    YouTubePlayerHelper.trackVideoHistory(view)
+                }
                 android.webkit.CookieManager.getInstance().flush()
             }
         }
@@ -1603,6 +1621,7 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("Tìm YouTube") { _, _ ->
                 val query = input.text.toString().trim()
                 if (query.isNotBlank()) {
+                    phoneWebMode = "youtube"
                     switchTab(TAB_YOUTUBE)
                     initYoutubeWebView()
                     val searchUrl = "https://m.youtube.com/results?search_query=" + Uri.encode(query)

@@ -81,6 +81,40 @@
       margin: 0 auto;
     }
 
+    /* Android WebView can paint its own oversized start/play affordance before
+       the first HLS frame arrives. IPTV already has a dedicated car-safe toolbar,
+       so keep Chromium's native media chrome completely out of the video layer. */
+    video#videoPlayer::-webkit-media-controls {
+      display: none !important;
+      -webkit-appearance: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+    video#videoPlayer::-webkit-media-controls-enclosure {
+      display: none !important;
+      -webkit-appearance: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+    video#videoPlayer::-webkit-media-controls-panel {
+      display: none !important;
+      -webkit-appearance: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+    video#videoPlayer::-webkit-media-controls-overlay-play-button {
+      display: none !important;
+      -webkit-appearance: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+    video#videoPlayer::-webkit-media-controls-start-playback-button {
+      display: none !important;
+      -webkit-appearance: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
     /* Transparent touch catcher above the hardware video layer.
        Android Auto/WebView can route touches directly to <video>, skipping
        parent DOM listeners. This layer guarantees taps reach our UI logic. */
@@ -1644,6 +1678,69 @@
     window.reloadCurrentChannel = reloadCurrentChannel;
     window.toggleFavCurrent = toggleFavCurrent;
 
+    function addUniqueStreamCandidate(list, url) {
+      if (!url || typeof url !== 'string') return;
+      if (!list.includes(url)) list.push(url);
+    }
+
+    function buildIptvStreamCandidates(channel) {
+      const list = [];
+      const primary = channel && channel.streamUrl ? String(channel.streamUrl).trim() : '';
+      addUniqueStreamCandidate(list, primary);
+      if (!primary) return list;
+
+      // Same FPT path is often reachable on more than one CDN hostname.
+      // Rotate automatically when one edge starts returning 403/5xx/timeouts.
+      try {
+        const u = new URL(primary);
+        const host = (u.hostname || '').toLowerCase();
+        const fptHosts = [
+          'live.fptplay53.net',
+          'live-a.fptplay53.net',
+          'vips-livecdn.fptplay.net'
+        ];
+        if (fptHosts.includes(host)) {
+          fptHosts.forEach(h => {
+            const alt = new URL(primary);
+            alt.hostname = h;
+            addUniqueStreamCandidate(list, alt.toString());
+          });
+        }
+      } catch(e) {}
+
+      // VTV has predictable live/media endpoints. Build fresh host fallbacks
+      // from the channel name/id instead of retrying one dead URL forever.
+      try {
+        const rawName = ((channel && channel.name) || '').toLowerCase().replace(/\s+/g, '');
+        const rawId = ((channel && channel.id) || '').toLowerCase().replace(/\s+/g, '');
+        const asciiName = rawName.normalize
+          ? rawName.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          : rawName;
+        let key = '';
+        if (asciiName.includes('vtv5taynambo') || rawId.includes('tnb')) key = 'vtv5tnb';
+        else if (asciiName.includes('vtv5taynguyen') || rawId.includes('taynguyen') ||
+                 rawId.includes('5tn')) key = 'vtv5tn';
+        else {
+          const m = (rawName + ' ' + rawId).match(/vtv(10|[1-9])/);
+          if (m) key = 'vtv' + m[1];
+        }
+
+        if (key) {
+          const path = key === 'vtv5tnb' || key === 'vtv5tn'
+            ? '/live/media/' + key + '/live-hls-avc/index.m3u8'
+            : '/live/media/' + key + '/live247-hls-avc/index.m3u8';
+          addUniqueStreamCandidate(list, 'https://live.fptplay53.net' + path);
+          addUniqueStreamCandidate(list, 'https://live-a.fptplay53.net' + path);
+          addUniqueStreamCandidate(list, 'https://vips-livecdn.fptplay.net' + path);
+          if (/^vtv(10|[1-9])$/.test(key)) {
+            addUniqueStreamCandidate(list, 'https://dethich.pw/' + key + '/index.m3u8');
+          }
+        }
+      } catch(e) {}
+
+      return list;
+    }
+
     function playStream(channel, el) {
       if (!channel) return;
       window.restoreVideoAspectRatio();
@@ -1705,69 +1802,135 @@
       }
 
       if (window.Hls && Hls.isSupported() && (url.includes('.m3u8') || !url.includes('.'))) {
-        if (hlsInstance) {
-          try { hlsInstance.destroy(); } catch(e) {}
-          hlsInstance = null;
-        }
-        hlsInstance = new Hls({
-          enableWorker: true,
-          lowLatencyMode: false,
-          startLevel: -1,
-          capLevelToPlayerSize: true,
-          backBufferLength: 30,
-          maxBufferLength: 40,
-          maxMaxBufferLength: 75,
-          maxBufferSize: 60 * 1000 * 1000,
-          maxBufferHole: 0.5,
-          highBufferWatchdogPeriod: 3,
-          liveSyncDurationCount: 3,
-          liveMaxLatencyDurationCount: 8,
-          startFragPrefetch: true,
-          abrBandWidthFactor: 0.85,
-          abrBandWidthUpFactor: 0.70,
-          manifestLoadingTimeOut: 15000,
-          manifestLoadingMaxRetry: 4,
-          levelLoadingTimeOut: 15000,
-          levelLoadingMaxRetry: 4,
-          fragLoadingTimeOut: 20000,
-          fragLoadingMaxRetry: 6
-        });
-        hlsInstance.loadSource(url);
-        hlsInstance.attachMedia(video);
-        const streamHls = hlsInstance;
-        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-          if (hlsInstance !== streamHls || window.__iptvUserPaused) return;
-          requestIptvPlay();
-        });
-        let hlsRecoveries = 0;
-        hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-          if (hlsInstance !== streamHls || window.__iptvUserPaused) return;
-          if (!data || !data.fatal) return;
-          hlsRecoveries += 1;
-          if (hlsRecoveries > 6) {
-            try { hlsInstance.destroy(); } catch(e) {}
-            hlsInstance = null;
+        const playbackGeneration = iptvPlaybackGeneration;
+        const candidates = buildIptvStreamCandidates(channel);
+        let candidateIndex = 0;
+        let networkFailuresOnCandidate = 0;
+        let mediaRecoveries = 0;
+
+        const startCandidate = (index, reason) => {
+          if (playbackGeneration !== iptvPlaybackGeneration || window.__iptvUserPaused) return;
+          if (index < 0 || index >= candidates.length) {
+            showToast('⚠️ Không tải được ' + channel.name + '. Đã thử ' + candidates.length + ' nguồn.');
             return;
           }
-          switch(data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              setTimeout(() => {
-                try { if (hlsInstance === streamHls && !window.__iptvUserPaused) streamHls.startLoad(-1); } catch(e) {}
-              }, Math.min(3000, 400 * hlsRecoveries));
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              setTimeout(() => {
-                try { if (hlsInstance === streamHls && !window.__iptvUserPaused) streamHls.recoverMediaError(); } catch(e) {}
-              }, 250);
-              break;
-            default:
-              // Stop after an unrecoverable error instead of rebuilding forever.
-              try { hlsInstance.destroy(); } catch(e) {}
-              hlsInstance = null;
-              showToast('Không tải được kênh. Chọn Tải lại nguồn để thử lại.');
-              break;
+
+          candidateIndex = index;
+          networkFailuresOnCandidate = 0;
+          mediaRecoveries = 0;
+
+          if (hlsInstance) {
+            try { hlsInstance.destroy(); } catch(e) {}
+            hlsInstance = null;
           }
-        });
+
+          const streamUrl = candidates[index];
+          if (index > 0) {
+            showToast('🔄 Nguồn ' + (index + 1) + '/' + candidates.length + ': ' + channel.name);
+          }
+
+          const streamHls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: false,
+            startLevel: -1,
+            capLevelToPlayerSize: true,
+            backBufferLength: 30,
+            maxBufferLength: 40,
+            maxMaxBufferLength: 75,
+            maxBufferSize: 60 * 1000 * 1000,
+            maxBufferHole: 0.5,
+            highBufferWatchdogPeriod: 3,
+            liveSyncDurationCount: 3,
+            liveMaxLatencyDurationCount: 8,
+            startFragPrefetch: true,
+            abrBandWidthFactor: 0.85,
+            abrBandWidthUpFactor: 0.70,
+            manifestLoadingTimeOut: 12000,
+            manifestLoadingMaxRetry: 1,
+            levelLoadingTimeOut: 12000,
+            levelLoadingMaxRetry: 1,
+            fragLoadingTimeOut: 16000,
+            fragLoadingMaxRetry: 2
+          });
+
+          hlsInstance = streamHls;
+          streamHls.loadSource(streamUrl);
+          streamHls.attachMedia(video);
+
+          streamHls.on(Hls.Events.MANIFEST_PARSED, () => {
+            if (hlsInstance !== streamHls ||
+                playbackGeneration !== iptvPlaybackGeneration ||
+                window.__iptvUserPaused) return;
+            requestIptvPlay();
+          });
+
+          streamHls.on(Hls.Events.ERROR, (event, data) => {
+            if (hlsInstance !== streamHls ||
+                playbackGeneration !== iptvPlaybackGeneration ||
+                window.__iptvUserPaused) return;
+            if (!data || !data.fatal) return;
+
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+              networkFailuresOnCandidate += 1;
+              const status = data.response && (data.response.code || data.response.status)
+                ? Number(data.response.code || data.response.status)
+                : 0;
+              const shouldRotateImmediately =
+                status === 401 || status === 403 || status === 404 || status >= 500 ||
+                /manifest/i.test(data.details || '');
+
+              if ((shouldRotateImmediately || networkFailuresOnCandidate >= 2) &&
+                  candidateIndex + 1 < candidates.length) {
+                const next = candidateIndex + 1;
+                setTimeout(() => startCandidate(next, 'network'), 180);
+                return;
+              }
+
+              if (networkFailuresOnCandidate <= 2) {
+                setTimeout(() => {
+                  try {
+                    if (hlsInstance === streamHls &&
+                        playbackGeneration === iptvPlaybackGeneration &&
+                        !window.__iptvUserPaused) streamHls.startLoad(-1);
+                  } catch(e) {}
+                }, Math.min(1800, 450 * networkFailuresOnCandidate));
+                return;
+              }
+
+              if (candidateIndex + 1 < candidates.length) {
+                setTimeout(() => startCandidate(candidateIndex + 1, 'network'), 180);
+              } else {
+                try { streamHls.destroy(); } catch(e) {}
+                if (hlsInstance === streamHls) hlsInstance = null;
+                const suffix = status ? ' (HTTP ' + status + ')' : '';
+                showToast('⚠️ Không tải được ' + channel.name + suffix);
+              }
+              return;
+            }
+
+            if (data.type === Hls.ErrorTypes.MEDIA_ERROR && mediaRecoveries < 2) {
+              mediaRecoveries += 1;
+              setTimeout(() => {
+                try {
+                  if (hlsInstance === streamHls &&
+                      playbackGeneration === iptvPlaybackGeneration &&
+                      !window.__iptvUserPaused) streamHls.recoverMediaError();
+                } catch(e) {}
+              }, 250);
+              return;
+            }
+
+            if (candidateIndex + 1 < candidates.length) {
+              setTimeout(() => startCandidate(candidateIndex + 1, 'fatal'), 180);
+            } else {
+              try { streamHls.destroy(); } catch(e) {}
+              if (hlsInstance === streamHls) hlsInstance = null;
+              showToast('⚠️ Luồng ' + channel.name + ' không tương thích hoặc đã hỏng.');
+            }
+          });
+        };
+
+        startCandidate(0, 'initial');
       } else {
         video.src = url;
         requestIptvPlay();

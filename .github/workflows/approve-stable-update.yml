@@ -128,9 +128,12 @@ jobs:
       - name: Re-run release tests
         run: |
           node tests/iptv-aspect.test.cjs
+          node tests/iptv-playback-network.test.cjs
           node tests/page-input.test.cjs
           node tests/youtube-quality.test.cjs
           node tests/youtube-search-routing.test.cjs
+          node tests/web-theme-safety.test.cjs
+          node tests/web-adblock.test.cjs
           ./gradlew testDebugUnitTest assembleDebug --stacktrace
 
       - name: Publish or verify immutable GitHub Release
